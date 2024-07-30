@@ -1,0 +1,105 @@
+{% extends base %}
+
+    
+{% block preamble %}
+    <link rel="stylesheet" href="app/static/css/main.css"> 
+    <link rel="shortcut icon" type="image/x-icon" href="/app/static/images/favicon.png">
+
+{% endblock %}
+
+{% block contents %}
+    <div class="app">
+
+        <div class="left-menu">
+            <button id="toggle-button">Toggle</button>
+            <img id=logo src="app/static/images/logo.png" height="200px" style="margin: 15px 5px 25px 25px; align-self: center;" alt="logo">
+            {{ embed(roots.left_menu) }}
+            <button id="settings-button">Settings</button>
+        </div>
+
+        <div class="main">
+
+            <div class="row">
+                <div id="cell">
+                    {{ embed(roots.panel_cell) }}
+                </div>
+                
+                <div id="graph">
+                    {{ embed(roots.panel_graph) }}
+                </div>
+            </div>
+
+            <div class="row">
+                <div id="simulation">
+                    {{ embed(roots.panel_simulation) }}
+                    
+                </div>
+               
+            </div>
+        </div>
+        <div class="right-menu">
+            {{ embed(roots.right_menu_section) }}
+        </div>
+    </div>
+
+    <div class="settings hidden">
+        <div class="settings-content">
+            <div class="settings-header">
+                <!-- <button id="settings-close-button">Close</button> -->
+            </div>
+            <div class="settings-body">
+                <div id="settings">
+                    <h1>Some settings here</h1>
+                    <a href="https://r-makarov.github.io/DendroTweaksWeb/" style="font-size: 45px;">Dendro Tweaks Web</a>
+                    {{ embed(roots.settings_panel) }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    
+
+  {{ super() }}
+
+  <script>
+    document.getElementById('toggle-button').addEventListener('click', function() {
+        console.log('clicked');
+        document.querySelector('.left-menu').classList.toggle('hidden');
+    });
+    document.getElementById('settings-button').addEventListener('click', function() {
+        console.log('clicked');
+        document.querySelector('.settings').classList.toggle('hidden');
+    });
+
+    document.querySelector('.settings').addEventListener('click', function(event) {
+    // Check if the clicked element is .settings itself
+    if (event.target === this) {
+        console.log('clicked');
+        this.classList.toggle('hidden');
+    }
+});
+
+
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('DOMContentLoaded');
+        const themeSelect = Bokeh.documents[0].get_model_by_name('theme_select');
+        console.log(themeSelect);
+        themeSelect.connect(themeSelect.properties.value.change, function() {
+            document.body.className = themeSelect.value;
+            console.log('Theme changed to: ' + themeSelect.value);
+        });
+    });
+
+    console.log('Before');
+    const choicesElements = document.querySelectorAll('.choices__list');
+    console.log(choicesElements);
+    choicesElements.forEach((element) => {
+        console.log(element);
+        console.log(element.style.background);
+        element.style.background = "red";
+        console.log(element.style.background);
+    });
+    console.log('After');
+
+</script>
+{% endblock %}

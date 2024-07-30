@@ -1,0 +1,10 @@
+**/archive/
+**/__pycache__/
+**/.ipynb_checkpoints/
+**/E_6_14_.swc
+**/E_6_14_smooth.swc
+**/n123_morphology.swc
+**/x86_64/
+**/x64_86/
+*.gexf
+*.log

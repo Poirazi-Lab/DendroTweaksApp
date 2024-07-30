@@ -1,0 +1,145 @@
+body {
+    background-color: #000000;
+    color: #ffffff;
+
+    .app {
+        background-color: #15191C;
+        color: #ffffff;
+        display: flex;
+        justify-content: space-between;
+        height: 100vh;
+        width: 100vw;
+        flex-wrap: nowrap !important;
+
+        .left-menu {
+            background-color: rgb(32,38,43);
+            color: #5db4ff;
+            width: 15%;
+            height: 100%;
+            padding: 0 10px;
+        }
+
+        .left-menu.hidden {
+            width: 2%;
+            overflow: hidden;
+        }
+
+        .main {
+            background-color: #15191C;
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 10px;
+
+            .row {
+                display: flex;
+                flex-direction: row;
+                justify-content: space-around;
+                align-items: top;
+                flex-wrap: nowrap;
+
+                div {
+                    // flex: 1;
+                    min-width: 100px;
+                    
+                }
+
+                #cell {
+                    width: 400px;
+                    height: 500px;
+                    // background-color: rgba(0, 255, 136, 0.05);
+                }
+
+                #graph {
+                    width: 800px;
+                    height: 500px;
+                    // background-color: rgba(247, 0, 255, 0.05);
+                }
+
+                #simulation {
+                    width: 1200px;
+                    height: 350px;
+                    // background-color: rgba(4, 0, 255, 0.05);
+                }
+
+                #section {
+                    width: 300px;
+                    height: 500px;
+                    // background-color: rgba(0, 255, 21, 0.05);
+                }
+            }
+        }
+
+        .right-menu {
+            background-color: rgb(32,38,43);
+            color: #57b1ff;
+            width: 20%;
+            height: 100%;
+            padding: 0 20px;
+        }
+    }
+
+    .settings {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background-color: rgba(32, 38, 43, 0.8);
+        z-index: 9999; /* Add this line */
+
+        .settings-content {
+            position: fixed;
+            top: 10vh;
+            left: 10vw;
+            width: 80vw;
+            height: 80vh;
+            background-color: rgba(32, 38, 43, 1);
+            color: #ffffff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border: 1px solid #ffffff;
+        }
+    }
+
+    .settings.hidden {
+        display: none;
+    }
+}
+
+
+.dark_minimal {
+    // background-color: rgb(32,38,43) !important;
+    background-color: #20262B !important;
+    color: #ffffff !important;
+}
+
+.dark_minimal .main {
+    background-color: #15191C !important;
+    color: #ffffff !important;
+}
+
+.light_minimal {
+    background-color: #D8D2D0 !important;
+    color: #000000 !important;
+}
+
+.light_minimal .main {
+    background-color: #EBE6E4 !important;
+    color: #000000 !important;
+}
+
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+body::-webkit-scrollbar {
+    display: none;
+}
+
+// /* Hide scrollbar for IE, Edge and Firefox */
+// body {
+//   -ms-overflow-style: none;  /* IE and Edge */
+//   scrollbar-width: none;  /* Firefox */
+// }
