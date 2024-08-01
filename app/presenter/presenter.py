@@ -626,11 +626,37 @@ class Presenter(IOMixin, CellMixin, BiophysMixin, SectionMixin, GraphMixin, Navi
         sec = self.selected_sec
         parent = sec.parentseg().sec
         segments_to_remove = [seg for sec in sec.subtree() for seg in sec]
+        # Remove the segments from channel groups
         for ch in self.model.channels.values():
+            groups_to_remove = []
             for group in ch.groups:
                 group.segments = [seg for seg in group.segments if seg not in segments_to_remove]
+                logger.debug(f'Group {group.name} has {len(group.segments)} segments')
+                if len(group.segments) == 0:
+                    groups_to_remove.append(group)
+            for group in groups_to_remove:
+                ch.remove_group(group)
+        # Remove the segments from capacitance the same way
+        groups_to_remove = []
+        for group in self.model.capacitance.groups:
+            group.segments = [seg for seg in group.segments if seg not in segments_to_remove]
+            if len(group.segments) == 0:
+                groups_to_remove.append(group)
+        for group in groups_to_remove:
+            self.model.capacitance.remove_group(group)
+
+
         self.model.reduce_subtree(sec)
-        
+
+        # Handle the out of group segments
+        out_of_group_segments = [seg for seg in sec]
+        for seg in out_of_group_segments:
+            # Create a group for each segment with a default uniform distribution
+            for ch in self.model.channels.values():
+                ch.add_group([seg], f'gbar_{ch.suffix}', Distribution('uniform', value=getattr(seg, f'gbar_{ch.suffix}')))
+            
+        # Assumes that the capacitance is the same for all segments in the subtree
+        self.model.capacitance.add_group(out_of_group_segments, 'cm', Distribution('uniform', value=out_of_group_segments[0].cm))
 
         self.selected_secs = set()
         self.selected_segs = []
@@ -640,7 +666,7 @@ class Presenter(IOMixin, CellMixin, BiophysMixin, SectionMixin, GraphMixin, Navi
         if hasattr(self.model.cell, 'sections'):
             del self.model.cell.sections
 
-        self.model.add_capacitance()
+        # self.model.add_capacitance()        
 
         self.create_cell_renderer()
         self.create_graph_renderer()
