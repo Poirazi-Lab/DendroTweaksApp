@@ -173,7 +173,7 @@ class NavigationMixin():
                 self.view.widgets.switches['record'].active = False
                 self.view.widgets.switches['record'].disabled = True
 
-
+    @log
     def update_iclamp_switch(self):
         if len(self.selected_segs) == 1:
             self.view.widgets.switches['iclamp'].disabled = False
@@ -182,9 +182,11 @@ class NavigationMixin():
                 self.view.widgets.switches['iclamp'].active = bool(self.model.iclamps.get(seg))
                 if self.view.widgets.switches['iclamp'].active:
                     self.view.widgets.sliders['iclamp_amp'].visible = True
+                    logger.debug(f'Amplitude: {self.model.iclamps[seg].amp}')
                     self.view.widgets.sliders['iclamp_amp'].value = self.model.iclamps[seg].amp
+                    
                     self.view.widgets.sliders['iclamp_duration'].visible = True
-                    self.view.widgets.sliders['iclamp_duration'].value = [self.model.iclamps[seg].delay, self.model.iclamps[seg].dur]
+                    self.view.widgets.sliders['iclamp_duration'].value = [self.model.iclamps[seg].delay, self.model.iclamps[seg].delay + self.model.iclamps[seg].dur]
                 else:
                     self.view.widgets.sliders['iclamp_amp'].visible = False
                     self.view.widgets.sliders['iclamp_duration'].visible = False

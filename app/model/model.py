@@ -216,7 +216,7 @@ class CellModel():
         self.equilibrium_potentials[ion] = value
         for sec in self.cell.all:
             for seg in sec:
-                logger.info(f'Setting e{ion} at {sec.name()}({seg.x}) to {value}')
+                logger.debug(f'Setting e{ion} at {sec.name()}({seg.x}) to {value}')
                 setattr(seg, f'e{ion}', value)
 
 
@@ -238,6 +238,7 @@ class CellModel():
         return {'channels': [ch.to_dict() for ch in self.channels.values()], 
                 'equilibrium_potentials': self.equilibrium_potentials,
                 'capacitance': self.capacitance.to_dict() if self.capacitance else None,
+                'simulator': self.simulator.to_dict(),
                 'path_to_model': self.path_to_model}
 
     def to_swc(self, path):

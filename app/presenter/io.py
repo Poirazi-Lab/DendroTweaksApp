@@ -166,6 +166,14 @@ class IOMixin():
             for ion, value in data['equilibrium_potentials'].items():
                 self.view.widgets.spinners[f'e{ion}'].value = value
 
+        if data.get('simulator') is not None:
+            self.view.widgets.sliders['dt'].value = data['simulator']['dt']
+            self.model.simulator.dt = data['simulator']['dt']
+            self.view.widgets.sliders['celsius'].value = data['simulator']['celsius']
+            self.model.simulator.celsius = data['simulator']['celsius']
+            self.view.widgets.sliders['v_init'].value = data['simulator']['v_init']
+            self.model.simulator.v_init = data['simulator']['v_init']
+
         if self.model.cell.name == 'Poirazi_2003':
             self.Ra_sigmoidal_temp()
         if self.model.cell.name == 'Hay_2011':

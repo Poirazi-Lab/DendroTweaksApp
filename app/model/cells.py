@@ -474,5 +474,10 @@ class Simulator():
 
         return [t.to_python() for _ in vs], [v.to_python() for v in vs], [i.to_python() for i in Is]
 
-
+    def to_dict(self):
+        return {
+            'celsius': self.celsius,
+            'v_init': self.v_init,
+            'dt': self.dt,
+        }
 

@@ -1038,8 +1038,8 @@ view.widgets.sliders['voltage_plot_y_range'].on_change('value_throttled', update
 
 
 settings_panel = column(view.widgets.selectors['theme'],
-                        view.widgets.selectors['output_format'],
-                        view.widgets.color_pickers['color_picker'],
+                        # view.widgets.selectors['output_format'],
+                        # view.widgets.color_pickers['color_picker'],
                         view.widgets.sliders['voltage_plot_x_range'],
                         view.widgets.sliders['voltage_plot_y_range'],
                         
