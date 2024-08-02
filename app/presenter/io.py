@@ -207,6 +207,31 @@ class IOMixin():
         path_to_json = os.path.join('app', 'static', 'data', f'{self.model.cell.name}_ephys.json')
         self.from_json(path_to_json)
 
+    def import_file_callback(self, attr, old, new):
+        import base64
+        import os
+        import io
+
+        filename = self.view.widgets.text['filename_workaround'].value
+        logger.info(f'Filename: {filename}')
+        decoded = base64.b64decode(new)
+        # f = io.BytesIO(decoded)
+        
+        if filename.endswith('.swc') or filename.endswith('.asc'):
+            with open(f'app/model/swc/{filename}', 'wb') as file:
+                file.write(decoded)
+            logger.info(f'File {filename} saved to app/model/swc')
+            self.view.widgets.selectors['cell'].options = [f for f in os.listdir('app/model/swc') if f.endswith('.swc') or f.endswith('.asc')]
+
+        elif filename.endswith('.mod'):
+            mod_folder = 'mod_cadyn' if 'cadyn' in filename else 'mod'
+            widget_name = 'mod_files_cadyn' if 'cadyn' in filename else 'mod_files'
+            os.makedirs(f'app/model/mechanisms/{mod_folder}/{filename.replace(".mod", "")}', exist_ok=True)
+            with open(f'app/model/mechanisms/{mod_folder}/{filename.replace(".mod", "")}/{filename}', 'wb') as file:
+                file.write(decoded)
+            logger.info(f'File {filename} saved to app/model/mechanisms/{mod_folder}/{filename.replace(".mod", "")}')
+            self.view.widgets.multichoice[widget_name].options = self.model.list_mod_files(mod_folder=mod_folder)
+
     ## OUTPUT METHODS
 
     def to_json_callback(self, event):
