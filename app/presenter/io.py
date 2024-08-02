@@ -15,6 +15,27 @@ class IOMixin():
     # INPUT METHODS
 
     @log
+    def update_graph_param_selector(self):
+        new_params = {f'gbar_{ch.suffix}': 
+                      f'Conductance {ch.suffix}, S/cm2' 
+                      for ch in self.model.channels.values()}
+        self.view.update_ephys_params(new_params)
+        logger.debug(f'Updating graph param selector with {new_params}')
+        logger.debug(f'Updating graph param selector with ephys params: {self.view.ephys_params}')
+        with remove_callbacks(self.view.widgets.selectors['graph_param']):
+            if self.view.widgets.tabs['section'].active == 1:
+                self.view.widgets.selectors['graph_param'].options = list(self.view.ephys_params)
+                self.view.widgets.selectors['graph_param'].value = self.view.widgets.selectors['graph_param'].options[0]
+            else:
+                self.view.widgets.selectors['graph_param'].options = list(self.view.params)
+                self.view.widgets.selectors['graph_param'].value = self.view.widgets.selectors['graph_param'].options[0]
+
+    def reset_simulation_state(self):
+        self.view.widgets.switches['record'].active = False
+        self.view.widgets.switches['iclamp'].active = False
+        self.view.sources['sim'].data = data={'xs': [], 'ys': [], 'color': []}
+
+    @log
     def selector_cell_callback(self, attr, old, new):
 
         self.view.widgets.multichoice['mod_files'].value = ['Leak']

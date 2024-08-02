@@ -10,13 +10,17 @@ from utils import get_seg_name, get_sec_type, get_sec_name, get_sec_id
 from bokeh.models import CategoricalColorMapper
 import colorcet as cc
 
-class BiophysMixin():
+class SimulationMixin():
+    """ This class is a mixin for the Presenter class.
+    It provides methods for handling the Simulation panel of the View.
+    """
 
     def __init__(self):
         logger.debug('BiophysMixin init')
         super().__init__()
         self.recorded_segments = []
 
+    # MODEL TO VIEW
 
     @log
     @timeit
@@ -130,6 +134,9 @@ class BiophysMixin():
                 self.model.equilibrium_potentials[ch.ion] = self.view.widgets.spinners[f'e{ch.ion}'].value
             else:
                 logger.debug(f'No ion for {ch.name}')
+
+
+    # VIEW TO MODEL
 
     def update_dt_callback(self, attr, old, new):
         self.model.simulator.dt = new
