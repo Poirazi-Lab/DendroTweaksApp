@@ -50,7 +50,7 @@
             <div class="settings-body">
                 <div id="settings">
                     <h1>Settings</h1>
-                    <a href="https://r-makarov.github.io/DendroTweaksWeb/" style="font-size: 25px; color: cyan">Dendro Tweaks Web</a>
+                    <a href="https://r-makarov.github.io/DendroTweaksWeb/" style="font-size: 25px; color: dodgerblue">Dendro Tweaks Web</a>
                     {{ embed(roots.settings_panel) }}
                 </div>
             </div>
@@ -87,16 +87,6 @@
         });
     });
 
-    console.log('Before');
-    const choicesElements = document.querySelectorAll('.choices__list');
-    console.log(choicesElements);
-    choicesElements.forEach((element) => {
-        console.log(element);
-        console.log(element.style.background);
-        element.style.background = "red";
-        console.log(element.style.background);
-    });
-    console.log('After');
 
 </script>
 {% endblock %}

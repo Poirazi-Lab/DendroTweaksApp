@@ -988,12 +988,13 @@ curdoc().add_root(left_menu)
 
 ### Settings panel
 
-console = TextInput(value='', title='Console', width=300, height=50, name='console')
+console = TextInput(value='', title='Console', width=500, height=50, name='console')
 
 
 console.on_change('value', p.console_callback)
 
-status_bar = Div(text="""Launched GUI""", name='status_bar')
+status_bar = Div(text="""Launched GUI""", name='status_bar', styles={'width': '500px', 'height':'200px', 
+                                                                     'overflow': 'auto', 'font-size': '12px'})
 view.DOM_elements['status_bar'] = status_bar
 view.DOM_elements['console'] = console
 view.DOM_elements['controller'] = column(console, status_bar, name='status_bar')
@@ -1109,3 +1110,21 @@ class Dummy:
 
 dummy = Dummy()
 # curdoc().add_root(dummy.button)
+
+
+custom_js = CustomJS(args=dict(), code="""
+    console.log('Before');
+    
+    const columnElement = document.querySelector('.bk-Column');
+    const TabsElement = columnElement.shadowRoot.querySelector('.bk-Tabs');
+    const columnElement2 = TabsElement.shadowRoot.querySelector('.bk-Column');
+    const MultiChoiceElement = columnElement2.shadowRoot.querySelector('.bk-MultiChoice');
+    const choicesInner = MultiChoiceElement.shadowRoot.querySelector('.choices__inner');
+
+    choicesInner.style.height = '100px';
+    choicesInner.style.overflow = 'auto';
+
+    console.log('After');
+""")
+
+view.widgets.buttons['from_json'].js_on_event(ButtonClick, custom_js)

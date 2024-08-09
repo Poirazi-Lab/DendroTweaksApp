@@ -158,7 +158,7 @@ class SectionMixin():
             preformatted_string = pprint.pformat(self.selected_sec.psection(), 
                                                     indent=4,
                                                     sort_dicts=False)
-            spoiler = f'<div style="height: 200px; overflow: auto;"><details><summary>Toggle psection</summary><pre>{preformatted_string}</pre></details></div>'
+            spoiler = f'<details><summary>Toggle psection</summary><pre style="font-size:x-small">{preformatted_string}</pre></details>'
             self.view.DOM_elements['status_bar'].text = spoiler
         elif len(self.selected_secs) > 1:
             self.view.DOM_elements['status_bar'].text = 'More than one section selected'
