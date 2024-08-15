@@ -593,8 +593,8 @@ view.widgets.selectors['distribution_type'] = Select(value='uniform',
                                title='Distribution type')
 
 
-view.widgets.buttons['add_distribution'] = Button(label='Add distribution', button_type='primary', disabled=False)
-view.widgets.buttons['add_distribution'].on_event(ButtonClick, p.add_group_callback)
+view.widgets.buttons['add_group'] = Button(label='Add distribution', button_type='primary', disabled=False)
+view.widgets.buttons['add_group'].on_event(ButtonClick, p.add_group_callback)
 
 
 
@@ -602,7 +602,7 @@ add_panel = column(row(view.widgets.selectors['graph_param'],
                         ),
                 row(view.widgets.selectors['distribution_type'], 
                     ),
-                    view.widgets.buttons['add_distribution'],
+                    view.widgets.buttons['add_group'],
                     )
                 
 
@@ -639,7 +639,7 @@ vspan = Span(location=0, dimension='height', line_color='white', line_width=1)
 view.figures['distribution'].add_layout(vspan)
 
 
-view.widgets.selectors['distribution'].on_change('value', p.select_distribution_callback)
+view.widgets.selectors['distribution'].on_change('value', p.select_group_callback)
 
 
 view.DOM_elements['distribution_panel'] = column(width=300)
@@ -772,20 +772,31 @@ def tab_section_callback(attr, old, new):
 
 view.widgets.tabs['section'].on_change('active', tab_section_callback)
 
-view.widgets.tabs['channels'] = Tabs(tabs=[], visible=False)
+
+view.widgets.selectors['channel'] = Select(title='Channel', options=[], visible=False)
+view.widgets.selectors['channel'].on_change('value', p.select_channel_callback)
+view.widgets.selectors['channel'].on_change('value', p.states_callback)
+view.widgets.buttons['record_current'] = Button(label='Record current', button_type='primary', visible=False)
+view.widgets.buttons['record_current'].on_event(ButtonClick, p.record_current_callback)
+
+view.DOM_elements['channel_panel'] = column([Div(text='Select a channel')], width=300)
 
 view.widgets.buttons['toggle_activation_curves'] = RadioButtonGroup(labels=['Cell', 'Channels'], active=0, margin=(5, 5, 20, 80))
 
 def toggle_activation_curves_callback(attr, old, new):
     if new == 0:
-        view.widgets.tabs['channels'].visible = False
+        view.widgets.selectors['channel'].visible = False
+        view.widgets.buttons['record_current'].visible = False
+        view.DOM_elements['channel_panel'].visible = False
         view.widgets.tabs['section'].visible = True
         view.figures['inf'].visible = False
         view.figures['tau'].visible = False
         if view.widgets.tabs['section'].active == 0: panel_section.visible = True
     elif new == 1:
         view.widgets.tabs['section'].visible = False
-        view.widgets.tabs['channels'].visible = True
+        view.widgets.selectors['channel'].visible = True
+        view.widgets.buttons['record_current'].visible = True
+        view.DOM_elements['channel_panel'].visible = True
         panel_section.visible = False
         view.figures['inf'].visible = True
         view.figures['tau'].visible = True
@@ -794,7 +805,9 @@ view.widgets.buttons['toggle_activation_curves'].on_change('active', toggle_acti
 
 right_menu = column(view.widgets.buttons['toggle_activation_curves'],
                     row(view.widgets.tabs['section'], 
-                        view.widgets.tabs['channels']), 
+                        column([row([view.widgets.selectors['channel'], view.widgets.buttons['record_current']]),
+                        view.DOM_elements['channel_panel']]),
+                        ), 
                     align='center',
                     name='right_menu_section')
 
@@ -1004,6 +1017,8 @@ view.widgets.selectors['output_format'] = Select(title="Output format:",
                                                 options=['canvas', 'svg', 'webgl'],
                                                 name='output_format')
 
+view.widgets.switches['recompile'] = Switch(active=True, name='recompile')                                             
+
 def update_output_format(attr, old, new):
     for fig in view.figures.values():
         print(f'Before: {fig.output_backend}')
@@ -1043,7 +1058,7 @@ settings_panel = column(view.widgets.selectors['theme'],
                         # view.widgets.color_pickers['color_picker'],
                         view.widgets.sliders['voltage_plot_x_range'],
                         view.widgets.sliders['voltage_plot_y_range'],
-                        
+                        row(view.widgets.switches['recompile'], Div(text='Recompile mod files')),
                         view.DOM_elements['controller'],
                         name='settings_panel')
 

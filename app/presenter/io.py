@@ -58,10 +58,10 @@ class IOMixin():
         
         # Add channels
         for mod_name in self.view.widgets.multichoice['mod_files'].value:
-            self.model.add_channel(mod_name, recompile=True)
+            self.model.add_channel(mod_name, recompile=self.view.widgets.switches['recompile'].active)
 
         # Add channel tabs ... 
-        self.update_channel_tabs()
+        self.update_channel_selector()
 
         self.update_equilibtium_potentials()
 
@@ -136,18 +136,23 @@ class IOMixin():
 
         # Add
         if mod_to_add:
-            self.model.add_channel(mod_to_add[0], recompile=True)
+            self.model.add_channel(mod_to_add[0], recompile=self.view.widgets.switches['recompile'].active)
             self.update_graph_param(f'gbar_{self.model.channels[mod_to_add[0]].suffix}')
             # P.add_channel(mod_to_add[0])
          
         # Add channel tabs ...
-        self.update_channel_tabs()
+        self.update_channel_selector()
 
         self.update_equilibtium_potentials()
             
         # Update graph param selector with new channels
         
         self.update_graph_param_selector()
+
+    @log
+    def update_channel_selector(self):
+        logger.debug(f'Updating channel selector options')
+        self.view.widgets.selectors['channel'].options = [ch.name for ch in self.model.channels.values() if ch.name != 'Leak']
 
     def from_json(self, path):
         
@@ -159,7 +164,7 @@ class IOMixin():
         for ch in data['channels']:
             # mod_file = f"{data['path_to_model']}/mechanisms/{ch['name']}/{ch['name']}.mod"
             if not self.model.channels.get(ch['name']):
-                self.model.add_channel(ch['name'], recompile=True)
+                self.model.add_channel(ch['name'], recompile=self.view.widgets.switches['recompile'].active)
             for group in ch['groups']:
                 segments = [self.model.cell.segments[seg_name] for seg_name in group['seg_names']]
                 self.model.channels[ch['name']].add_group(segments,
@@ -171,7 +176,7 @@ class IOMixin():
         with remove_callbacks(self.view.widgets.multichoice['mod_files']):
             self.view.widgets.multichoice['mod_files'].value = [ch['name'] for ch in data['channels']]
 
-        self.update_channel_tabs()
+        self.update_channel_selector()
 
         if data.get('capacitance') is not None:
             self.model.capacitance.remove_all_groups()

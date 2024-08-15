@@ -16,6 +16,8 @@ from bokeh.models import LogScale
 
 from model.mechanisms.channels import StandardIonChannel
 
+from model.mechanisms.distributions import Distribution
+
 
 class ChannelMixin():
     """ This class is a mixin for the Presenter class. 
@@ -123,39 +125,41 @@ class ChannelMixin():
             else:
                 panel = TabPanel(child=column([button, *sliders]), title=ch.name)
         else:
-           panel = TabPanel(child=column([button, Div(text='No sliders to display. Try adding some variables to RANGE')]), 
+           panel = TabPanel(child=column([button, Div(text='No sliders to display. Try declaring some RANGE variables in the mod file (requires reuploading the file).')]), 
                             title=ch.name)
-
         return panel
 
-    @log
-    def update_channel_tabs(self):
-        logger.debug(f'Updating channel {self.model.channels.values()}')
-        self.view.widgets.tabs['channels'].tabs = [self.create_channel_panel(ch) for ch in self.model.channels.values() if ch.name != 'Leak']
-        self.view.widgets.tabs['channels'].on_change('active', self.states_callback)
-        self.view.widgets.tabs['channels'].on_change('active', self.voltage_callback_on_change)
 
     @log
     def standardize_callback(self, event):
         custom_ch = self.selected_channel
+        copy_of_groups = custom_ch.to_dict()["groups"]
 
         self.model.standardize_channel(custom_ch)
         logger.info(f'Standardized {custom_ch.name}')
-
+        
+        # logger.debug(f'Avaliable groups before: {len(custom_ch.to_dict()["groups"])}')
         self.view.widgets.multichoice['mod_files'].value = [v for v in self.view.widgets.multichoice['mod_files'].value if v != custom_ch.name]
+        # logger.debug(f'Avaliable groups after: {len(custom_ch.to_dict()["groups"])}')
         self.view.widgets.multichoice['mod_files_std'].value = self.view.widgets.multichoice['mod_files_std'].value + [f'{custom_ch.name}_standard']
+        
 
         # open the new chanel's tab
-        with remove_callbacks(self.view.widgets.tabs['channels']):
-            self.view.widgets.tabs['channels'].active = len(self.view.widgets.tabs['channels'].tabs) - 1
+        # with remove_callbacks(self.view.widgets.selectors['channel']):
+        self.view.widgets.selectors['channel'].value = f'{custom_ch.name}_standard'
+        
 
         standard_ch = self.model.channels[f'{custom_ch.name}_standard']
         v_range = np.linspace(-100, 100, 1000)
         standard_ch.update(v_range)
-        for group in custom_ch.to_dict()['groups']:
+
+        
+        for group in copy_of_groups:
             segments = [self.model.cell.segments[seg_name] for seg_name in group['seg_names']]
-            standard_ch.add_group(segments, f"{group['param_name']}s")
-            standard_ch.groups[-1].distribution = Distribution.from_dict(group['distribution'])
+            standard_ch.add_group(segments, 
+                                  param_name=f"{group['param_name']}s", 
+                                  distribution=Distribution.from_dict(group['distribution']))
+        self.update_graph_param(f"{group['param_name']}s")
 
         inf_fit_data = {'xs': [v_range.tolist() for _ in range(len(standard_ch.state_vars))],
                         'ys': [getattr(standard_ch, standard_ch.state_vars[state]['inf']).tolist() for state in standard_ch.state_vars],

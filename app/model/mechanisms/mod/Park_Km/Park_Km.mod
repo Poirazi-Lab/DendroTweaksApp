@@ -16,7 +16,7 @@ ENDCOMMENT
 NEURON {
 	SUFFIX km
 	USEION k READ ek WRITE ik
-	RANGE gbar, ik
+	RANGE gbar, i, v12, q
 }
 
 UNITS {
@@ -40,6 +40,7 @@ PARAMETER {
 ASSIGNED {
 	v       (mV)
 	ik      (mA/cm2)
+	i       (mA/cm2)
 	gk      (S/cm2)
 	ek      (mV)
 	ninf    (1)
@@ -54,7 +55,8 @@ STATE { n }
 BREAKPOINT {
     SOLVE states METHOD cnexp
 	gk = tadj * gbar * n
-	ik = gk * (v - ek)
+	i = gk * (v - ek)
+	ik = i
 } 
 
 DERIVATIVE states {

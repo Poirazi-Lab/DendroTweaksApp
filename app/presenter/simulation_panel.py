@@ -33,13 +33,6 @@ class SimulationMixin():
         labels = [get_sec_name(seg.sec) + f'({seg.x})' for seg in self.model.simulator.recordings.keys()]
         logger.info(f'Recording voltage from {labels}')
 
-        ### Select channel if available ###
-        if self.view.widgets.tabs['channels'].visible:
-            ch = self.model.channels[self.view.widgets.tabs['channels'].tabs[self.view.widgets.tabs['channels'].active].title]
-            self.model.simulator.ch = ch
-        else:
-            self.model.simulator.ch = None
-
         duration = self.view.widgets.sliders['duration'].value
         start = time.time()
         ts, vs, Is = self.model.simulator.run(duration)
@@ -109,6 +102,12 @@ class SimulationMixin():
             self.update_voltage()
 
     def voltage_callback_on_click(self, event):
+        self.update_voltage()
+
+    def record_current_callback(self, event):
+        
+        ch = self.model.channels[self.view.widgets.selectors['channel'].value]
+        self.model.simulator.ch = ch
         self.update_voltage()
 
     @log

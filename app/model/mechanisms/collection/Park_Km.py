@@ -10,6 +10,8 @@ class Park_Km(CustomVoltageDependentIonChannel):
         self.ion = 'k'
         self.range_params = [
             'gbar',
+            'v12',
+            'q',
         ]
         self.gbar = 0.0 # S/cm2
         self.Ra = 0.001 # /mV/ms

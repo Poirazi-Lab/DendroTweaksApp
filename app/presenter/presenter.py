@@ -288,9 +288,9 @@ class Presenter(IOMixin, NavigationMixin,
 
     @property
     def selected_channel(self):
-        if self.view.widgets.tabs['channels'].visible:
-            active_tab = self.view.widgets.tabs['channels'].tabs[self.view.widgets.tabs['channels'].active].title
-            return self.model.channels[active_tab]
+        if self.view.widgets.selectors['channel'].visible:
+            value = self.view.widgets.selectors['channel'].value
+            return self.model.channels[value]
         else:
             suffix = self.selected_param.replace('gbar_', '')
             chs = [ch for ch in self.model.channels.values() if ch.suffix == suffix]
@@ -327,7 +327,18 @@ class Presenter(IOMixin, NavigationMixin,
             self.view.figures['graph'].renderers[0].node_renderer.data_source.selected.indices = []
 
     @log
-    def select_distribution_callback(self, attr, old, new):
+    def select_channel_callback(self, attr, old, new):
+        self.toggle_channel_panel()
+
+    def toggle_channel_panel(self):
+        logger.debug(f'Toggling channel')
+        ch = self.selected_channel
+        panel = self.create_channel_panel(ch).child
+        self.view.DOM_elements['channel_panel'].children = panel.children
+        logger.debug(f'Channel panel: {panel}')
+
+    @log
+    def select_group_callback(self, attr, old, new):
         self.toggle_group_panel()
         self.select_distribution_segs_in_graph()
         self.update_distribution_plot()
