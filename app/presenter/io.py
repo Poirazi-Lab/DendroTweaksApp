@@ -31,8 +31,10 @@ class IOMixin():
                 self.view.widgets.selectors['graph_param'].value = self.view.widgets.selectors['graph_param'].options[0]
 
     def reset_simulation_state(self):
-        self.view.widgets.switches['record'].active = False
-        self.view.widgets.switches['iclamp'].active = False
+        with remove_callbacks(self.view.widgets.switches['record']):
+            self.view.widgets.switches['record'].active = False
+        with remove_callbacks(self.view.widgets.switches['iclamp']):
+            self.view.widgets.switches['iclamp'].active = False
         self.view.sources['sim'].data = data={'xs': [], 'ys': [], 'color': []}
 
     @log
@@ -243,3 +245,8 @@ class IOMixin():
         import os
         path_to_json = os.path.join('app', 'static', 'data', f'{self.model.cell.name}_ephys.json')
         self.model.to_json(path_to_json)
+
+    def export_to_swc_callback(self, event):
+        import os
+        path_to_swc = os.path.join('app', 'static', 'data', f'{self.model.cell.name}.swc')
+        self.model.to_swc(path_to_swc)

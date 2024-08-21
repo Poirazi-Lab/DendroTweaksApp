@@ -1,6 +1,7 @@
 from model.cells import Cell, Simulator, IClamp
 from model.mechanisms.channels import CustomIonChannel, StandardIonChannel, LeakChannel, Capacitance, DummyChannel
 # from mechanisms.synapses import AMPA, NMDA, GABAa
+from model.swcmanager import SWCManager
 
 from model.mechanisms.distributions import Distribution
 from model.mechanisms.groups import Group
@@ -38,6 +39,8 @@ class CellModel():
         self.capacitance = None
         self.equilibrium_potentials = {}
 
+        self.swcm = SWCManager()
+
         self.path_to_model = path_to_model
 
     def create_cell(self, swc_file):
@@ -52,6 +55,8 @@ class CellModel():
     def list_mod_files(self, mod_folder='mod'):
         path = self.path_to_model + f'mechanisms/{mod_folder}/'
         mod_files = [f for f in os.listdir(path) if os.path.isdir(path + f)]
+        if "Synapses" in mod_files:
+            mod_files.remove("Synapses")
         sorted_mod_files = sorted(mod_files, key=lambda x: x.lower())
         return sorted_mod_files
 
@@ -242,7 +247,8 @@ class CellModel():
                 'path_to_model': self.path_to_model}
 
     def to_swc(self, path):
-        pass
+        self.swcm.from_hoc(hoc_sections=self.cell.all, soma_format='3PS')
+        self.swcm.export2swc(path)
 
     def to_json(self, path):
         

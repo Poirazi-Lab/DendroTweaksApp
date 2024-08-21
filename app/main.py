@@ -529,6 +529,9 @@ view.widgets.buttons['reduce'] = Button(label='Reduce subtree', button_type='war
 view.widgets.buttons['reduce'].on_event(ButtonClick, p.reduce_subtree_callback)
 view.widgets.buttons['reduce'].on_event(ButtonClick, p.voltage_callback_on_event)
 
+view.widgets.buttons['to_swc'] = Button(label='Export to SWC', button_type='default')
+view.widgets.buttons['to_swc'].on_event(ButtonClick, p.export_to_swc_callback)
+
 view.DOM_elements['stats'] = Div(text='Stats:')
 
 view.widgets.buttons['stats'] = Button(label='Stats', button_type='default')
@@ -550,7 +553,7 @@ widgets_section_vars = column([
                         view.widgets.sliders['n_seg'],
                         view.widgets.spinners['Ra'],
                         # panel_section,
-                        view.widgets.buttons['reduce'],
+                        row([view.widgets.buttons['reduce'], view.widgets.buttons['to_swc']]),
                         stats_panel,
                         ], name='widgets_section_vars')
 
@@ -859,9 +862,9 @@ callback = CustomJS(args=dict(filename_workaround= view.widgets.text['filename_w
     
 """)
 
-view.widgets.file_input['all'].js_on_change('change', callback)
+# view.widgets.file_input['all'].js_on_change('change', callback)
 
-view.widgets.file_input['all'].on_change('value', p.import_file_callback)
+# view.widgets.file_input['all'].on_change('value', p.import_file_callback)
 
 view.widgets.multichoice['mod_files'] = MultiChoice(title='Mechanisms', 
                                     value=['Leak'],
@@ -903,7 +906,7 @@ view.widgets.sliders['v_init'].on_change('value_throttled', p.voltage_callback_o
 tab_io = TabPanel(title='Input/Output', 
                              child=column(view.widgets.selectors['cell'],
                                           view.widgets.sliders['d_lambda'],
-                                            view.widgets.file_input['all'],
+                                            # view.widgets.file_input['all'],
                                             json_panel,
                                             view.widgets.multichoice['mod_files'],
                                             view.widgets.multichoice['mod_files_std'],
@@ -1004,7 +1007,7 @@ curdoc().add_root(left_menu)
 console = TextInput(value='', title='Console', width=500, height=50, name='console')
 
 
-console.on_change('value', p.console_callback)
+# console.on_change('value', p.console_callback)
 
 status_bar = Div(text="""Launched GUI""", name='status_bar', styles={'width': '500px', 'height':'200px', 
                                                                      'overflow': 'auto', 'font-size': '12px'})
@@ -1059,7 +1062,7 @@ settings_panel = column(view.widgets.selectors['theme'],
                         view.widgets.sliders['voltage_plot_x_range'],
                         view.widgets.sliders['voltage_plot_y_range'],
                         row(view.widgets.switches['recompile'], Div(text='Recompile mod files')),
-                        view.DOM_elements['controller'],
+                        # view.DOM_elements['controller'],
                         name='settings_panel')
 
 curdoc().add_root(settings_panel)
