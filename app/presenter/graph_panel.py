@@ -46,14 +46,14 @@ def add_sec_to_graph(G, sec, parent_id, cell, total_nseg):
         G.add_edge(parent_id, len(G.nodes) + 1)
     for seg, idx in nodes.items():
         seg_params = {param: getattr(seg, param) for param in ['diam', 'cm', ]}
-        size = int(200/np.sqrt(total_nseg)) if get_sec_type(sec) == 'soma' else int(150/np.sqrt(total_nseg))
+        radius = int(200/np.sqrt(total_nseg)) if get_sec_type(sec) == 'soma' else int(150/np.sqrt(total_nseg))
         gbars = {gb: getattr(seg, gb) for gb in get_gbars(sec)}
         # logger.debug(f'gbars: {gbars}')
         G.add_node(int(idx), 
                    name=f'{get_sec_name(seg.sec)}({round(seg.x, 5)})', 
                    type=get_sec_type(seg.sec), 
                    sec=get_sec_name(seg.sec),
-                   size=size*0.8, 
+                   radius=radius*0.002, 
                    color=color_map[get_sec_type(seg.sec)],
                    line_color='white',
                    line_width=1,
@@ -129,7 +129,8 @@ class GraphMixin():
                                        iterations=0)
 
         # Change glyph
-        graph_renderer.node_renderer.glyph = Circle(size='size',
+        graph_renderer.node_renderer.glyph = Circle(radius='radius',
+                                                    radius_units='data',
                                                     fill_color='color',
                                                     line_color='line_color',
                                                     line_alpha='line_alpha',
@@ -148,7 +149,8 @@ class GraphMixin():
         # graph_renderer.selection_policy
 
         # Change selection glyph
-        graph_renderer.node_renderer.selection_glyph = Circle(size='size',
+        graph_renderer.node_renderer.selection_glyph = Circle(radius='radius',
+                                                              radius_units='data',
                                                               fill_color='color',
                                                               line_color='line_color',
                                                               line_alpha='line_alpha',
@@ -161,7 +163,12 @@ class GraphMixin():
         # graph_renderer.node_renderer.selection_glyph.line_color = view.theme.graph_line
 
         # Change nonselection glyph
-        graph_renderer.node_renderer.nonselection_glyph = Circle(size='size', fill_color='color', line_color=self.view.theme.graph_line, line_alpha='line_alpha', line_width='line_width')
+        graph_renderer.node_renderer.nonselection_glyph = Circle(radius='radius', 
+                                                                 radius_units='data',
+                                                                 fill_color='color', 
+                                                                 line_color=self.view.theme.graph_line, 
+                                                                 line_alpha='line_alpha', 
+                                                                 line_width='line_width')
         # graph_renderer.node_renderer.nonselection_glyph = graph_renderer.node_renderer.glyph
         # graph_renderer.node_renderer.nonselection_glyph = graph_renderer.node_renderer.glyph
         graph_renderer.node_renderer.nonselection_glyph.fill_alpha = 0.3
