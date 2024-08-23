@@ -8,7 +8,7 @@ from logger import logger
 from utils import get_seg_name, get_sec_type, get_sec_name, get_sec_id
 
 from bokeh.models import Slider, TabPanel, Tabs, Button, Spinner
-from bokeh_utils import SmartSlider
+from bokeh_utils import AdjustableSpinner
 from bokeh.layouts import row, column
 from bokeh.models import Div
 from bokeh.palettes import Bokeh
@@ -112,22 +112,23 @@ class ChannelMixin():
         for var in ch.range_params:
             if var == 'gbar': continue
             logger.info(f'Creating slider for {var}')
-            slider = SmartSlider(name=var, value=getattr(ch, var))
+            slider = AdjustableSpinner(title=var, value=getattr(ch, var))
             slider.on_change('value_throttled', make_slider_callback(slider.title))
             slider.on_change('value_throttled', self.states_callback)
             slider.on_change('value_throttled', self.voltage_callback_on_change)
             sliders.append(slider.get_widget())
             
+        ch.sliders = sliders
         
         if sliders:
             if 'standard' in ch.name:
-                panel = TabPanel(child=column([*sliders]), title=ch.name)
+                return column([*sliders])
             else:
-                panel = TabPanel(child=column([button, *sliders]), title=ch.name)
+                return column([button, *sliders])
         else:
-           panel = TabPanel(child=column([button, Div(text='No sliders to display. Try declaring some RANGE variables in the mod file (requires reuploading the file).')]), 
-                            title=ch.name)
-        return panel
+           return column([button, Div(text='No sliders to display. Try declaring some RANGE variables in the mod file (requires reuploading the file).')])
+                   
+        # return panel
 
 
     @log

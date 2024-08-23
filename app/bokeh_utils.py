@@ -1,50 +1,52 @@
-from bokeh.models import Slider, NumericInput
+from bokeh.models import Slider, NumericInput, Spinner
 from bokeh.layouts import row
+import math
 
-class SmartSlider():
-    
-    def __init__(self, name, value):
-        self.slider = Slider(title=name, start=0, end=1, step=0.01, value=value, width=200, format='0[.]00000')
-        self.ninput = NumericInput(title=name, value=value, width=100, mode='float')
+class AdjustableSpinner():
+    def __init__(self, title, value, step=None, visible=True):
 
+        step = self.calculate_step(value) if step is None else step
+
+        self.spinner = Spinner(title=title, low=-1e5, high=1e5, step=step, value=value, width=200)
+        self.ninput = NumericInput(title='Step', value=step, width=70, mode='float')
+
+        # self.ninput.js_link('value', self.spinner, 'step')
         def ninput_callback(attr, old, new):
-            value = self.ninput.value
-            start = - 10 * value
-            if start < 0:
-                start = 0
-            end = 10 * value
-            step = value / 10
-            self.slider.start = start
-            self.slider.end = end
-            self.slider.step = step
-            self.slider.value = value
-            # self.slider.format = f'0[.]0{len(str(value).split(".")[1])}'
+            self.spinner.step = new
 
         self.ninput.on_change('value', ninput_callback)
-        
+
+    def calculate_step(self, value):
+        magnitude = math.floor(math.log10(abs(value))) if value != 0 else 0
+        base_step = 10**(magnitude)
+        return base_step
+
     def get_widget(self):
-        return row(self.ninput, self.slider)
+        return row(self.spinner, self.ninput)
+
+    def on_change(self, attr, callback):
+        self.spinner.on_change(attr, callback)
 
     @property
     def value(self):
-        return self.slider.value
-
-    @property
-    def title(self):
-        return self.slider.title
+        return self.spinner.value
 
     @value.setter
     def value(self, value):
-        self.slider.value = value
-        self.ninput.value = value
-
-    def on_change(self, attr, callback):
-        self.slider.on_change(attr, callback)
-        self.ninput.on_change('value', callback)
+        self.spinner.value = value
 
     @property
     def title(self):
-        return self.slider.title
+        return self.spinner.title
+
+    @property
+    def visible(self):
+        return self.spinner.visible
+
+    @visible.setter
+    def visible(self, value):
+        self.spinner.visible = value
+        self.ninput.visible = value
 
 
 class remove_callbacks:

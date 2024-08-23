@@ -9,7 +9,7 @@ from bokeh.layouts import row, column
 
 from model.mechanisms.distributions import Distribution
 
-from bokeh_utils import SmartSlider
+from bokeh_utils import AdjustableSpinner
 from bokeh_utils import remove_callbacks
 
 from bokeh.models import LogScale, LinearScale
@@ -333,9 +333,21 @@ class Presenter(IOMixin, NavigationMixin,
     def toggle_channel_panel(self):
         logger.debug(f'Toggling channel')
         ch = self.selected_channel
-        panel = self.create_channel_panel(ch).child
-        self.view.DOM_elements['channel_panel'].children = panel.children
-        logger.debug(f'Channel panel: {panel}')
+        panel = self.create_channel_panel(ch)
+        # delete previous widgets:
+        for child in self.view.DOM_elements['channel_menu'].children[-1].children:
+            logger.debug(f'Child {child}')
+            if hasattr(child, 'children'):
+                for ch in child.children:
+                    logger.debug(f'Ch {ch}')
+                    if hasattr(ch, 'children'):
+                        for c in ch.children:
+                            logger.debug(f'C {c}')
+                            c.destroy()
+                    ch.destroy()
+            child.destroy()
+        self.view.DOM_elements['channel_menu'].children[-1] = panel
+        
 
     @log
     def select_group_callback(self, attr, old, new):
@@ -364,7 +376,7 @@ class Presenter(IOMixin, NavigationMixin,
         sliders = []
         for k, v in group.distribution.f.keywords.items():
             logger.info(f'Adding slider for {k} with value {v}')
-            slider = SmartSlider(name=k, value=v)
+            slider = AdjustableSpinner(title=k, value=v)
             slider_callback = make_slider_callback(slider.title)
             slider.on_change('value_throttled', slider_callback)
             slider.on_change('value_throttled', self.voltage_callback_on_change)
@@ -403,7 +415,8 @@ class Presenter(IOMixin, NavigationMixin,
     @log
     def iclamp_amp_callback(self, attr, old, new):
         seg = self.selected_segs[0]
-        unit = self.view.widgets.selectors['iclamp_amp_unit'].value
+        # unit = self.view.widgets.selectors['iclamp_amp_unit'].value
+        unit = 'pA'
         amp = self.view.widgets.sliders['iclamp_amp'].value
         factor = {f'pA': 1e-12, f'nA': 1e-9, f'uA': 1e-6}[unit]
         self.model.iclamps[seg].amp = amp * factor * 1e9

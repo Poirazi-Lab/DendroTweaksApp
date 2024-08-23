@@ -676,12 +676,14 @@ view.widgets.sliders['iclamp_duration'] = RangeSlider(start=0, end=300,
 
 view.widgets.sliders['iclamp_duration'].on_change('value_throttled', p.iclamp_duration_callback)
 
-view.widgets.sliders['iclamp_amp'] = Slider(start=-1000, end=1000, value=0,
-                    step=1, title="Amp", format='0[.]00000', 
-                    width=200, 
-                    visible=False)
-view.widgets.selectors['iclamp_amp_unit'] = Select(value='pA', options=['pA', 'nA', 'uA'], title='Units', width=50, visible=False)
-view.widgets.selectors['iclamp_amp_unit'].on_change('value', p.iclamp_amp_callback)
+from bokeh_utils import AdjustableSpinner
+# view.widgets.sliders['iclamp_amp'] = Slider(start=-1000, end=1000, value=0,
+#                     step=1, title="Amp", format='0[.]00000', 
+#                     width=200, 
+#                     visible=False)
+view.widgets.sliders['iclamp_amp'] = AdjustableSpinner(title="Amp (pA)", value=0, step=1, visible=False)
+# view.widgets.selectors['iclamp_amp_unit'] = Select(value='pA', options=['pA', 'nA', 'uA'], title='Units', width=50, visible=False)
+# view.widgets.selectors['iclamp_amp_unit'].on_change('value', p.iclamp_amp_callback)
 
 view.widgets.sliders['iclamp_amp'].on_change('value_throttled', p.iclamp_amp_callback)
 
@@ -695,7 +697,7 @@ view.widgets.switches['record'].on_change('active', p.record_callback)
 view.widgets.switches['record'].on_change('active', p.voltage_callback_on_change)
 view.widgets.switches['iclamp'].on_change('active', p.voltage_callback_on_change)
 view.widgets.sliders['iclamp_amp'].on_change('value_throttled', p.voltage_callback_on_change)
-view.widgets.selectors['iclamp_amp_unit'].on_change('value', p.voltage_callback_on_change)
+# view.widgets.selectors['iclamp_amp_unit'].on_change('value', p.voltage_callback_on_change)
 view.widgets.sliders['iclamp_duration'].on_change('value_throttled', p.voltage_callback_on_change)
 
 remove_all_button = Button(label='Remove all', button_type='danger')
@@ -731,7 +733,8 @@ widgets_point_processes = column([remove_all_button,
                           row([view.widgets.switches['record'], Div(text='Record voltage')]),
                           row([view.widgets.switches['iclamp'], Div(text='Inject current')]),
                           view.widgets.sliders['iclamp_duration'], 
-                          row(view.widgets.sliders['iclamp_amp'], view.widgets.selectors['iclamp_amp_unit']),
+                        #   row(view.widgets.sliders['iclamp_amp'], view.widgets.selectors['iclamp_amp_unit']),
+                          view.widgets.sliders['iclamp_amp'].get_widget(),
                           row([view.widgets.selectors['syn_type'], view.widgets.spinners['N_syn']]),
                         #   view.widgets.sliders['syn rate'],
                         #     view.widgets.sliders['noise'],
@@ -806,10 +809,13 @@ def toggle_activation_curves_callback(attr, old, new):
 
 view.widgets.buttons['toggle_activation_curves'].on_change('active', toggle_activation_curves_callback)
 
+view.DOM_elements['channel_menu'] = column([row([view.widgets.selectors['channel'], 
+                                                 view.widgets.buttons['record_current']]),
+                                            view.DOM_elements['channel_panel']])
+
 right_menu = column(view.widgets.buttons['toggle_activation_curves'],
                     row(view.widgets.tabs['section'], 
-                        column([row([view.widgets.selectors['channel'], view.widgets.buttons['record_current']]),
-                        view.DOM_elements['channel_panel']]),
+                        view.DOM_elements['channel_menu']
                         ), 
                     align='center',
                     name='right_menu_section')
@@ -1004,7 +1010,7 @@ curdoc().add_root(left_menu)
 
 ### Settings panel
 
-console = TextInput(value='', title='Console', width=500, height=50, name='console')
+console = TextInput(value='Only for development', title='Console', width=500, height=50, name='console', disabled=True)
 
 
 # console.on_change('value', p.console_callback)
@@ -1062,7 +1068,7 @@ settings_panel = column(view.widgets.selectors['theme'],
                         view.widgets.sliders['voltage_plot_x_range'],
                         view.widgets.sliders['voltage_plot_y_range'],
                         row(view.widgets.switches['recompile'], Div(text='Recompile mod files')),
-                        # view.DOM_elements['controller'],
+                        view.DOM_elements['controller'],
                         name='settings_panel')
 
 curdoc().add_root(settings_panel)
@@ -1082,9 +1088,9 @@ for name, fig in view.figures.items():
     if name in ['cell', 'graph']:
         fig.toolbar.logo = None
         fig.grid.visible = False
-        # figure.ygrid.visible = False
+        
         fig.axis.visible = False
-        # figure.yaxis.visible = False
+        
         fig.outline_line_color = None
 
 # for slider in view.widgets.sliders.values():
