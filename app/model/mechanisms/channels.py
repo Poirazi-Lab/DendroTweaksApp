@@ -57,7 +57,7 @@ class IonChannel():
     #                     setattr(seg, distribution.param_name, distribution(distance))
 
     def remove_group(self, group):
-        group.distribution = Distribution('uniform', 0)
+        group.distribution = Distribution('uniform', value=0)
         self.groups.remove(group)
 
     def remove_all_groups(self):
