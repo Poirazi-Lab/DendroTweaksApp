@@ -87,24 +87,32 @@ class IOMixin():
 
         self.reset_simulation_state()
 
-        self.view.widgets.buttons['to_json'].js_on_event('button_click', CustomJS(
-            code=f"var filename = 'app/static/data/{self.model.cell.name}_ephys.json';" +
-        """
-        var xhr = new XMLHttpRequest();
-        xhr.open('GET', filename, true);
-        xhr.responseType = 'blob';
-        xhr.onload = function(e) {
-            if (this.status == 200) {
-                var blob = this.response;
-                var link = document.createElement('a');
-                link.href = window.URL.createObjectURL(blob);
-                link.download = filename.split('/').pop();
-                link.click();
-            }
-        };
-        xhr.send();
-        console.log('Downloaded', filename);
-        """))
+        def attach_download_js(button, file_path):
+
+            js_code = f"""
+            var filename = '{file_path}';
+            var xhr = new XMLHttpRequest();
+            xhr.open('GET', filename, true);
+            xhr.responseType = 'blob';
+            xhr.onload = function(e) {{
+                if (this.status == 200) {{
+                    var blob = this.response;
+                    var link = document.createElement('a');
+                    link.href = window.URL.createObjectURL(blob);
+                    link.download = filename.split('/').pop();
+                    link.click();
+                }}
+            }};
+            xhr.send();
+            console.log('Downloaded', filename);
+            """
+            
+            button.js_on_event('button_click', CustomJS(code=js_code))
+
+        attach_download_js(self.view.widgets.buttons['to_json'], 
+                           f'app/static/data/{self.model.cell.name}_ephys.json')
+        attach_download_js(self.view.widgets.buttons['to_swc'], 
+                           f'app/static/data/{self.model.cell.name}_3PS.swc')
         
         with remove_callbacks(self.view.widgets.multichoice['mod_files']):
             self.view.widgets.multichoice['mod_files'].options = self.model.list_mod_files()

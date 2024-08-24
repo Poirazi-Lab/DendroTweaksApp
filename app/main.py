@@ -136,8 +136,8 @@ view.figures['section_param'].scatter(y='y', x='x', marker='marker', source=view
 
 view.figures['section_param_hist'] = figure(title='Section', x_axis_label='Param', 
                                             y_axis_label='Count', width=270, height=241,
-                                            x_range=[0, 150],
-                                            y_range=[0, 70],
+                                            # x_range=[0, 150],
+                                            # y_range=[0, 70],
                                             tools='pan, box_zoom, reset, wheel_zoom, save',
                                             visible=True)
 
@@ -236,7 +236,7 @@ view.widgets.selectors['graph_param'] = Select(title="Parameter:")
 
 view.widgets.sliders['graph_param_high'] = Slider(start=0, end=1, value=1, 
                                                  step=0.01, title="High", width=200, visible=True)
-view.widgets.sliders['time_slice'] = Spinner(title="Time slice", low=0, high=1000, step=0.1, value=100, width=100)
+view.widgets.sliders['time_slice'] = Spinner(title="Time slice", low=0, high=1000, step=0.1, value=100, width=100, visible=False)
 
 view.widgets.sliders['time_slice'].on_change('value_throttled', p.update_time_slice_callback)
 
@@ -254,6 +254,8 @@ def update_high(attr, old, new):
         new_color_mapper = LinearColorMapper(palette=palette, low=0, high=new)
         param = graph_renderer.node_renderer.glyph.fill_color.field
         graph_renderer.node_renderer.glyph.fill_color = {'field': param, 'transform': new_color_mapper}
+        # graph_renderer.node_renderer.selection_glyph.fill_color = {'field': param, 'transform': new_color_mapper}
+        # graph_renderer.node_renderer.nonselection_glyph.fill_color = {'field': param, 'transform': new_color_mapper}
         view.figures['graph'].renderers[0] = graph_renderer
 
 view.widgets.sliders['graph_param_high'].on_change('value', update_high)
@@ -858,7 +860,7 @@ view.widgets.buttons['from_json'].on_event(ButtonClick, p.voltage_callback_on_ev
 json_panel = row(view.widgets.buttons['to_json'], 
                 view.widgets.buttons['from_json'])
 
-view.widgets.file_input['all'] = FileInput(accept='.swc, .asc, .mod', name='file', visible=True, width=242)
+view.widgets.file_input['all'] = FileInput(accept='.swc, .asc, .mod', name='file', visible=True, width=242, disabled=True)
 view.widgets.text['filename_workaround'] = TextInput(value='', visible=False)
 # Define a CustomJS callback
 callback = CustomJS(args=dict(filename_workaround= view.widgets.text['filename_workaround'],
@@ -912,7 +914,7 @@ view.widgets.sliders['v_init'].on_change('value_throttled', p.voltage_callback_o
 tab_io = TabPanel(title='Input/Output', 
                              child=column(view.widgets.selectors['cell'],
                                           view.widgets.sliders['d_lambda'],
-                                            # view.widgets.file_input['all'],
+                                            view.widgets.file_input['all'],
                                             json_panel,
                                             view.widgets.multichoice['mod_files'],
                                             view.widgets.multichoice['mod_files_std'],
