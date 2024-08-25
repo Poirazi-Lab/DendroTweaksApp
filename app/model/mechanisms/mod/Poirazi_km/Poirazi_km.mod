@@ -10,7 +10,7 @@ Author: Zach Mainen, Salk Institute, 1995, zach@salk.edu
 ENDCOMMENT
 
 NEURON {
-	SUFFIX km
+	SUFFIX kmp
 	USEION k READ ek WRITE ik
 	RANGE i, g, gbar
 }

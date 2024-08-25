@@ -82,7 +82,7 @@ class Group():
     def apply(self):
         for seg in self.segments:
             self._apply_to_seg(seg)
-        logger.info(f'Applied {self} to {len(self.segments)} segments.')
+        # logger.info(f'Applied {self} to {len(self.segments)} segments.')
 
     # def apply_distributions(self):
     #     for sec in getattr(cell, self.sec_type):

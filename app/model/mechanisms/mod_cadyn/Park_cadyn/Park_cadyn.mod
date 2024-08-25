@@ -29,7 +29,7 @@ Written by Alain Destexhe, Salk Institute, Nov 12, 1992
 ENDCOMMENT
 
 NEURON {
-	SUFFIX cadyn
+	SUFFIX cadynpark
 	USEION ca READ ica, cai WRITE cai
 	RANGE ca, ica, cai, depth, taur, cainf
 }

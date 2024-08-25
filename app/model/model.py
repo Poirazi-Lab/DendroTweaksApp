@@ -38,6 +38,7 @@ class CellModel():
         self.simulator = Simulator()
         self.capacitance = None
         self.equilibrium_potentials = {}
+        self.cadyn_suffix = None
 
         self.swcm = SWCManager()
 
@@ -60,19 +61,6 @@ class CellModel():
         sorted_mod_files = sorted(mod_files, key=lambda x: x.lower())
         return sorted_mod_files
 
-    ### Channel methods ###
-
-    # def load_mechanisms(self, path_to_mod, suffix=''):
-    #     load_mechanisms(path_to_mod, suffix=suffix)
-    #     logger.info(f'Loaded mod files from "{path_to_mod}"')
-
-    # def recompile_mods(self, path_to_mod):
-    #     import os
-    #     cwd = os.getcwd()
-    #     os.chdir(path_to_mod)
-    #     os.system('nrnivmodl')
-    #     os.chdir(cwd)
-    #     logger.info(f'Recompiled mod files in "{path_to_mod}"')
 
     def create_from_mod(self, mod_name, mod_folder='mod'):
         try:
@@ -92,9 +80,22 @@ class CellModel():
                                         Distribution('uniform', value=1))
 
     def add_ca_dynamics(self, mod_name='Park_Ca_dyn'):
-        load_mechanisms(f'{self.path_to_model}mechanisms/mod_cadyn/{mod_name}/', suffix='cadyn', recompile=True)
+        if self.cadyn_suffix:
+            warnings.warn(f'Ca dynamics already exists. Overwriting.')
+            self.remove_ca_dynamics()
+
+        self.parser.parse_basic(mod_file=f'{self.path_to_model}mechanisms/mod_cadyn/{mod_name}/{mod_name}.mod')
+        self.cadyn_suffix = self.parser.suffix
+        load_mechanisms(f'{self.path_to_model}mechanisms/mod_cadyn/{mod_name}/', suffix=self.cadyn_suffix, recompile=True)
         for sec in self.cell.all:
-            sec.insert('cadyn')
+            sec.insert(self.cadyn_suffix)
+
+    def remove_ca_dynamics(self):
+        for sec in self.cell.all:
+            if sec.has_membrane(self.cadyn_suffix):
+                sec.uninsert(self.cadyn_suffix)
+        self.cadyn_suffix = None
+        logger.info(f'Removed Ca dynamics.')
         
 
     def add_channel(self, mod_name, recompile=True):

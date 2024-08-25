@@ -457,13 +457,20 @@ class ModParser():
         with open(self._mod_file, 'w') as f:
             f.write(self.data)
             print(f"Saved changes to {self._mod_file}")
-        
 
-    def parse(self, mod_file):
+    def parse_basic(self, mod_file):
         self.read_file(mod_file)
         self.clean()
         self.result = self.grammar.parseString(self.data)
         self.ast = self.result.asDict()
+
+    @property
+    def suffix(self):
+        if self.ast is not None:
+            return self.ast['mod_file']['neuron_block']['suffix']
+
+    def parse(self, mod_file):
+        self.parse_basic(mod_file)
         self.update_state_vars_with_power()
         self.replace_constants_with_values()
 

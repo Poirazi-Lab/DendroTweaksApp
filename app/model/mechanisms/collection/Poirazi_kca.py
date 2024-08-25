@@ -6,7 +6,7 @@ except:
 
 class Poirazi_kca(CustomCalciumDependentIonChannel):
     def __init__(self, cell=None):
-        super().__init__(name='Poirazi_kca', suffix='kca', cell=cell)
+        super().__init__(name='Poirazi_kca', suffix='kcap', cell=cell)
         self.ion = 'k'
         self.range_params = [
             'gbar',

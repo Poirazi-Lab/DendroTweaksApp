@@ -4469,7 +4469,7 @@
         },
         {
             "name": "Poirazi_km",
-            "suffix": "km",
+            "suffix": "kmp",
             "groups": [
                 {
                     "seg_names": [
@@ -4478,7 +4478,7 @@
                         "soma[2](0.5)",
                         "soma[3](0.5)"
                     ],
-                    "param_name": "gbar_km",
+                    "param_name": "gbar_kmp",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -4516,7 +4516,7 @@
                         "axon[9](0.78571)",
                         "axon[9](0.92857)"
                     ],
-                    "param_name": "gbar_km",
+                    "param_name": "gbar_kmp",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -4558,7 +4558,7 @@
                         "apic[103](0.5)",
                         "apic[104](0.5)"
                     ],
-                    "param_name": "gbar_km",
+                    "param_name": "gbar_kmp",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -4579,7 +4579,7 @@
                         "apic[2](0.5)",
                         "apic[2](0.83333)"
                     ],
-                    "param_name": "gbar_km",
+                    "param_name": "gbar_kmp",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -4592,7 +4592,7 @@
                     "seg_names": [
                         "apic[5](0.07143)"
                     ],
-                    "param_name": "gbar_km",
+                    "param_name": "gbar_kmp",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -4610,7 +4610,7 @@
                         "apic[5](0.78571)",
                         "apic[5](0.92857)"
                     ],
-                    "param_name": "gbar_km",
+                    "param_name": "gbar_kmp",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -4624,7 +4624,7 @@
                         "apic[7](0.5)",
                         "apic[8](0.16667)"
                     ],
-                    "param_name": "gbar_km",
+                    "param_name": "gbar_kmp",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -4649,7 +4649,7 @@
                         "apic[8](0.5)",
                         "apic[8](0.83333)"
                     ],
-                    "param_name": "gbar_km",
+                    "param_name": "gbar_kmp",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -4663,7 +4663,7 @@
                         "apic[12](0.1)",
                         "apic[11](0.16667)"
                     ],
-                    "param_name": "gbar_km",
+                    "param_name": "gbar_kmp",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -4681,7 +4681,7 @@
                         "apic[11](0.5)",
                         "apic[11](0.83333)"
                     ],
-                    "param_name": "gbar_km",
+                    "param_name": "gbar_kmp",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -4694,7 +4694,7 @@
                     "seg_names": [
                         "apic[116](0.5)"
                     ],
-                    "param_name": "gbar_km",
+                    "param_name": "gbar_kmp",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -4714,7 +4714,7 @@
                         "apic[117](0.5)",
                         "apic[117](0.83333)"
                     ],
-                    "param_name": "gbar_km",
+                    "param_name": "gbar_kmp",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -4727,7 +4727,7 @@
                     "seg_names": [
                         "apic[113](0.16667)"
                     ],
-                    "param_name": "gbar_km",
+                    "param_name": "gbar_kmp",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -4749,7 +4749,7 @@
                         "apic[114](0.5)",
                         "apic[114](0.83333)"
                     ],
-                    "param_name": "gbar_km",
+                    "param_name": "gbar_kmp",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -4762,7 +4762,7 @@
                     "seg_names": [
                         "apic[17](0.5)"
                     ],
-                    "param_name": "gbar_km",
+                    "param_name": "gbar_kmp",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -4790,7 +4790,7 @@
                         "apic[18](0.78571)",
                         "apic[18](0.92857)"
                     ],
-                    "param_name": "gbar_km",
+                    "param_name": "gbar_kmp",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -4803,7 +4803,7 @@
                     "seg_names": [
                         "apic[112](0.07143)"
                     ],
-                    "param_name": "gbar_km",
+                    "param_name": "gbar_kmp",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -4821,7 +4821,7 @@
                         "apic[112](0.78571)",
                         "apic[112](0.92857)"
                     ],
-                    "param_name": "gbar_km",
+                    "param_name": "gbar_kmp",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -4834,7 +4834,7 @@
                     "seg_names": [
                         "apic[24](0.07143)"
                     ],
-                    "param_name": "gbar_km",
+                    "param_name": "gbar_kmp",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -4852,7 +4852,7 @@
                         "apic[24](0.78571)",
                         "apic[24](0.92857)"
                     ],
-                    "param_name": "gbar_km",
+                    "param_name": "gbar_kmp",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -4865,7 +4865,7 @@
                     "seg_names": [
                         "apic[109](0.5)"
                     ],
-                    "param_name": "gbar_km",
+                    "param_name": "gbar_kmp",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -4887,7 +4887,7 @@
                         "apic[110](0.7)",
                         "apic[110](0.9)"
                     ],
-                    "param_name": "gbar_km",
+                    "param_name": "gbar_kmp",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -4900,7 +4900,7 @@
                     "seg_names": [
                         "apic[108](0.16667)"
                     ],
-                    "param_name": "gbar_km",
+                    "param_name": "gbar_kmp",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -4914,7 +4914,7 @@
                         "apic[108](0.5)",
                         "apic[108](0.83333)"
                     ],
-                    "param_name": "gbar_km",
+                    "param_name": "gbar_kmp",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -4927,7 +4927,7 @@
                     "seg_names": [
                         "apic[28](0.5)"
                     ],
-                    "param_name": "gbar_km",
+                    "param_name": "gbar_kmp",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -4975,7 +4975,7 @@
                         "apic[30](0.7)",
                         "apic[30](0.9)"
                     ],
-                    "param_name": "gbar_km",
+                    "param_name": "gbar_kmp",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -4989,7 +4989,7 @@
                         "apic[37](0.5)",
                         "apic[36](0.9)"
                     ],
-                    "param_name": "gbar_km",
+                    "param_name": "gbar_kmp",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -5005,7 +5005,7 @@
                         "apic[37](0.83333)",
                         "apic[37](0.94444)"
                     ],
-                    "param_name": "gbar_km",
+                    "param_name": "gbar_kmp",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -5018,7 +5018,7 @@
                     "seg_names": [
                         "apic[107](0.1)"
                     ],
-                    "param_name": "gbar_km",
+                    "param_name": "gbar_kmp",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -5034,7 +5034,7 @@
                         "apic[107](0.7)",
                         "apic[107](0.9)"
                     ],
-                    "param_name": "gbar_km",
+                    "param_name": "gbar_kmp",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -5047,7 +5047,7 @@
                     "seg_names": [
                         "apic[43](0.5)"
                     ],
-                    "param_name": "gbar_km",
+                    "param_name": "gbar_kmp",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -5073,7 +5073,7 @@
                         "apic[44](0.61111)",
                         "apic[44](0.72222)"
                     ],
-                    "param_name": "gbar_km",
+                    "param_name": "gbar_kmp",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -5088,7 +5088,7 @@
                         "apic[44](0.83333)",
                         "apic[44](0.94444)"
                     ],
-                    "param_name": "gbar_km",
+                    "param_name": "gbar_kmp",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -5101,7 +5101,7 @@
                     "seg_names": [
                         "apic[45](0.94444)"
                     ],
-                    "param_name": "gbar_km",
+                    "param_name": "gbar_kmp",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -5114,7 +5114,7 @@
                     "seg_names": [
                         "apic[47](0.05556)"
                     ],
-                    "param_name": "gbar_km",
+                    "param_name": "gbar_kmp",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -5133,7 +5133,7 @@
                         "apic[47](0.72222)",
                         "apic[47](0.83333)"
                     ],
-                    "param_name": "gbar_km",
+                    "param_name": "gbar_kmp",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -5146,7 +5146,7 @@
                     "seg_names": [
                         "apic[47](0.94444)"
                     ],
-                    "param_name": "gbar_km",
+                    "param_name": "gbar_kmp",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -5160,7 +5160,7 @@
                         "apic[49](0.16667)",
                         "apic[49](0.5)"
                     ],
-                    "param_name": "gbar_km",
+                    "param_name": "gbar_kmp",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -5185,7 +5185,7 @@
                         "apic[51](0.38889)",
                         "apic[51](0.5)"
                     ],
-                    "param_name": "gbar_km",
+                    "param_name": "gbar_kmp",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -5198,7 +5198,7 @@
                     "seg_names": [
                         "apic[51](0.61111)"
                     ],
-                    "param_name": "gbar_km",
+                    "param_name": "gbar_kmp",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -5213,7 +5213,7 @@
                         "apic[51](0.83333)",
                         "apic[51](0.94444)"
                     ],
-                    "param_name": "gbar_km",
+                    "param_name": "gbar_kmp",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -5226,7 +5226,7 @@
                     "seg_names": [
                         "apic[57](0.05556)"
                     ],
-                    "param_name": "gbar_km",
+                    "param_name": "gbar_kmp",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -5245,7 +5245,7 @@
                         "apic[57](0.72222)",
                         "apic[57](0.83333)"
                     ],
-                    "param_name": "gbar_km",
+                    "param_name": "gbar_kmp",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -5258,7 +5258,7 @@
                     "seg_names": [
                         "apic[57](0.94444)"
                     ],
-                    "param_name": "gbar_km",
+                    "param_name": "gbar_kmp",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -5271,7 +5271,7 @@
                     "seg_names": [
                         "apic[59](0.1)"
                     ],
-                    "param_name": "gbar_km",
+                    "param_name": "gbar_kmp",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -5287,7 +5287,7 @@
                         "apic[59](0.7)",
                         "apic[59](0.9)"
                     ],
-                    "param_name": "gbar_km",
+                    "param_name": "gbar_kmp",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -5304,7 +5304,7 @@
                         "apic[61](0.7)",
                         "apic[61](0.9)"
                     ],
-                    "param_name": "gbar_km",
+                    "param_name": "gbar_kmp",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -5317,7 +5317,7 @@
                     "seg_names": [
                         "apic[63](0.1)"
                     ],
-                    "param_name": "gbar_km",
+                    "param_name": "gbar_kmp",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -5333,7 +5333,7 @@
                         "apic[63](0.7)",
                         "apic[63](0.9)"
                     ],
-                    "param_name": "gbar_km",
+                    "param_name": "gbar_kmp",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -5346,7 +5346,7 @@
                     "seg_names": [
                         "apic[106](0.1)"
                     ],
-                    "param_name": "gbar_km",
+                    "param_name": "gbar_kmp",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -5362,7 +5362,7 @@
                         "apic[106](0.7)",
                         "apic[106](0.9)"
                     ],
-                    "param_name": "gbar_km",
+                    "param_name": "gbar_kmp",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -5375,7 +5375,7 @@
                     "seg_names": [
                         "apic[66](0.5)"
                     ],
-                    "param_name": "gbar_km",
+                    "param_name": "gbar_kmp",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -5395,7 +5395,7 @@
                         "apic[67](0.5)",
                         "apic[67](0.64286)"
                     ],
-                    "param_name": "gbar_km",
+                    "param_name": "gbar_kmp",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -5409,7 +5409,7 @@
                         "apic[67](0.78571)",
                         "apic[67](0.92857)"
                     ],
-                    "param_name": "gbar_km",
+                    "param_name": "gbar_kmp",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -5422,7 +5422,7 @@
                     "seg_names": [
                         "apic[70](0.1)"
                     ],
-                    "param_name": "gbar_km",
+                    "param_name": "gbar_kmp",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -5438,7 +5438,7 @@
                         "apic[70](0.7)",
                         "apic[70](0.9)"
                     ],
-                    "param_name": "gbar_km",
+                    "param_name": "gbar_kmp",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -5451,7 +5451,7 @@
                     "seg_names": [
                         "apic[72](0.5)"
                     ],
-                    "param_name": "gbar_km",
+                    "param_name": "gbar_kmp",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -5481,7 +5481,7 @@
                         "apic[73](0.7)",
                         "apic[73](0.9)"
                     ],
-                    "param_name": "gbar_km",
+                    "param_name": "gbar_kmp",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -5499,7 +5499,7 @@
                         "apic[78](0.83333)",
                         "apic[76](0.83333)"
                     ],
-                    "param_name": "gbar_km",
+                    "param_name": "gbar_kmp",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -5512,7 +5512,7 @@
                     "seg_names": [
                         "apic[82](0.1)"
                     ],
-                    "param_name": "gbar_km",
+                    "param_name": "gbar_kmp",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -5528,7 +5528,7 @@
                         "apic[82](0.7)",
                         "apic[82](0.9)"
                     ],
-                    "param_name": "gbar_km",
+                    "param_name": "gbar_kmp",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -5542,7 +5542,7 @@
                         "apic[84](0.5)",
                         "apic[85](0.16667)"
                     ],
-                    "param_name": "gbar_km",
+                    "param_name": "gbar_kmp",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -5583,7 +5583,7 @@
                         "apic[86](0.5)",
                         "apic[86](0.83333)"
                     ],
-                    "param_name": "gbar_km",
+                    "param_name": "gbar_kmp",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -5613,7 +5613,7 @@
                         "apic[97](0.7)",
                         "apic[97](0.9)"
                     ],
-                    "param_name": "gbar_km",
+                    "param_name": "gbar_kmp",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -5629,7 +5629,7 @@
                         "apic[101](0.5)",
                         "apic[101](0.7)"
                     ],
-                    "param_name": "gbar_km",
+                    "param_name": "gbar_kmp",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -5642,7 +5642,7 @@
                     "seg_names": [
                         "apic[101](0.9)"
                     ],
-                    "param_name": "gbar_km",
+                    "param_name": "gbar_kmp",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -5655,7 +5655,7 @@
                     "seg_names": [
                         "apic[105](0.1)"
                     ],
-                    "param_name": "gbar_km",
+                    "param_name": "gbar_kmp",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -5671,7 +5671,7 @@
                         "apic[105](0.7)",
                         "apic[105](0.9)"
                     ],
-                    "param_name": "gbar_km",
+                    "param_name": "gbar_kmp",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -8082,7 +8082,7 @@
         },
         {
             "name": "Poirazi_kca",
-            "suffix": "kca",
+            "suffix": "kcap",
             "groups": [
                 {
                     "seg_names": [
@@ -8091,7 +8091,7 @@
                         "soma[2](0.5)",
                         "soma[3](0.5)"
                     ],
-                    "param_name": "gbar_kca",
+                    "param_name": "gbar_kcap",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -8107,7 +8107,7 @@
                         "apic[0](0.83333)",
                         "apic[4](0.5)"
                     ],
-                    "param_name": "gbar_kca",
+                    "param_name": "gbar_kcap",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -8134,7 +8134,7 @@
                         "apic[56](0.5)",
                         "apic[58](0.5)"
                     ],
-                    "param_name": "gbar_kca",
+                    "param_name": "gbar_kcap",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -8157,7 +8157,7 @@
                         "apic[103](0.5)",
                         "apic[104](0.5)"
                     ],
-                    "param_name": "gbar_kca",
+                    "param_name": "gbar_kcap",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -8178,7 +8178,7 @@
                         "apic[2](0.5)",
                         "apic[2](0.83333)"
                     ],
-                    "param_name": "gbar_kca",
+                    "param_name": "gbar_kcap",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -8191,7 +8191,7 @@
                     "seg_names": [
                         "apic[5](0.07143)"
                     ],
-                    "param_name": "gbar_kca",
+                    "param_name": "gbar_kcap",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -8209,7 +8209,7 @@
                         "apic[5](0.78571)",
                         "apic[5](0.92857)"
                     ],
-                    "param_name": "gbar_kca",
+                    "param_name": "gbar_kcap",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -8223,7 +8223,7 @@
                         "apic[7](0.5)",
                         "apic[8](0.16667)"
                     ],
-                    "param_name": "gbar_kca",
+                    "param_name": "gbar_kcap",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -8248,7 +8248,7 @@
                         "apic[8](0.5)",
                         "apic[8](0.83333)"
                     ],
-                    "param_name": "gbar_kca",
+                    "param_name": "gbar_kcap",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -8262,7 +8262,7 @@
                         "apic[12](0.1)",
                         "apic[11](0.16667)"
                     ],
-                    "param_name": "gbar_kca",
+                    "param_name": "gbar_kcap",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -8280,7 +8280,7 @@
                         "apic[11](0.5)",
                         "apic[11](0.83333)"
                     ],
-                    "param_name": "gbar_kca",
+                    "param_name": "gbar_kcap",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -8293,7 +8293,7 @@
                     "seg_names": [
                         "apic[116](0.5)"
                     ],
-                    "param_name": "gbar_kca",
+                    "param_name": "gbar_kcap",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -8313,7 +8313,7 @@
                         "apic[117](0.5)",
                         "apic[117](0.83333)"
                     ],
-                    "param_name": "gbar_kca",
+                    "param_name": "gbar_kcap",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -8326,7 +8326,7 @@
                     "seg_names": [
                         "apic[113](0.16667)"
                     ],
-                    "param_name": "gbar_kca",
+                    "param_name": "gbar_kcap",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -8348,7 +8348,7 @@
                         "apic[114](0.5)",
                         "apic[114](0.83333)"
                     ],
-                    "param_name": "gbar_kca",
+                    "param_name": "gbar_kcap",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -8361,7 +8361,7 @@
                     "seg_names": [
                         "apic[17](0.5)"
                     ],
-                    "param_name": "gbar_kca",
+                    "param_name": "gbar_kcap",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -8389,7 +8389,7 @@
                         "apic[18](0.78571)",
                         "apic[18](0.92857)"
                     ],
-                    "param_name": "gbar_kca",
+                    "param_name": "gbar_kcap",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -8402,7 +8402,7 @@
                     "seg_names": [
                         "apic[112](0.07143)"
                     ],
-                    "param_name": "gbar_kca",
+                    "param_name": "gbar_kcap",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -8420,7 +8420,7 @@
                         "apic[112](0.78571)",
                         "apic[112](0.92857)"
                     ],
-                    "param_name": "gbar_kca",
+                    "param_name": "gbar_kcap",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -8433,7 +8433,7 @@
                     "seg_names": [
                         "apic[24](0.07143)"
                     ],
-                    "param_name": "gbar_kca",
+                    "param_name": "gbar_kcap",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -8451,7 +8451,7 @@
                         "apic[24](0.78571)",
                         "apic[24](0.92857)"
                     ],
-                    "param_name": "gbar_kca",
+                    "param_name": "gbar_kcap",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -8464,7 +8464,7 @@
                     "seg_names": [
                         "apic[109](0.5)"
                     ],
-                    "param_name": "gbar_kca",
+                    "param_name": "gbar_kcap",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -8486,7 +8486,7 @@
                         "apic[110](0.7)",
                         "apic[110](0.9)"
                     ],
-                    "param_name": "gbar_kca",
+                    "param_name": "gbar_kcap",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -8499,7 +8499,7 @@
                     "seg_names": [
                         "apic[108](0.16667)"
                     ],
-                    "param_name": "gbar_kca",
+                    "param_name": "gbar_kcap",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -8513,7 +8513,7 @@
                         "apic[108](0.5)",
                         "apic[108](0.83333)"
                     ],
-                    "param_name": "gbar_kca",
+                    "param_name": "gbar_kcap",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -8526,7 +8526,7 @@
                     "seg_names": [
                         "apic[28](0.5)"
                     ],
-                    "param_name": "gbar_kca",
+                    "param_name": "gbar_kcap",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -8574,7 +8574,7 @@
                         "apic[30](0.7)",
                         "apic[30](0.9)"
                     ],
-                    "param_name": "gbar_kca",
+                    "param_name": "gbar_kcap",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -8588,7 +8588,7 @@
                         "apic[37](0.5)",
                         "apic[36](0.9)"
                     ],
-                    "param_name": "gbar_kca",
+                    "param_name": "gbar_kcap",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -8604,7 +8604,7 @@
                         "apic[37](0.83333)",
                         "apic[37](0.94444)"
                     ],
-                    "param_name": "gbar_kca",
+                    "param_name": "gbar_kcap",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -8617,7 +8617,7 @@
                     "seg_names": [
                         "apic[107](0.1)"
                     ],
-                    "param_name": "gbar_kca",
+                    "param_name": "gbar_kcap",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -8633,7 +8633,7 @@
                         "apic[107](0.7)",
                         "apic[107](0.9)"
                     ],
-                    "param_name": "gbar_kca",
+                    "param_name": "gbar_kcap",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -8646,7 +8646,7 @@
                     "seg_names": [
                         "apic[43](0.5)"
                     ],
-                    "param_name": "gbar_kca",
+                    "param_name": "gbar_kcap",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -8672,7 +8672,7 @@
                         "apic[44](0.61111)",
                         "apic[44](0.72222)"
                     ],
-                    "param_name": "gbar_kca",
+                    "param_name": "gbar_kcap",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -8687,7 +8687,7 @@
                         "apic[44](0.83333)",
                         "apic[44](0.94444)"
                     ],
-                    "param_name": "gbar_kca",
+                    "param_name": "gbar_kcap",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -8700,7 +8700,7 @@
                     "seg_names": [
                         "apic[45](0.94444)"
                     ],
-                    "param_name": "gbar_kca",
+                    "param_name": "gbar_kcap",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -8713,7 +8713,7 @@
                     "seg_names": [
                         "apic[47](0.05556)"
                     ],
-                    "param_name": "gbar_kca",
+                    "param_name": "gbar_kcap",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -8732,7 +8732,7 @@
                         "apic[47](0.72222)",
                         "apic[47](0.83333)"
                     ],
-                    "param_name": "gbar_kca",
+                    "param_name": "gbar_kcap",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -8745,7 +8745,7 @@
                     "seg_names": [
                         "apic[47](0.94444)"
                     ],
-                    "param_name": "gbar_kca",
+                    "param_name": "gbar_kcap",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -8759,7 +8759,7 @@
                         "apic[49](0.16667)",
                         "apic[49](0.5)"
                     ],
-                    "param_name": "gbar_kca",
+                    "param_name": "gbar_kcap",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -8784,7 +8784,7 @@
                         "apic[51](0.38889)",
                         "apic[51](0.5)"
                     ],
-                    "param_name": "gbar_kca",
+                    "param_name": "gbar_kcap",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -8797,7 +8797,7 @@
                     "seg_names": [
                         "apic[51](0.61111)"
                     ],
-                    "param_name": "gbar_kca",
+                    "param_name": "gbar_kcap",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -8812,7 +8812,7 @@
                         "apic[51](0.83333)",
                         "apic[51](0.94444)"
                     ],
-                    "param_name": "gbar_kca",
+                    "param_name": "gbar_kcap",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -8825,7 +8825,7 @@
                     "seg_names": [
                         "apic[57](0.05556)"
                     ],
-                    "param_name": "gbar_kca",
+                    "param_name": "gbar_kcap",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -8844,7 +8844,7 @@
                         "apic[57](0.72222)",
                         "apic[57](0.83333)"
                     ],
-                    "param_name": "gbar_kca",
+                    "param_name": "gbar_kcap",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -8857,7 +8857,7 @@
                     "seg_names": [
                         "apic[57](0.94444)"
                     ],
-                    "param_name": "gbar_kca",
+                    "param_name": "gbar_kcap",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -8870,7 +8870,7 @@
                     "seg_names": [
                         "apic[59](0.1)"
                     ],
-                    "param_name": "gbar_kca",
+                    "param_name": "gbar_kcap",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -8886,7 +8886,7 @@
                         "apic[59](0.7)",
                         "apic[59](0.9)"
                     ],
-                    "param_name": "gbar_kca",
+                    "param_name": "gbar_kcap",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -8903,7 +8903,7 @@
                         "apic[61](0.7)",
                         "apic[61](0.9)"
                     ],
-                    "param_name": "gbar_kca",
+                    "param_name": "gbar_kcap",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -8916,7 +8916,7 @@
                     "seg_names": [
                         "apic[63](0.1)"
                     ],
-                    "param_name": "gbar_kca",
+                    "param_name": "gbar_kcap",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -8932,7 +8932,7 @@
                         "apic[63](0.7)",
                         "apic[63](0.9)"
                     ],
-                    "param_name": "gbar_kca",
+                    "param_name": "gbar_kcap",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -8945,7 +8945,7 @@
                     "seg_names": [
                         "apic[106](0.1)"
                     ],
-                    "param_name": "gbar_kca",
+                    "param_name": "gbar_kcap",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -8961,7 +8961,7 @@
                         "apic[106](0.7)",
                         "apic[106](0.9)"
                     ],
-                    "param_name": "gbar_kca",
+                    "param_name": "gbar_kcap",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -8974,7 +8974,7 @@
                     "seg_names": [
                         "apic[66](0.5)"
                     ],
-                    "param_name": "gbar_kca",
+                    "param_name": "gbar_kcap",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -8994,7 +8994,7 @@
                         "apic[67](0.5)",
                         "apic[67](0.64286)"
                     ],
-                    "param_name": "gbar_kca",
+                    "param_name": "gbar_kcap",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -9008,7 +9008,7 @@
                         "apic[67](0.78571)",
                         "apic[67](0.92857)"
                     ],
-                    "param_name": "gbar_kca",
+                    "param_name": "gbar_kcap",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -9021,7 +9021,7 @@
                     "seg_names": [
                         "apic[70](0.1)"
                     ],
-                    "param_name": "gbar_kca",
+                    "param_name": "gbar_kcap",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -9037,7 +9037,7 @@
                         "apic[70](0.7)",
                         "apic[70](0.9)"
                     ],
-                    "param_name": "gbar_kca",
+                    "param_name": "gbar_kcap",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -9050,7 +9050,7 @@
                     "seg_names": [
                         "apic[72](0.5)"
                     ],
-                    "param_name": "gbar_kca",
+                    "param_name": "gbar_kcap",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -9080,7 +9080,7 @@
                         "apic[73](0.7)",
                         "apic[73](0.9)"
                     ],
-                    "param_name": "gbar_kca",
+                    "param_name": "gbar_kcap",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -9098,7 +9098,7 @@
                         "apic[78](0.83333)",
                         "apic[76](0.83333)"
                     ],
-                    "param_name": "gbar_kca",
+                    "param_name": "gbar_kcap",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -9111,7 +9111,7 @@
                     "seg_names": [
                         "apic[82](0.1)"
                     ],
-                    "param_name": "gbar_kca",
+                    "param_name": "gbar_kcap",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -9127,7 +9127,7 @@
                         "apic[82](0.7)",
                         "apic[82](0.9)"
                     ],
-                    "param_name": "gbar_kca",
+                    "param_name": "gbar_kcap",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -9141,7 +9141,7 @@
                         "apic[84](0.5)",
                         "apic[85](0.16667)"
                     ],
-                    "param_name": "gbar_kca",
+                    "param_name": "gbar_kcap",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -9182,7 +9182,7 @@
                         "apic[86](0.5)",
                         "apic[86](0.83333)"
                     ],
-                    "param_name": "gbar_kca",
+                    "param_name": "gbar_kcap",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -9212,7 +9212,7 @@
                         "apic[97](0.7)",
                         "apic[97](0.9)"
                     ],
-                    "param_name": "gbar_kca",
+                    "param_name": "gbar_kcap",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -9228,7 +9228,7 @@
                         "apic[101](0.5)",
                         "apic[101](0.7)"
                     ],
-                    "param_name": "gbar_kca",
+                    "param_name": "gbar_kcap",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -9241,7 +9241,7 @@
                     "seg_names": [
                         "apic[101](0.9)"
                     ],
-                    "param_name": "gbar_kca",
+                    "param_name": "gbar_kcap",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -9254,7 +9254,7 @@
                     "seg_names": [
                         "apic[105](0.1)"
                     ],
-                    "param_name": "gbar_kca",
+                    "param_name": "gbar_kcap",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -9270,7 +9270,7 @@
                         "apic[105](0.7)",
                         "apic[105](0.9)"
                     ],
-                    "param_name": "gbar_kca",
+                    "param_name": "gbar_kcap",
                     "distribution": {
                         "f_type": "uniform",
                         "args": [],
@@ -15789,6 +15789,11 @@
                 }
             }
         ]
+    },
+    "simulator": {
+        "celsius": 34,
+        "v_init": -70,
+        "dt": 0.025
     },
     "path_to_model": "model/"
 }

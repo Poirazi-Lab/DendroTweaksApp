@@ -32,192 +32,28 @@ def load_mechanisms(path_to_mod, suffix='', recompile=True, log=True):
     neuron.load_mechanisms(path_to_mod)
     if log: logger.info(f'Loaded mod files from "{path_to_mod}"')
 
-if os.path.exists('app/model/mechanisms/mod/Synapses/'):
-    load_mechanisms('app/model/mechanisms/mod/Synapses/', recompile=False)
-else:
-    load_mechanisms('model/mechanisms/mod/Synapses/', recompile=False)
+load_mechanisms('app/model/mechanisms/mod/Synapses/', 
+                recompile=not os.path.exists('app/model/mechanisms/mod/Synapses/x86_64/'))
 
+import contextlib
 
-# def load_mechanisms(path_to_mod, suffix=''):
-#     if hasattr(h, suffix):
-#         warnings.warn(f'Mechanism with suffix {suffix} already exists.')
-#         return
-#     path_to_mod = path_to_mod.replace('//', '/')
-#     # Get the parent directory of mod_folder
-#     parent_dir = os.path.dirname(os.path.dirname(path_to_mod))
-#     print(f'Parent directory:"{parent_dir}"')
+@contextlib.contextmanager
+def push_section(section):
+    section.push()
+    yield
+    h.pop_section()
 
-#     # Create a temporary directory in the parent directory
-#     temp_dir = tempfile.mkdtemp(dir=parent_dir)
-#     print(f'Temporary directory: "{temp_dir}"')
+def reset_neuron():
+    logger.info('Resetting NEURON')
+    # h('forall delete_section()')
+    # h('forall delete_all()')
+    # h('forall delete()')
 
-#     # Copy the .mod files from mod_folder to the temporary directory
-#     for filename in os.listdir(path_to_mod):
-#         if filename.endswith('.mod'):
-#             print(f'    Coping "{filename}"...')
-#             shutil.copy(os.path.join(path_to_mod, filename), temp_dir)
+    for sec in h.allsec():
+        with push_section(sec):
+            h.delete_section()
 
-#     # Compile the mechanisms in the temporary directory
-#     cwd = os.getcwd()
-#     os.chdir(temp_dir)
-#     os.system('nrnivmodl')
-#     os.chdir(cwd)
-
-#     # Load the mechanisms from the temporary directory
-#     neuron.load_mechanisms(temp_dir)
-
-#     # Delete the temporary directory
-#     if temp_dir.startswith('model/mechanisms/'):
-#         print(f'Removing temporary directory "{temp_dir}"')
-#         shutil.rmtree(temp_dir)
-#     else:
-#         raise ValueError(f'Not removing "{temp_dir}" because it is not a temporary directory.')
-
-
-
-# class Section():
-#     def __init__(self, sec):
-#         self._sec = sec
-#         self._children = []
-#         self._parent = None
-#         self._segments = [Segment(seg) for seg in sec]
-#         for seg in self._segments:
-#             seg.sec = self
-
-#     def __iter__(self):
-#         return iter([Segment(seg) for seg in self._sec])
-
-#     def __call__(self, x):
-#         return Segment(self._sec(x))
-
-#     def __eq__(self, other):
-#         return self._sec == other._sec
-
-#     def __hash__(self):
-#         return hash(self._sec)
-
-#     def psection(self):
-#         return self._sec.psection()
-
-#     def n3d(self):
-#         return self._sec.n3d()
-
-#     def x3d(self, i):
-#         return self._sec.x3d(i)
-
-#     def y3d(self, i):
-#         return self._sec.y3d(i)
-
-#     def z3d(self, i):
-#         return self._sec.z3d(i)
-
-#     def diam3d(self, i):
-#         return self._sec.diam3d(i)
-
-#     def children(self):
-#         return [Section(sec) for sec in self._sec.children()]
-
-#     def parent(self):
-#         return Section(self._sec.parentseg().sec) if self._sec.parentseg() else None
-
-#     @property
-#     def name(self):
-#         return self._sec.name().split('.')[-1]
-
-#     @property
-#     def sec_type(self):
-#         return self.name.split('[')[0]
-
-#     @property
-#     def sec_id(self):
-#         return self.name.split('[')[1].split(']')[0]
-
-#     @property
-#     def cell(self):
-#         return self._sec.cell
-
-#     def has_membrane(self, name):
-#         return self._sec.has_membrane(mech)
-
-#     @property
-#     def pts3d(self):
-#         return [(self._sec.x3d(i), self._sec.y3d(i), self._sec.z3d(i)) for i in range(self._sec.n3d())]
-
-#     @property
-#     def L(self):
-#         return self._sec.L
-
-#     @property
-#     def nseg(self):
-#         return self._sec.nseg
-
-#     @nseg.setter
-#     def nseg(self, new_nseg):
-#         self._sec.nseg = new_nseg
-
-#     @property
-#     def diam(self):
-#         return self._sec.diam
-
-#     def __repr__(self):
-#         return f'Sec {self.sec_type}[{self.sec_id}]'
-
-#     def __str__(self):
-#         return self.__repr__().replace('Sec ', '')
-
-# class Segment():
-#     __slots__ = ['_seg', 'sec']
-
-#     def __init__(self, seg):
-#         self._seg = seg
-#         self.sec = Section(seg.sec)
-
-#     def __eq__(self, other):
-#         return self._seg == other._seg
-
-#     def __hash__(self):
-#         return hash(self._seg)
-
-#     @property
-#     def name(self):
-#         return f'{self.sec.name}({self.x})'
-
-#     @property
-#     def sec_type(self):
-#         return self.sec.sec_type
-
-#     @property
-#     def sec_id(self):
-#         return self.sec.sec_id
-    
-#     @property    
-#     def x(self):
-#         return round(self._seg.x, 5)
-
-#     @property
-#     def cell(self):
-#         return self.sec.cell()
-
-#     @property
-#     def distance_from_soma(self):
-#         return h.distance(self._seg, self.cell.soma[0](0.5))
-
-#     def __repr__(self):
-#         return f'Seg {self.sec.sec_type}[{self.sec.sec_id}]({round(self.x, 5)})'
-
-#     def __str__(self):
-#         return self.__repr__().replace('Seg ', '')
-
-#     def __getattr__(self, attr):
-#         return getattr(self._seg, attr)
-
-#     def __setattr__(self, attr, value):
-#         if attr in ('_seg', 'sec'):
-#             super().__setattr__(attr, value)
-#         else:
-#             setattr(self._seg, attr, value)
-#     #     else:
-#     #         raise AttributeError(f'Attribute {name} is neither a segment attribute nor a membrane mechanism.')
+reset_neuron()            
 
 
 class Cell():
@@ -230,24 +66,6 @@ class Cell():
         self._load_morphology(swc_file)
         
     ### Morphology methods ###
-
-    # def create_tree_recursively(self, sec, parent=None):
-    #     section = Section(sec)
-    #     section._parent = parent
-    #     for child in sec.children():
-    #         section._children.append(Section(child))
-    #         self.create_tree_recursively(child_sec, parent=section)
-    #     self.sections[section.name] = section
-        
-    
-
-    # @cached_property
-    # def sections(self):
-    #     return {sec.name: sec for sec in (Section(s) for s in self.all)}
-
-    # @cached_property
-    # def segments(self):
-    #     return {seg.name: seg for sec in self.all for seg in (Segment(s) for s in sec)}
 
     @cached_property
     def sections(self):
@@ -406,42 +224,6 @@ class Simulator():
             h.fcurrent()
         h.frecord_init()
 
-    # def _record_current(self, ch):
-    #     for seg in self.recordings.keys():
-    #         if getattr(seg, f'_ref_i_{ch.suffix}', None) is None:
-    #             logger.warning(f'No current recorded for {ch.suffix} at {seg}. Make i a RANGE variable in mod file.')
-    #             continue
-    #         I = h.Vector().record(getattr(seg, f'_ref_i_{ch.suffix}'))
-    #         Is.append(I)
-
-    
-    # @timeit
-    # def run(self, duration=300):
-    #     logger.info(f'Starting simulation for {duration} ms')
-
-    #     vs = []
-    #     Is = []
-        
-    #     for v in self.recordings.values():
-    #         # v = h.Vector().record(seg._ref_v)
-    #         vs.append(v)
-    #     t = h.Vector().record(h._ref_t)
-        
-    #     # if ch is None:
-    #     #     pass
-    #     # else:
-    #     #     for seg in self.recordings.keys():
-    #     #         if getattr(seg, f'_ref_i_{ch.suffix}', None) is None:
-    #     #             logger.warning(f'No current recorded for {ch.suffix} at {seg}. Make i a RANGE variable in mod file.')
-    #     #             continue
-    #     #         I = h.Vector().record(getattr(seg, f'_ref_i_{ch.suffix}'))
-    #     #         Is.append(I)
-
-    #     self._init_simulation()
-                             
-    #     h.continuerun(duration * ms)
-
-    #     return np.tile(t, (len(vs), 1)), np.array(vs), np.array(Is)
 
 
     

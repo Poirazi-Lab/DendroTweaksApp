@@ -31,7 +31,7 @@ COMMENT
 ENDCOMMENT
 
 NEURON {
-        SUFFIX kca
+        SUFFIX kcap
         USEION k READ ek WRITE ik
         USEION ca READ cai
         RANGE gbar, g, i

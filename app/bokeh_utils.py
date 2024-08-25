@@ -28,6 +28,17 @@ class AdjustableSpinner():
         self.spinner.on_change(attr, callback)
 
     @property
+    def _callbacks(self):
+        return self.spinner._callbacks
+
+    @property
+    def _event_callbacks(self):
+        return self.spinner._event_callbacks
+
+    def remove_on_change(self, attr, callback):
+        self.spinner.remove_on_change(attr, callback)
+
+    @property
     def value(self):
         return self.spinner.value
 

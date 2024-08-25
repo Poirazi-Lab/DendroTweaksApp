@@ -2,7 +2,7 @@
 : modified from Destexhe et al. 1994
 
 NEURON	{
-	SUFFIX cadyn
+	SUFFIX cadynhay
 	USEION ca READ ica WRITE cai
 	RANGE decay, gamma, minCai, depth
 }

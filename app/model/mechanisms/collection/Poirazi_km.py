@@ -6,7 +6,7 @@ except:
 
 class Poirazi_km(CustomVoltageDependentIonChannel):
     def __init__(self, cell=None):
-        super().__init__(name='Poirazi_km', suffix='km', cell=cell)
+        super().__init__(name='Poirazi_km', suffix='kmp', cell=cell)
         self.ion = 'k'
         self.range_params = [
             'gbar',

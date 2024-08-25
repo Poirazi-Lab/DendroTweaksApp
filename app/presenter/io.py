@@ -30,12 +30,7 @@ class IOMixin():
                 self.view.widgets.selectors['graph_param'].options = list(self.view.params)
                 self.view.widgets.selectors['graph_param'].value = self.view.widgets.selectors['graph_param'].options[0]
 
-    def reset_simulation_state(self):
-        with remove_callbacks(self.view.widgets.switches['record']):
-            self.view.widgets.switches['record'].active = False
-        with remove_callbacks(self.view.widgets.switches['iclamp']):
-            self.view.widgets.switches['iclamp'].active = False
-        self.view.sources['sim'].data = data={'xs': [], 'ys': [], 'color': []}
+
 
     @log
     def selector_cell_callback(self, attr, old, new):
@@ -55,8 +50,7 @@ class IOMixin():
         for sec in self.model.cell.all:
             sec.Ra = 100
         self.model.add_capacitance()
-        # self.model.add_ca_dynamics(mod_name='Park_cadyn')
-        # self.model.add_ca_dynamics(mod_name='Gonzalez_cadyn')
+
         
         # Add channels
         for mod_name in self.view.widgets.multichoice['mod_files'].value:
@@ -85,7 +79,6 @@ class IOMixin():
         self.view.widgets.selectors['section'].options=[''] + list(self.model.cell.sections.keys())
         logger.debug(f"Section selector value: {self.view.widgets.selectors['section'].value}")
 
-        self.reset_simulation_state()
 
         def attach_download_js(button, file_path):
 
@@ -114,14 +107,16 @@ class IOMixin():
         attach_download_js(self.view.widgets.buttons['to_swc'], 
                            f'app/static/data/{self.model.cell.name}_3PS.swc')
         
-        with remove_callbacks(self.view.widgets.multichoice['mod_files']):
-            self.view.widgets.multichoice['mod_files'].options = self.model.list_mod_files()
-            self.view.widgets.multichoice['mod_files'].value = ['Leak']
+        self.view.widgets.selectors['cell'].disabled = True
 
     def cadyn_files_callback(self, attr, old, new):
         logger.debug(f'cadyn_files_callback: {new}')
         if new:
             self.model.add_ca_dynamics(mod_name=new)
+            if self.model.cell.name == 'Hay_2011':
+                self.Ca_dyn_temp()
+        else: 
+            self.model.remove_ca_dynamics()
 
     @log
     def mod_files_callback(self, attr, old, new):
@@ -212,8 +207,6 @@ class IOMixin():
 
         if self.model.cell.name == 'Poirazi_2003':
             self.Ra_sigmoidal_temp()
-        if self.model.cell.name == 'Hay_2011':
-            self.Ca_dyn_temp()
 
         self.update_graph_param_selector()
 

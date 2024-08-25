@@ -34,7 +34,7 @@ COMMENT
 ENDCOMMENT
 
 NEURON {
-	SUFFIX cadyn
+	SUFFIX cadynpoirazi
 	USEION ca READ ica, cai WRITE cai
 	RANGE ca
 }

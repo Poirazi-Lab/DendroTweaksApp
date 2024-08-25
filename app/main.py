@@ -839,7 +839,7 @@ view.widgets.selectors['cell'] = Select(value=None,
                        options=[f for f in os.listdir('app/model/swc') if f.endswith('.swc') or f.endswith('.asc')], 
                        title='Cell:', 
                        width=242)
-view.widgets.selectors['cell'].description = 'Select an SWC file to load'
+view.widgets.selectors['cell'].description = 'Select an SWC file to load. To select another cell, reload the page.'
 
 view.widgets.selectors['cell'].on_change('value', p.selector_cell_callback)
 

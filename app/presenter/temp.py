@@ -17,13 +17,13 @@ class TempMixin():
 
         for sec in self.model.cell.soma:
             for seg in sec:
-                seg.decay_cadyn = 460
-                seg.gamma_cadyn = 0.000501
+                seg.decay_cadynhay = 460
+                seg.gamma_cadynhay = 0.000501
 
         for sec in self.model.cell.apic:
             for seg in sec:
-                seg.decay_cadyn = 122
-                seg.gamma_cadyn = 0.000509
+                seg.decay_cadynhay = 122
+                seg.gamma_cadynhay = 0.000509
 
     def Ra_sigmoidal_temp(self):
 
