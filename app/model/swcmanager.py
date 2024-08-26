@@ -65,99 +65,113 @@ class SWCSection():
             ax = fig.add_subplot(111, **kwargs)
         return ax
 
-
-    def plot_sec(self, ax=None, parent=True, shift=False, fill_color='orange', line_color='red'):
+    def _get_distances(self, shift):
+        if self.parent is not None:
+            parent_distances = calculate_distances(self.parent.df.X, self.parent.df.Y, self.parent.df.Z)
+            # print(f'Parent distances: {parent_distances}')
         
-        ax = self._setup_plot(ax, figsize=[5,2])
+            connection_idx = self._find_connection_idx()
 
-        def _get_distances(sec, shift):
-            if sec.parent is not None:
-                parent_distances = calculate_distances(sec.parent.df.X, sec.parent.df.Y, sec.parent.df.Z)
-                # print(f'Parent distances: {parent_distances}')
-            
-                connection_idx = _find_connection_idx(sec)
-
-                if not sec.parent.df[['X', 'Y', 'Z']].iloc[connection_idx].equals(sec.df[['X', 'Y', 'Z']].iloc[0]):
-                    # print('Coordinates do not match')
-                    
-                    distances = calculate_distances(pd.concat([sec.parent.df.X.iloc[connection_idx:connection_idx+1], self.df.X]),
-                                                    pd.concat([sec.parent.df.Y.iloc[connection_idx:connection_idx+1], self.df.Y]),
-                                                    pd.concat([sec.parent.df.Z.iloc[connection_idx:connection_idx+1], self.df.Z]))
-                    
-                    # print(f'Distances 1: {distances}')
-                    missing_distances = distances[:2]
-                    distances = distances[1:]
-                    
-                    missing_radii = [sec.parent.df.R.iloc[connection_idx], sec.df.R.iloc[0]]
-                else:
-                    # print('Coordinates match')
-                    distances = calculate_distances(sec.df.X, sec.df.Y, sec.df.Z)
-                    
-                    missing_distances = np.array([])
-                    missing_radii = np.array([])
-                    
+            if not self.parent.df[['X', 'Y', 'Z']].iloc[connection_idx].equals(self.df[['X', 'Y', 'Z']].iloc[0]):
+                # print('Coordinates do not match')
                 
+                distances = calculate_distances(pd.concat([self.parent.df.X.iloc[connection_idx:connection_idx+1], self.df.X]),
+                                                pd.concat([self.parent.df.Y.iloc[connection_idx:connection_idx+1], self.df.Y]),
+                                                pd.concat([self.parent.df.Z.iloc[connection_idx:connection_idx+1], self.df.Z]))
+                
+                # print(f'Distances 1: {distances}')
+                missing_distances = distances[:2]
+                distances = distances[1:]
+                
+                missing_radii = [self.parent.df.R.iloc[connection_idx], self.df.R.iloc[0]]
             else:
-                if self.df['Parent'].tolist() == [-1, 1, 1]:
-                    distances = [-self.df.R.iloc[0], 0, self.df.R.iloc[0]]
-                    
-                else:
-                    distances = calculate_distances(sec.df.X, sec.df.Y, sec.df.Z)
+                # print('Coordinates match')
+                distances = calculate_distances(self.df.X, self.df.Y, self.df.Z)
+                
                 missing_distances = np.array([])
                 missing_radii = np.array([])
-
-            # print()
-            # print(f'Missing distances: {missing_distances}')
-            # print(f'Distances: {distances}')
-            # print()
-            if shift:
-                shift_ = distances[-1]
-                # print(f'Shifting {distances} by {shift_}')
-                distances = [d - shift_ for d in distances]
-                if self.df['Parent'].tolist() == [-1, 1, 1]:
-                    distances = [d + shift_ for d in distances]
-                # print(f'Distances: {distances}')
                 
-                if missing_distances:
-                    # print(f'Shifting {missing_distances} by {shift_}')
-                    missing_distances = [d - shift_ for d in missing_distances]
-                    # print(f'Missing distances: {missing_distances}')
             
-            return distances, missing_distances, missing_radii
+        else:
+            if self.df['Parent'].tolist() == [-1, 1, 1]:
+                distances = [-self.df.R.iloc[0], 0, self.df.R.iloc[0]]
                 
-        def _find_connection_idx(sec):
-            connection_idx =  np.where(sec.parent.df.index == sec.df['Parent'].iloc[0])
-            if connection_idx[0].size > 1:
-                raise ValueError(f'More than one connection index found: {connection_idx}')
-            elif connection_idx[0].size == 0:
-                raise ValueError(f'No connection index found')
             else:
-                return connection_idx[0][0]
+                distances = calculate_distances(self.df.X, self.df.Y, self.df.Z)
+            missing_distances = np.array([])
+            missing_radii = np.array([])
+
+        # print()
+        # print(f'Missing distances: {missing_distances}')
+        # print(f'Distances: {distances}')
+        # print()
+        if shift:
+            shift_ = distances[-1]
+            # print(f'Shifting {distances} by {shift_}')
+            distances = [d - shift_ for d in distances]
+            if self.df['Parent'].tolist() == [-1, 1, 1]:
+                distances = [d + shift_ for d in distances]
+            # print(f'Distances: {distances}')
+            
+            if missing_distances:
+                # print(f'Shifting {missing_distances} by {shift_}')
+                missing_distances = [d - shift_ for d in missing_distances]
+                # print(f'Missing distances: {missing_distances}')
+        
+        return distances, missing_distances, missing_radii
+            
+    def _find_connection_idx(self):
+        connection_idx =  np.where(self.parent.df.index == self.df['Parent'].iloc[0])
+        if connection_idx[0].size > 1:
+            raise ValueError(f'More than one connection index found: {connection_idx}')
+        elif connection_idx[0].size == 0:
+            raise ValueError(f'No connection index found')
+        else:
+            return connection_idx[0][0]
+
+    def get_new_radii(self, shift=False):
+        distances, missing_distances, missing_radii = self._get_distances(shift)
+        new_radii = linear_regression(distances, self.df.R)
+        return new_radii
+
+    def simplify_geometry(self, shift=False):
+        distances, missing_distances, missing_radii = self._get_distances(shift)
+        new_radii = linear_regression(distances, self.df.R)
+        # take only the first, the middle and the last point
+        self.df['R'] = new_radii
+
+
+    def plot_sec(self, ax=None, parent=True, shift=False, fill_color='orange', line_color='red', implicit=True, fit=False):
+        
+        ax = self._setup_plot(ax, figsize=[5,2])
             
 
         if parent and self.parent is not None:
             self.parent.plot_sec(ax, parent=False, shift=True, fill_color='dodgerblue', line_color='blue')
             
-        distances, missing_distances, missing_radii = _get_distances(self, shift)
+        distances, missing_distances, missing_radii = self._get_distances(shift)
 
-        if missing_distances:
+        if missing_distances and implicit:
             plt.fill_between(missing_distances, 
                              np.zeros_like(missing_distances),
                              missing_radii, color=fill_color, alpha=0.3, edgecolor='None')
             
         plt.fill_between(distances, np.zeros_like(distances), self.df.R, color=fill_color, alpha=.8, edgecolor='None')
-        new_radii = linear_regression(distances, self.df.R)
-        plt.plot(distances, new_radii, color=line_color, linestyle='--', alpha=0.5)
+        if fit:
+            new_radii = linear_regression(distances, self.df.R)
+            plt.scatter(distances, new_radii, color='black', s=5)
+            plt.plot(distances, new_radii, color='black', linestyle='--', alpha=0.5)
 
 
         # for d in distances:
             # plt.axvline(d, color=line_color, linestyle='--', alpha=0.1)
-        plt.plot(distances, self.df.R, '.', color='#019E73')
+        plt.plot(distances, self.df.R, '.', color=line_color)
             
             
         
         ax.set_title(f'type: {self.info()["Type"]}, ID: {self.info()["ID"]}, \nParent: {self.info()["Parent"]}, Children: {self.info()["Children"]}')
-        
+
+
 
     def plot_sec_3d(self, ax=None, parent=False, children=False, projection='', line_color='orange', marker_color='red'):
 
@@ -315,7 +329,12 @@ class SWCManager():
         
         sec_df = pd.DataFrame(data = data).set_index('ID', drop=True)
 
-        if drop_first:
+        if 'soma' not in get_sec_name(sec):
+            child_of_soma = 'soma' in get_seg_name(sec.parentseg())
+        else:
+            child_of_soma = False
+
+        if drop_first and not child_of_soma:
             sec_df.index -= 1
             sec_df.iloc[1, -1] = sec_df.iloc[0, -1]
             sec_df.iloc[2:, -1] = sec_df.iloc[2:, -1].apply(lambda x: x-1)
@@ -334,6 +353,8 @@ class SWCManager():
         return sec_df, parent_ids
 
     def from_hoc(self, hoc_sections, soma_format='3PS'):
+
+        self.sections = []
         
         parents = dict()
 
@@ -341,7 +362,7 @@ class SWCManager():
             if sec.n3d():
                 if sec.parentseg():
                     parent_id = parents[get_seg_name(sec.parentseg())]
-                    # print(parent_id)
+                    # print(f'Segment {get_seg_name(sec.parentseg())} parent: {parent_id}')
                     df_sec, parent_ids = self.sec_to_df(sec, 
                                             parent_id=parent_id, 
                                             root_id=self.df.index[-1] + 1,
@@ -349,6 +370,7 @@ class SWCManager():
                                             drop_last=False)
                 else:
                 # In case of soma
+                    # print('Soma')
                     df_sec, parent_ids = self.sec_to_df(sec,
                                             parent_id=-1, 
                                             root_id=1,
@@ -357,8 +379,10 @@ class SWCManager():
                     if soma_format == '3PS':
                         df_sec = df_sec.reindex([2,1,3])
                         df_sec.index = [1,2,3]
+                        parent_ids.update({f'{get_sec_name(sec)}(0.0)': 2, 
+                                           f'{get_sec_name(sec)}(1.0)': 3, 
+                                           f'{get_sec_name(sec)}(0.5)': 1})
                         df_sec['Parent'] = [-1, 1, 1]
-                        
 
                 self.sections.append(SWCSection(df_sec))
 
@@ -529,7 +553,7 @@ class SWCManager():
                 point = (row['X'], row['Y'], row['Z'])
                 distances.append(distance_3d(point, self.soma_center))
             std_dev = np.std(distances)
-            if std_dev > 0.1:
+            if std_dev < 0.1:
                 print('Soma is not a contour')
                 # in not a contour soma use radius to have same surface area
                 A = calculate_surface_area(self.soma.df)
@@ -574,6 +598,11 @@ class SWCManager():
 
     def export2swc(self, path):
         self.df.to_csv(path.replace('.swc', '_') + self.soma_notation + '.swc', header=None, index=True, sep=' ', mode='w')
+        # append one info line in front of the file
+        with open(path.replace('.swc', '_') + self.soma_notation + '.swc', 'r+') as f:
+            content = f.read()
+            f.seek(0, 0)
+            f.write(f'# This file is automatically generated by DendroTweaks.\n' + f'# Soma notation is {self.soma_notation}\n#\n' + content)
         print(f'Saved to {path.replace(".swc", "_") + self.soma_notation + ".swc"}')
 
 
