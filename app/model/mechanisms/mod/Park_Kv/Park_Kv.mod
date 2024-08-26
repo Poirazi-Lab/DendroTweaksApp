@@ -71,14 +71,6 @@ FUNCTION rateconst(v (mV), r (/mV/ms), th (mV), q (mV)) (/ms) {
 	rateconst = r * (v - th) / (1 - exp(-(v - th)/q))
 }
 
-FUNCTION fakeconst(v (mV), r (/mV/ms), v12 (mV), q (mV)) (/ms) {
-	if (fabs((v - v12)/q) > 1e-6) {
-	        fakeconst = r * (v - v12) / (1 - exp(-(v - v12)/q))
-	} else {
-	        fakeconst = r * q
- 	}
-}
-
 PROCEDURE rates(v (mV)) {
 
 	LOCAL alpn, betn

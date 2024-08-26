@@ -34,14 +34,6 @@ class Park_Kv(CustomVoltageDependentIonChannel):
         rateconst = (r * (v - th)) / (1 - np.exp((-((v - th)) / q)))
         return rateconst
 
-    def fakeconst(self, v, r, v12, q):
-        conditions = [np.abs(((self.v - self.v12) / self.q)) > 1e-06,
-                      ~(np.abs(((self.v - self.v12) / self.q)) > 1e-06)]
-        choices = [(r * (v - v12)) / (1 - np.exp((-((v - v12)) / q))),
-                   r * q]
-        fakeconst = np.select(conditions, choices)
-        return fakeconst
-
     def rates(self, v):
         self.tadj = self.q10 ** ((self.celsius - self.temp) / 10)
         self.alpn = self.rateconst(v, self.Ra, self.v12, self.q)

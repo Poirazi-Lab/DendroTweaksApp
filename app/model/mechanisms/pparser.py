@@ -426,7 +426,7 @@ class ModParser():
         self._original_data = self.data
         
 
-    def clean(self, remove_inline_comments=True, remove_unitsoff=True, remove_suffix_from_gbar=True):
+    def clean_up(self, remove_inline_comments=True, remove_unitsoff=True, remove_suffix_from_gbar=True):
         if remove_unitsoff:
             self.data = re.sub(r'UNITSOFF|UNITSON', '', self.data)
         if remove_inline_comments:
@@ -460,7 +460,7 @@ class ModParser():
 
     def parse_basic(self, mod_file):
         self.read_file(mod_file)
-        self.clean()
+        self.clean_up()
         self.result = self.grammar.parseString(self.data)
         self.ast = self.result.asDict()
 
