@@ -29,8 +29,6 @@ The repository is organized as follows:
 dendrotweaks/
 │
 ├── app/
-│   ├── main.py                   # Main script to launch the Bokeh app
-│   ├── view.py                   # User interface components for the app
 │   ├── model/                    # Model logic
 │   │   ├── mechanisms/           # Ion channel and synapse mechanisms
 |   |   |   ├── collection/       # Python classes of ion channels
@@ -46,17 +44,22 @@ dendrotweaks/
 │   │   ├── cells.py              # NEURON cell class
 │   │   ├── model.py              # Core model logic
 │   │   └── swcmanager.py         # Manager class for SWC files
+│   │
 │   ├── presenter/                # Coordination of app components
 │   │   ├── presenter.py          # Main presenter class
 │   │   └── ...                   # Mixins for the presenter class
+│   │
 │   ├── static/                   # Static files (e.g., CSS, JS, user data)
-│   └── templates/                # HTML templates for the app
+│   ├── templates/                # HTML templates for the app
+│   ├── main.py                   # Main script to launch the Bokeh app
+│   ├── view.py                   # User interface components for the app
+│   ├── bokeh_utils.py            
+│   ├── utils.py                  
+│   └── logger.py
 │
-├── notebooks/                    # Jupyter notebooks with demos
-│   ├── standalone_demo.ipynb
-│   ├── parsing_demo.ipynb   
-│   └── swc_demo.ipynb          
-│
+├── Demo_1_SWC.ipynb              # Preprocessing of SWC files
+├── Demo_2_Parsing.ipynb          # Parsing of MOD files
+├── Demo_3_Standalone.ipynb       # DendroTweaks as a standalone library
 ├── environment.yml               # Conda environment configuration
 ├── requirements.txt              # Python dependencies for pip
 ├── README.md                     # Documentation and setup instructions

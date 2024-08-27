@@ -222,7 +222,7 @@ class CellModel():
         self.equilibrium_potentials[ion] = value
         for sec in self.cell.all:
             for seg in sec:
-                logger.debug(f'Setting e{ion} at {sec.name()}({seg.x}) to {value}')
+                # logger.debug(f'Setting e{ion} at {sec.name()}({seg.x}) to {value}')
                 setattr(seg, f'e{ion}', value)
 
 
