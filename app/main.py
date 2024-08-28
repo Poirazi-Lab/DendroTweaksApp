@@ -511,14 +511,14 @@ view.widgets.sliders['n_seg'].on_change('value_throttled', p.nseg_callback)
 
 view.widgets.sliders['length'] = Slider(start=1, end=200, 
                            value=1, 
-                           step=1, title='Length, μm')
+                           step=1, title='Length (μm)', visible=False)
 
     
 view.widgets.sliders['length'].on_change('value_throttled', p.length_callback)
 
 view.widgets.sliders['Ra'] = Slider(start=1, end=200,
                           value=100,
-                            step=1, title='Ra, Ω*cm')
+                            step=1, title='Ra, Ω*cm', visible=False)
 
 # view.widgets.sliders['Ra'].on_change('value_throttled', p.Ra_callback)
 
@@ -846,7 +846,7 @@ view.widgets.selectors['cell'].on_change('value', p.selector_cell_callback)
 view.widgets.sliders['d_lambda'] = Slider(start=0, end=0.2, value=0.1, step=0.01, title="d_lambda", width=200)
 view.widgets.sliders['d_lambda'].on_change('value_throttled', p.selector_cell_callback)
 
-view.widgets.buttons['to_json'] = Button(label='Export biophys', button_type='primary')
+view.widgets.buttons['to_json'] = Button(label='Export biophys', button_type='primary', disabled=True)
 view.widgets.buttons['to_json'].on_event(ButtonClick, p.to_json_callback)
 
 

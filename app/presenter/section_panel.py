@@ -179,7 +179,10 @@ class SectionMixin():
     # VIEW TO MODEL
 
     def nseg_callback(self, attr, old, new):
-        del self.model.cell.segments
+        if not self.selected_secs: 
+            logger.debug('No section selected')
+            return
+        if self.model.cell.segments: del self.model.cell.segments
         selected_secs = self.selected_secs
         self.view.widgets.selectors['section'].value = ''
         for sec in selected_secs:

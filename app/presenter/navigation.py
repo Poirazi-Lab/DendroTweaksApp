@@ -183,7 +183,7 @@ class NavigationMixin():
                 if self.view.widgets.switches['iclamp'].active:
                     self.view.widgets.sliders['iclamp_amp'].visible = True
                     logger.debug(f'Amplitude: {self.model.iclamps[seg].amp}')
-                    self.view.widgets.sliders['iclamp_amp'].value = self.model.iclamps[seg].amp
+                    self.view.widgets.sliders['iclamp_amp'].value = self.model.iclamps[seg].amp * 1e3 # convert to pA
                     
                     self.view.widgets.sliders['iclamp_duration'].visible = True
                     self.view.widgets.sliders['iclamp_duration'].value = [self.model.iclamps[seg].delay, self.model.iclamps[seg].delay + self.model.iclamps[seg].dur]

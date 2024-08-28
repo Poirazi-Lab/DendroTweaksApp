@@ -69,6 +69,7 @@ def add_sec_to_graph(G, sec, parent_id, cell, total_nseg):
                    iclamps=0,
                    AMPA=0,
                    NMDA=0,
+                   AMPA_NMDA=0,
                    GABAa=0,
                    weights=0,
                    voltage=0,
