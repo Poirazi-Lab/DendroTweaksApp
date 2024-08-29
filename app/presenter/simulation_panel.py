@@ -113,6 +113,10 @@ class SimulationMixin():
     @log
     def toggle_iclamp_callback(self, attr, old, new):
         if new:
+            with remove_callbacks(self.view.widgets.sliders['iclamp_amp']):
+                self.view.widgets.sliders['iclamp_amp'].value = 0
+            with remove_callbacks(self.view.widgets.sliders['iclamp_duration']):
+                self.view.widgets.sliders['iclamp_duration'].value = [100, 200]
             self.view.widgets.sliders['iclamp_duration'].visible = True
             self.view.widgets.sliders['iclamp_amp'].visible = True
             # self.view.widgets.selectors['iclamp_amp_unit'].visible = True

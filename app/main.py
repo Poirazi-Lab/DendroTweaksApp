@@ -690,7 +690,7 @@ view.widgets.sliders['iclamp_amp'] = AdjustableSpinner(title="Amp (pA)", value=0
 view.widgets.sliders['iclamp_amp'].on_change('value_throttled', p.iclamp_amp_callback)
 
 view.widgets.switches['record'] = Switch(active=False)
-view.widgets.switches['record_from_all'] = Switch(active=False)
+view.widgets.switches['record_from_all'] = Switch(active=False, disabled=True)
 
 view.widgets.switches['record_from_all'].on_change('active', p.record_from_all_callback)
 view.widgets.switches['record_from_all'].on_change('active', p.voltage_callback_on_change)
@@ -737,6 +737,7 @@ widgets_point_processes = column([remove_all_button,
                           view.widgets.sliders['iclamp_duration'], 
                         #   row(view.widgets.sliders['iclamp_amp'], view.widgets.selectors['iclamp_amp_unit']),
                           view.widgets.sliders['iclamp_amp'].get_widget(),
+                          Div(text='<hr style="width:30em">'),
                           row([view.widgets.selectors['syn_type'], view.widgets.spinners['N_syn']]),
                         #   view.widgets.sliders['syn rate'],
                         #     view.widgets.sliders['noise'],
@@ -835,11 +836,11 @@ curdoc().add_root(right_menu)
 
 # LEFT HAND MENU
 
-view.widgets.selectors['cell'] = Select(value=None,
-                       options=[f for f in os.listdir('app/model/swc') if f.endswith('.swc') or f.endswith('.asc')], 
+view.widgets.selectors['cell'] = Select(value='Select a cell to begin',
+                       options=['Select a cell to begin'] + [f for f in os.listdir('app/model/swc') if f.endswith('.swc') or f.endswith('.asc')], 
                        title='Cell:', 
                        width=242)
-view.widgets.selectors['cell'].description = 'Select an SWC file to load. To select another cell, reload the page.'
+view.widgets.selectors['cell'].description = 'Select an SWC file to load. To select another cell, reload the page.\nIt is recommended to choose d_lambda before loading a cell.'
 
 view.widgets.selectors['cell'].on_change('value', p.selector_cell_callback)
 
@@ -966,11 +967,23 @@ view.sources['stats_ephys'] = ColumnDataSource(data={'x': [], 'y': []})
 
 view.figures['stats_ephys'].circle(x='x', y='y', source=view.sources['stats_ephys'], color='red', size=5)
 
+view.widgets.buttons['clear_validation'] = Button(label='Clear', button_type='danger')
+
+def clear_validation_callback():
+    view.sources['stats_ephys'].data = {'x': [], 'y': []}
+    view.sources['detected_spikes'].data = {'x': [], 'y': []}
+    view.sources['frozen_v'].data = {'xs': [], 'ys': []}
+    view.widgets.switches['frozen_v'].active = False
+    view.figures['stats_ephys'].visible = False
+
+view.widgets.buttons['clear_validation'].on_event(ButtonClick, clear_validation_callback)
+
 tab_validation = TabPanel(title='Validation',
                     child=column(view.widgets.buttons['stats_ephys'],
                                   view.DOM_elements['stats_ephys'],
                                 #   view.widgets.buttons['iterate'],
-                                  view.figures['stats_ephys']
+                                  view.figures['stats_ephys'],
+                                  view.widgets.buttons['clear_validation'],
                                   )
                     )
 
@@ -1051,6 +1064,13 @@ view.widgets.color_pickers['color_picker'].on_change('color', update_background_
 view.widgets.sliders['voltage_plot_x_range'] = RangeSlider(start=0, end=1000, value=(0, 300), step=1, title='Voltage plot x range', width=200)
 view.widgets.sliders['voltage_plot_y_range'] = RangeSlider(start=-200, end=200, value=(-100, 100), step=1, title='Voltage plot y range', width=200)
 
+view.widgets.switches['enable_record_from_all'] = Switch(active=False, name='enable_record_from_all')
+
+def enable_record_from_all_callback(attr, old, new):
+    view.widgets.switches['record_from_all'].disabled = not new
+
+view.widgets.switches['enable_record_from_all'].on_change('active', enable_record_from_all_callback)
+
 def update_voltage_plot_x_range(attr, old, new):
     view.figures['sim'].x_range.start = new[0]
     view.figures['sim'].x_range.end = new[1]
@@ -1070,6 +1090,7 @@ settings_panel = column(view.widgets.selectors['theme'],
                         view.widgets.sliders['voltage_plot_x_range'],
                         view.widgets.sliders['voltage_plot_y_range'],
                         row(view.widgets.switches['recompile'], Div(text='Recompile mod files')),
+                        row(view.widgets.switches['enable_record_from_all'], Div(text='Enable record from all')),
                         view.DOM_elements['controller'],
                         name='settings_panel')
 
@@ -1101,41 +1122,6 @@ for name, fig in view.figures.items():
 curdoc().theme = 'dark_minimal'
 
 
-# dummy_button = Button(label='Dummy button', button_type='primary', visible=True)
-
-# def callback_decorator(callback, instance):
-#     def wrapper(event):
-#         callback(instance, event)
-#     return wrapper
-
-# class Dummy:
-#     def __init__(self):
-#         ...
-
-#     @callback_decorator(instance=self)
-#     def callback(self, event):
-#         print('dummy callback')
-
-# dummy = Dummy()
-
-# dummy_button.on_event(ButtonClick, dummy.callback)
-
-# curdoc().add_root(dummy_button)
-
-
-
-
-class Dummy:
-    def __init__(self):
-        self.button = Button(label='Dummy button', button_type='primary', visible=True)
-        self.button.on_event(ButtonClick, self.callback)
-        self.x = 1
-
-    def callback(self, event):
-        print(f'dummy callback {self.x}')
-
-dummy = Dummy()
-# curdoc().add_root(dummy.button)
 
 
 custom_js = CustomJS(args=dict(), code="""
