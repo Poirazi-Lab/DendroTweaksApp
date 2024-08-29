@@ -25,7 +25,7 @@ ENDCOMMENT
 NEURON {
 	SUFFIX na
 	USEION na READ ena WRITE ina
-	RANGE gbar, i, vshift, v12m, qm, v12ha, v12hb, qh, v12hinf, qhinf, Rma, Rmb, Rhb, Rha
+	RANGE gbar, i, v12m, qm, v12ha, v12hb, qh, v12hinf, qhinf, Rma, Rmb, Rhb, Rha
 }
 
 UNITS {
@@ -39,21 +39,20 @@ PARAMETER {
 	gbar    = 0.0    (S/cm2)
 	Rma     = 0.182  (/mV/ms) : opening max rate
 	Rmb     = 0.14   (/mV/ms) : closing max rate
-	v12m    = -35    (mV)     : (1/2) half-activation voltage
+	v12m    = -30    (mV)     : (1/2) half-activation voltage
 	qm      = 9.8    (mV)     : steepness of the voltage-dependence	
 
 	Rhb     = 0.0091 (/mV/ms) : inactivation max rate
 	Rha     = 0.024  (/mV/ms) : inactivation recovovery max rate
-	v12ha   = -50	 (mV)     : half-activation voltage
-	v12hb   = -75	 (mV)     : half-activation voltage
+	v12ha   = -45	 (mV)     : half-activation voltage
+	v12hb   = -70	 (mV)     : half-activation voltage
 	qh      = 5      (mV)     : inact tau slope
-	v12hinf = -65    (mV)     : inact inf slope	
+	v12hinf = -60    (mV)     : inact inf slope	
 	qhinf   = 6.2	 (mV)     : inact inf slope
 
 	temp    = 23     (degC)   : original temp 
 	q10     = 2.3    (1)      : temperature sensitivity
 
-	vshift = -5.0      (mV)
 }
 
 ASSIGNED {
@@ -80,13 +79,13 @@ BREAKPOINT {
 }
 
 DERIVATIVE states {   
-        rates(v + vshift)
+        rates(v)
         m' = (minf - m)/mtau
         h' = (hinf - h)/htau
 }
 
 INITIAL { 
-	rates(v + vshift)
+	rates(v)
 	m = minf
 	h = hinf
 }

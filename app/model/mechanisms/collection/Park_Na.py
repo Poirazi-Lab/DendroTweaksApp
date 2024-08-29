@@ -10,7 +10,6 @@ class Park_Na(CustomVoltageDependentIonChannel):
         self.ion = 'na'
         self.range_params = [
             'gbar',
-            'vshift',
             'v12m',
             'qm',
             'v12ha',
@@ -26,18 +25,17 @@ class Park_Na(CustomVoltageDependentIonChannel):
         self.gbar = 0.0 # S/cm2
         self.Rma = 0.182 # /mV/ms
         self.Rmb = 0.14 # /mV/ms
-        self.v12m = -35 # mV
+        self.v12m = -30 # mV
         self.qm = 9.8 # mV
         self.Rhb = 0.0091 # /mV/ms
         self.Rha = 0.024 # /mV/ms
-        self.v12ha = -50 # mV
-        self.v12hb = -75 # mV
+        self.v12ha = -45 # mV
+        self.v12hb = -70 # mV
         self.qh = 5 # mV
-        self.v12hinf = -65 # mV
+        self.v12hinf = -60 # mV
         self.qhinf = 6.2 # mV
         self.temp = 23 # degC
         self.q10 = 2.3 # 1
-        self.vshift = -5.0 # mV
         self.celsius = 37 # degC
         self.v = np.linspace(-100, 100, 1000)
         self.state_vars = {

@@ -22,16 +22,16 @@ class Park_Na_standard(CustomVoltageDependentIonChannel):
             'tau0_h',
         ]
         self.gbar = 0.0 # S/cm2
-        self.vhalf_m = -37.571 # mV
+        self.vhalf_m = -32.571 # mV
         self.sigma_m = 9.8 # mV
-        self.k_m = 1.867 # 1/ms
-        self.delta_m = 0.539 # 1
-        self.tau0_m = 0.063 # ms
-        self.vhalf_h = -65.0 # mV
+        self.k_m = 1.884 # 1/ms
+        self.delta_m = 0.541 # 1
+        self.tau0_m = 0.065 # ms
+        self.vhalf_h = -60.0 # mV
         self.sigma_h = -6.2 # mV
         self.k_h = 0.018 # 1/ms
-        self.delta_h = 0.409 # 1
-        self.tau0_h = 0.743 # ms
+        self.delta_h = 0.397 # 1
+        self.tau0_h = 0.795 # ms
         self.temp = 23 # degC
         self.q10 = 2.3 # 1
         self.celsius = 37 # degC
