@@ -1,5 +1,5 @@
 from model.cells import Cell, Simulator, IClamp
-from model.mechanisms.channels import CustomIonChannel, StandardIonChannel, LeakChannel, Capacitance, DummyChannel
+from model.mechanisms.channels import CustomIonChannel, StandardIonChannel, LeakChannel, Capacitance, FallbackChannel, CaDynamics
 # from mechanisms.synapses import AMPA, NMDA, GABAa
 from model.swcmanager import SWCManager
 
@@ -38,7 +38,7 @@ class CellModel():
         self.simulator = Simulator()
         self.capacitance = None
         self.equilibrium_potentials = {}
-        self.cadyn_suffix = None
+        self.cadyn = None
 
         self.swcm = SWCManager()
 
@@ -69,7 +69,7 @@ class CellModel():
             Channel = dynamic_import(module_name=f'model.mechanisms.collection.{mod_name}', class_name=mod_name)
             return Channel()
         except:
-            ch = DummyChannel(mod_file=f'{self.path_to_model}mechanisms/{mod_folder}/{mod_name}/{mod_name}.mod')
+            ch = FallbackChannel(mod_file=f'{self.path_to_model}mechanisms/{mod_folder}/{mod_name}/{mod_name}.mod')
             logger.warning(f'Failed to create channel "{mod_name}" from mod file. Creating an empty channel to insert the {ch.suffix} mechanism.')
             return ch
 
@@ -80,22 +80,22 @@ class CellModel():
                                         Distribution('uniform', value=1))
 
     def add_ca_dynamics(self, mod_name='Park_Ca_dyn'):
-        if self.cadyn_suffix:
-            warnings.warn(f'Ca dynamics already exists. Overwriting.')
+        if self.cadyn is not None:
+            logger.warning(f'Ca dynamics already exists. Overwriting.')
             self.remove_ca_dynamics()
 
-        self.parser.parse_basic(mod_file=f'{self.path_to_model}mechanisms/mod_cadyn/{mod_name}/{mod_name}.mod')
-        self.cadyn_suffix = self.parser.suffix
-        load_mechanisms(f'{self.path_to_model}mechanisms/mod_cadyn/{mod_name}/', suffix=self.cadyn_suffix, recompile=True)
+        self.cadyn = CaDynamics(mod_file=f'{self.path_to_model}mechanisms/mod_cadyn/{mod_name}/{mod_name}.mod')
+        load_mechanisms(f'{self.path_to_model}mechanisms/mod_cadyn/{mod_name}/', suffix=self.cadyn.suffix, recompile=True)
         for sec in self.cell.all:
-            sec.insert(self.cadyn_suffix)
+            sec.insert(self.cadyn.suffix)
 
     def remove_ca_dynamics(self):
+        logger.info(f'Removing Ca dynamics, name: {self.cadyn.name} suffix: {self.cadyn.suffix}')
         for sec in self.cell.all:
-            if sec.has_membrane(self.cadyn_suffix):
-                sec.uninsert(self.cadyn_suffix)
-        self.cadyn_suffix = None
-        logger.info(f'Removed Ca dynamics.')
+            if sec.has_membrane(self.cadyn.suffix):
+                sec.uninsert(self.cadyn.suffix)
+        self.cadyn = None
+        logger.info(f'Removed Ca dynamics')
         
 
     def add_channel(self, mod_name, recompile=True):
@@ -245,7 +245,8 @@ class CellModel():
                 'equilibrium_potentials': self.equilibrium_potentials,
                 'capacitance': self.capacitance.to_dict() if self.capacitance else None,
                 'simulator': self.simulator.to_dict(),
-                'path_to_model': self.path_to_model}
+                'path_to_model': self.path_to_model,
+                'ca_dynamics': self.cadyn.name}
 
     def to_swc(self, path):
         self.swcm.from_hoc(hoc_sections=self.cell.all, soma_format='3PS')
@@ -260,22 +261,22 @@ class CellModel():
         with open(path, 'w') as f:
             json.dump(data, f, indent=4)
 
-    def from_json(self, path):
+    # def from_json(self, path):
         
-        import json
+    #     import json
 
-        with open(path, 'r') as f:
-            data = json.load(f)
+    #     with open(path, 'r') as f:
+    #         data = json.load(f)
 
-        for ch in data['channels']:
-            # mod_file = f"{data['path_to_model']}/mechanisms/{ch['name']}/{ch['name']}.mod"
-            if not self.channels.get(ch['name']):
-                self.add_channel(ch['name'], recompile=False)
-            for group in ch['groups']:
-                segments = [self.cell.segments[seg_name] for seg_name in group['seg_names']]
-                self.channels[ch['name']].add_group(segments,
-                                                    group['param_name'])
-                self.channels[ch['name']].groups[-1].distribution = Distribution.from_dict(group['distribution'])
+    #     for ch in data['channels']:
+    #         # mod_file = f"{data['path_to_model']}/mechanisms/{ch['name']}/{ch['name']}.mod"
+    #         if not self.channels.get(ch['name']):
+    #             self.add_channel(ch['name'], recompile=False)
+    #         for group in ch['groups']:
+    #             segments = [self.cell.segments[seg_name] for seg_name in group['seg_names']]
+    #             self.channels[ch['name']].add_group(segments,
+    #                                                 group['param_name'])
+    #             self.channels[ch['name']].groups[-1].distribution = Distribution.from_dict(group['distribution'])
                                                         
                     
 

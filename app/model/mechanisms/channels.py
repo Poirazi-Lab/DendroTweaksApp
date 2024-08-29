@@ -170,13 +170,24 @@ class CustomCalciumDependentIonChannel(CustomIonChannel):
 
 
                 
-class DummyChannel(CustomIonChannel):
-
+class FallbackChannel(CustomIonChannel):
+    """ This class is used to store the basic information (name and suffix)
+    about a channel, when parsing the mod file fails.
+    """
     def __init__(self, mod_file):
         with open(mod_file, 'r') as f:
             mod_text = f.read()
         # use regex to extract suffix from the NEURON block under SUFFIX keyword
         self.suffix = re.search(r'SUFFIX\s+(\w+)', mod_text).group(1)    
+        self.name = mod_file.split('/')[-1].replace('.mod', '')
+
+class CaDynamics():
+
+    def __init__(self, mod_file):
+        with open(mod_file, 'r') as f:
+            mod_text = f.read()
+        # use regex to extract suffix from the NEURON block under SUFFIX keyword
+        self.suffix = re.search(r'SUFFIX\s+(\w+)', mod_text).group(1)
         self.name = mod_file.split('/')[-1].replace('.mod', '')
 
 

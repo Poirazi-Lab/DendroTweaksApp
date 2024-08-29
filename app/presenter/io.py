@@ -192,6 +192,9 @@ class IOMixin():
             self.update_graph_param('cm')
             self.update_section_param_data()
 
+        if data.get('ca_dynamics') is not None:
+            self.view.widgets.selectors['mod_files_cadyn'].value = data['ca_dynamics']
+
         self.update_equilibtium_potentials()
         if data.get('equilibrium_potentials') is not None:
             for ion, value in data['equilibrium_potentials'].items():

@@ -15795,5 +15795,6 @@
         "v_init": -70,
         "dt": 0.025
     },
-    "path_to_model": "model/"
+    "path_to_model": "model/",
+    "ca_dynamics": "Poirazi_cadyn"
 }
