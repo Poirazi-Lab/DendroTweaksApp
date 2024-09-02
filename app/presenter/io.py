@@ -214,6 +214,9 @@ class IOMixin():
         self.update_graph_param_selector()
 
     def from_json_callback(self, event):
+        if self.model.cell is None:
+            logger.warning('No cell loaded')
+            return
         import os
         path_to_json = os.path.join('app', 'static', 'data', f'{self.model.cell.name}_ephys.json')
         self.from_json(path_to_json)
