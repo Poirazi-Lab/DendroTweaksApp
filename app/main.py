@@ -396,6 +396,7 @@ view.figures['spikes'] = figure(height=300,
                 y_axis_label='Synapse index',
                 y_range=FactorRange(factors=[]),
                 tools="pan, box_zoom, reset, save")
+
 view.figures['spikes'].toolbar.logo = None
 view.figures['spikes'].grid.grid_line_alpha = 0.1
 view.figures['spikes'].ygrid.visible = False
@@ -414,41 +415,62 @@ view.figures['sim'].x_range = view.figures['spikes'].x_range = view.figures['cur
 
 view.figures['inf'] = figure(width=300, height=300, title='Steady state',
                         x_axis_label='Voltage (mV)', y_axis_label='Inf, (1)',
-                        visible=False,
-                        )
+                        visible=False)
+
 view.sources['inf_orig'] = ColumnDataSource(data={'xs': [], 'ys': [], })
 view.figures['inf'].multi_line(xs='xs',
-                                            ys='ys',
-                                            source=view.sources['inf_orig'],
-                                            line_width=2,
-                                            color='color')
+                               ys='ys',
+                               source=view.sources['inf_orig'],
+                               line_width=2,
+                               color='color')
 
 view.sources['inf_fit'] = ColumnDataSource(data={'xs': [], 'ys': [], })
 view.figures['inf'].multi_line(xs='xs',
-                                            ys='ys',
-                                            source=view.sources['inf_fit'],
-                                            line_width=2,
-                                            line_dash='dashed',
-                                            color='color')
+                               ys='ys',
+                               source=view.sources['inf_fit'],
+                               line_width=2,
+                               line_dash='dashed',
+                               color='color')
+
+from bokeh.models import LogScale
+view.figures['inf_log'] = figure(width=300, height=300, title='Steady state',
+                        x_axis_label='Voltage (mV)', y_axis_label='Inf, (1)',
+                        visible=False, x_axis_type='log')
+
+view.figures['inf_log'].multi_line(xs='xs',
+                                   ys='ys',
+                                   source=view.sources['inf_orig'],
+                                   line_width=2,
+                                   color='color')
 
 view.figures['tau'] = figure(width=300, height=300, title='Time constant',
                         x_axis_label='Voltage (mV)', y_axis_label='Tau, ms',
-                        visible=False,
-                        )
+                        visible=False)
+
 view.sources['tau_orig'] = ColumnDataSource(data={'xs': [], 'ys': []})
 view.figures['tau'].multi_line(xs='xs',
-                                            ys='ys',
-                                            source=view.sources['tau_orig'],
-                                            line_width=2,
-                                            color='color')
+                               ys='ys',
+                               source=view.sources['tau_orig'],
+                               line_width=2,
+                               color='color')
+
+view.figures['tau_log'] = figure(width=300, height=300, title='Time constant',
+                        x_axis_label='Voltage (mV)', y_axis_label='Tau, ms',
+                        visible=False, x_axis_type='log')
+
+view.figures['tau_log'].multi_line(xs='xs',
+                                   ys='ys',
+                                   source=view.sources['tau_orig'],
+                                   line_width=2,
+                                   color='color')                        
 
 view.sources['tau_fit'] = ColumnDataSource(data={'xs': [], 'ys': []})
 view.figures['tau'].multi_line(xs='xs',
-                                            ys='ys',
-                                            source=view.sources['tau_fit'],
-                                            line_width=2,
-                                            line_dash='dashed',
-                                            color='color')
+                               ys='ys',
+                               source=view.sources['tau_fit'],
+                               line_width=2,
+                               line_dash='dashed',
+                               color='color')
 
 view.DOM_elements['runtime'] = Div(text='')
 
@@ -486,7 +508,9 @@ view.widgets.tabs['simulation'] = Tabs(tabs=[TabPanel(child=voltage_panel, title
 panel_simulation = row(
                        view.widgets.tabs['simulation'], 
                        view.figures['inf'], 
+                       view.figures['inf_log'],
                        view.figures['tau'], 
+                       view.figures['tau_log'],
                        name='panel_simulation', width=1200)
 
 
@@ -799,7 +823,9 @@ def toggle_activation_curves_callback(attr, old, new):
         view.DOM_elements['channel_panel'].visible = False
         view.widgets.tabs['section'].visible = True
         view.figures['inf'].visible = False
+        view.figures['inf_log'].visible = False
         view.figures['tau'].visible = False
+        view.figures['tau_log'].visible = False
         if view.widgets.tabs['section'].active == 0: panel_section.visible = True
     elif new == 1:
         view.widgets.tabs['section'].visible = False
