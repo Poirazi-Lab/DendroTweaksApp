@@ -205,7 +205,9 @@ class NavigationMixin():
         self.model.remove_all_iclamps()
         self.model.remove_all_synapses()
         self.view.DOM_elements['syn_group_panel'].children = []
+        self.view.widgets.selectors['syn_group'].options = []
         self.update_graph_param('iclamps')
         self.update_graph_param('recordings')
         for name in self.model.synapses:
             self.update_graph_param(name)
+        self.view.sources['sim'].data = {'xs': [], 'ys': [], 'label': []}

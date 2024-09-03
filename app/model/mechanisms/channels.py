@@ -61,7 +61,7 @@ class IonChannel():
         self.groups.remove(group)
 
     def remove_all_groups(self):
-        for group in self.groups:
+        for group in reversed(self.groups):
             self.remove_group(group)
         logger.debug(f'{self.name} groups removed: {self.groups}')
 

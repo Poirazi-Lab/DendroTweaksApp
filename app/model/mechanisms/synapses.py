@@ -170,7 +170,7 @@ class Synapse():
         self.groups.remove(group)
 
     def remove_all_groups(self):
-        for group in self.groups:
+        for group in reversed(self.groups):
             self.remove_group(group)
 
     def get_by_name(self, name):
