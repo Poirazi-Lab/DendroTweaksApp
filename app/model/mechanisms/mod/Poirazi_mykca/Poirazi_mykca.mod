@@ -30,7 +30,7 @@ UNITS {
 	(mV) =	(millivolt)
 	(mA) =	(milliamp)
 	(mM) =	(millimolar)
-	FARADAY = (faraday)  (kilocoulombs)
+	FARADAY = (faraday) (coulombs)
 	R = (k-mole) (joule/degC)
 }
 
@@ -85,13 +85,13 @@ FUNCTION bet(v (mV), ca (mM)) (1/ms) {
 }  
 
 FUNCTION exp1(k (mM), d, v (mV)) (mM) {
-	exp1 = k * exp(-2 * d * FARADAY * v / R / (273.15 + celsius))
+	exp1 = k * exp(-2 * d * FARADAY * (0.001) * v / R / (273.15 + celsius))
 }
 
 PROCEDURE rate(v (mV), ca (mM)) {
 	LOCAL a, b
 	a = alp(v,ca)
 	b = bet(v,ca)
-	mtau = 1/(a + b) : estimation of activation mtau
+	mtau = 1/(a + b)   : estimation of activation mtau
 	minf = a * mtau    : estimation of activation steady state value
 }

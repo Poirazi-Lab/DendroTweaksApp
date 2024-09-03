@@ -289,8 +289,8 @@ class Presenter(IOMixin, NavigationMixin,
     @property
     def selected_channel(self):
         if self.view.widgets.selectors['channel'].visible:
-            value = self.view.widgets.selectors['channel'].value
-            return self.model.channels[value]
+            ch_name = self.view.widgets.selectors['channel'].value
+            return self.model.channels.get(ch_name, None)
         else:
             suffix = self.selected_param.replace('gbar_', '')
             chs = [ch for ch in self.model.channels.values() if ch.suffix == suffix]

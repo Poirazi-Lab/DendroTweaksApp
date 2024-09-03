@@ -61,8 +61,8 @@ comment_block = Combine(COMMENT + SkipTo(ENDCOMMENT) + ENDCOMMENT)('comment_bloc
 verbatim = VERBATIM + SkipTo(ENDVERBATIM) + ENDVERBATIM
 
 ## Block keywords
-FARADAY = Suppress(Keyword('FARADAY', caseless=False))
-R = Suppress(Keyword('R', caseless=False))
+FARADAY = Keyword('FARADAY', caseless=False)
+R = Keyword('R', caseless=False)
 
 number = pyparsing_common.number
 identifier = Word(alphas, alphanums + "_") 
@@ -76,8 +76,8 @@ unit = Combine(LPAREN
                + RPAREN)
 dimensionless = LPAREN + Literal("1") + RPAREN
 
-faraday_constant = FARADAY + EQUAL + LPAREN + Literal('faraday') + RPAREN + Optional(unit)
-gas_constant = R + EQUAL + LPAREN + Literal('k-mole') + RPAREN + Optional(unit)
+faraday_constant = Dict(Group(FARADAY + EQUAL + LPAREN + Suppress(Literal('faraday')) + RPAREN + Optional(unit)))
+gas_constant = Dict(Group(R + EQUAL + LPAREN + Suppress(Literal('k-mole')) + RPAREN + Optional(unit)))
 
 constant = faraday_constant | gas_constant
 
@@ -572,6 +572,8 @@ class ModParser():
                         for item in value:
                             if isinstance(item, dict):
                                 replace_in_nested_dict(item, target, replacement)
+                            elif item == target:
+                                value[value.index(item)] = replacement
                     elif value == target:
                         input_dict[key] = replacement
             return input_dict

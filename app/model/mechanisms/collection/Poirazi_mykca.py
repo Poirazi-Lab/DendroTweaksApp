@@ -38,7 +38,7 @@ class Poirazi_mykca(CustomCalciumDependentIonChannel):
         return bet
 
     def exp1(self, k, d, v):
-        exp1 = k * np.exp((((((-(2) * d) * FARADAY) * v) / R) / (273.15 + self.celsius)))
+        exp1 = k * np.exp(((((((-(2) * d) * 96485.309) * 0.001) * v) / 8.313424) / (273.15 + self.celsius)))
         return exp1
 
     def rate(self, v, ca):
