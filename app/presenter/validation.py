@@ -316,10 +316,10 @@ class ValidationMixin():
     def update_histogram(self):
         diams = [seg.diam for seg in self.selected_segs]
         areas = [seg.area() for seg in self.selected_segs]
-        bins = np.linspace(0, 300, 40)
-        hist, edges = np.histogram(areas, bins=bins)
+        # bins = np.linspace(0, 300, 40)
+        hist, edges = np.histogram(areas, bins='auto')
         logger.debug(f'Top: {hist}\nLeft: {edges[:-1]}\nRight: {edges[1:]}')
         self.view.sources['section_param_hist'].data = {'top': hist, 'left': edges[:-1], 'right': edges[1:]}
         
         # self.view.figures['section_param_hist'].yaxis.axis_label = 'Count'
-        # self.view.figures['section_param_hist'].xaxis.axis_label = 'Diameter, µm'
+        self.view.figures['section_param_hist'].xaxis.axis_label = 'Area, µm2'
