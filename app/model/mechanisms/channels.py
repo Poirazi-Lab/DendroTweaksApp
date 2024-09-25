@@ -175,6 +175,7 @@ class FallbackChannel(CustomIonChannel):
     about a channel, when parsing the mod file fails.
     """
     def __init__(self, mod_file):
+        super().__init__('', '')
         with open(mod_file, 'r') as f:
             mod_text = f.read()
         # use regex to extract suffix from the NEURON block under SUFFIX keyword
