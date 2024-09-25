@@ -81,7 +81,7 @@ class SimulationMixin():
         synapse_names = sorted(set(data['y']))
         self.view.figures['spikes'].y_range.factors = synapse_names
         if len(synapse_names) > 20:
-            self.view.figures['spikes'].yaxis.visible = False
+            self.view.figures['spikes'].yaxis.ticker = []
 
         self.view.sources['spikes'].data = data
 

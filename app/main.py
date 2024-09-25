@@ -76,6 +76,8 @@ view.figures['cell'] = figure(title='Cell',
        match_aspect=True,
        tools='pan, box_zoom,reset, tap, wheel_zoom, save')
 
+view.figures['cell'].toolbar.active_scroll = view.figures['cell'].select_one(WheelZoomTool)
+
 view.sources['cell'] = ColumnDataSource(data={'xs': [], 'ys': [], 'color': [], 'line_width': [], 'label': [], 'line_alpha': []})
 view.sources['soma'] = ColumnDataSource(data={'x': [], 'y': [], 'rad': [], 'color': ['red']})
 
@@ -90,7 +92,7 @@ view.figures['cell'].renderers[0].selection_glyph = MultiLine(line_alpha=0.8, li
 view.figures['cell'].renderers[0].nonselection_glyph = MultiLine(line_alpha=0.3, line_width='line_width', line_color='color')
 
 view.figures['cell'].circle(x='x', y='y', radius='rad', color='color', source=view.sources['soma'], alpha=0.9)
-view.widgets.sliders['rotate_cell'] = Slider(start=0, end=360, value=1, step=2, title="Angle", width=370)
+view.widgets.sliders['rotate_cell'] = Slider(start=0, end=360, value=1, step=2, title="Rotate", width=370)
 
 view.widgets.sliders['rotate_cell'].on_change('value', p.update_3D_callback)
 
@@ -293,7 +295,7 @@ view.figures['sim'] = figure(width=600, height=300,
                x_axis_label='Time (ms)',
                y_axis_label='Voltage (mV)',
                y_range=(-100, 50),
-               tools="pan, xwheel_zoom, ywheel_zoom, box_zoom, reset, save, tap",
+               tools="pan, xwheel_zoom, reset, save, ywheel_zoom, box_zoom, tap",
                output_backend="webgl")
 
 view.figures['sim'].grid.grid_line_alpha = 0.1
@@ -393,7 +395,7 @@ view.figures['spikes'] = figure(height=300,
                 sizing_mode='scale_width',
                 x_axis_label='Time (ms)',
                 x_range=(0, 300),
-                y_axis_label='Synapse index',
+                y_axis_label='Synapses',
                 y_range=FactorRange(factors=[]),
                 tools="pan, box_zoom, reset, save")
 
@@ -474,7 +476,7 @@ view.figures['tau'].multi_line(xs='xs',
 
 view.DOM_elements['runtime'] = Div(text='')
 
-view.widgets.buttons['run'] = Button(label='Run', button_type='primary', width=242, height=50)
+view.widgets.buttons['run'] = Button(label='Run', button_type='primary', width=242, height=50, disabled=True)
 
 
 runtime_callback = CustomJS(args=dict(runtime=view.DOM_elements['runtime']), code="""
@@ -497,8 +499,8 @@ current_panel = column(view.figures['curr'],
 
 
 view.widgets.tabs['simulation'] = Tabs(tabs=[TabPanel(child=voltage_panel, title='Voltage'),
-                                            TabPanel(child=view.figures['spikes'],title='Spikes'),
                                             TabPanel(child=current_panel, title='Current'),
+                                            TabPanel(child=view.figures['spikes'],title='Synaptic inputs'),
                                             ], width=600, height=300, 
                                             width_policy='fit',)
 
@@ -871,6 +873,7 @@ view.widgets.selectors['cell'].description = 'Select an SWC file to load. To sel
 view.widgets.selectors['cell'].on_change('value', p.selector_cell_callback)
 
 view.widgets.sliders['d_lambda'] = Slider(start=0, end=0.2, value=0.1, step=0.01, title="d_lambda", width=200)
+
 view.widgets.sliders['d_lambda'].on_change('value_throttled', p.selector_cell_callback)
 
 view.widgets.buttons['to_json'] = Button(label='Export biophys', button_type='primary', disabled=True)
@@ -940,6 +943,9 @@ tab_io = TabPanel(title='Input/Output',
                                 )
 
 view.widgets.switches['real_time'] = Switch(active=True)
+def enable_run_button(attr, old, new):
+    view.widgets.buttons['run'].disabled = new
+view.widgets.switches['real_time'].on_change('active', enable_run_button)
 
 tab_sim = TabPanel(title='Simulation',
                     child=column(view.widgets.sliders['duration'],
