@@ -99,6 +99,8 @@ class CellView():
         self.DOM_elements = {}
         self._params = PARAMS
         self._add_theme_callbacks()
+        self._file_content = None
+        self._filename = None
 
     @property
     def params(self):

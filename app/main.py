@@ -888,18 +888,8 @@ json_panel = row(view.widgets.buttons['to_json'],
                 view.widgets.buttons['from_json'])
 
 view.widgets.file_input['all'] = FileInput(accept='.swc, .asc, .mod', name='file', visible=True, width=242, disabled=True)
-view.widgets.text['filename_workaround'] = TextInput(value='', visible=False)
-# Define a CustomJS callback
-callback = CustomJS(args=dict(filename_workaround= view.widgets.text['filename_workaround'],
-                     file_input=view.widgets.file_input['all']), code="""
-    
-    filename_workaround.value = file_input.filename
-    
-""")
-
-# view.widgets.file_input['all'].js_on_change('change', callback)
-
-# view.widgets.file_input['all'].on_change('value', p.import_file_callback)
+view.widgets.file_input['all'].on_change('filename', p.import_file_callback)
+view.widgets.file_input['all'].on_change('value', p.import_file_callback)
 
 view.widgets.multichoice['mod_files'] = MultiChoice(title='Mechanisms', 
                                     value=['Leak'],
@@ -1052,8 +1042,6 @@ curdoc().add_root(left_menu)
 ### Settings panel
 
 console = TextInput(value='Only for development', title='Console', width=500, height=50, name='console', disabled=True)
-
-
 # console.on_change('value', p.console_callback)
 
 status_bar = Div(text="""Launched GUI""", name='status_bar', styles={'width': '500px', 'height':'200px', 

@@ -246,7 +246,7 @@ class CellModel():
                 'capacitance': self.capacitance.to_dict() if self.capacitance else None,
                 'simulator': self.simulator.to_dict(),
                 'path_to_model': self.path_to_model,
-                'ca_dynamics': self.cadyn.name}
+                'ca_dynamics': self.cadyn.name if self.cadyn else None,}
 
     def to_swc(self, path):
         self.swcm.from_hoc(hoc_sections=self.cell.all, soma_format='3PS')
