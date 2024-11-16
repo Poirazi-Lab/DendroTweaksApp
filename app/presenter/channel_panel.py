@@ -12,7 +12,6 @@ from bokeh_utils import AdjustableSpinner
 from bokeh.layouts import row, column
 from bokeh.models import Div
 from bokeh.palettes import Bokeh
-from bokeh.models import LogScale
 
 from model.mechanisms.channels import StandardIonChannel
 
@@ -46,12 +45,17 @@ class ChannelMixin():
         
         if hasattr(ch, 'cai'):
             x_range = np.logspace(-5, 5, 1000)
-            logger.debug(f'X scale {self.view.figures["inf"].x_scale}')
-            self.view.figures['inf'].x_scale = LogScale()
-            logger.debug(f'X scale {self.view.figures["inf"].x_scale}')
+            self.view.figures['inf'].visible = False
+            self.view.figures['inf_log'].visible = True
+            self.view.figures['tau'].visible = False
+            self.view.figures['tau_log'].visible = True
         else: 
             logger.debug('Using linear scale for x-axis')
             x_range = np.linspace(-100, 100, 1000)
+            self.view.figures['inf_log'].visible = False
+            self.view.figures['inf'].visible = True
+            self.view.figures['tau_log'].visible = False
+            self.view.figures['tau'].visible = True
 
         ch.update(x_range)
 
@@ -97,6 +101,9 @@ class ChannelMixin():
             button.on_click(self.standardize_callback)
             button.on_click(self.voltage_callback_on_event)
 
+        if hasattr(ch, 'cai'):
+            button.disabled = True
+
         def make_slider_callback(slider_title):
             def slider_callback(attr, old, new):
                 
@@ -126,7 +133,7 @@ class ChannelMixin():
             else:
                 return column([button, *sliders])
         else:
-           return column([button, Div(text='No sliders to display. Try declaring some RANGE variables in the mod file (requires reuploading the file).')])
+           return column([button, Div(text='No sliders to display. Try declaring some RANGE variables in the mod file (requires reuploading the file).<br>Note that recording current from the channel is possible only if <code>i</code> is declared as a RANGE variable in the mod file.')])
                    
         # return panel
 

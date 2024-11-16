@@ -80,8 +80,8 @@ class SimulationMixin():
 
         synapse_names = sorted(set(data['y']))
         self.view.figures['spikes'].y_range.factors = synapse_names
-        # if len(synapse_names) > 20:
-        #     self.view.figures['spikes'].yaxis.visible = False
+        if len(synapse_names) > 20:
+            self.view.figures['spikes'].yaxis.ticker = []
 
         self.view.sources['spikes'].data = data
 
@@ -113,6 +113,10 @@ class SimulationMixin():
     @log
     def toggle_iclamp_callback(self, attr, old, new):
         if new:
+            with remove_callbacks(self.view.widgets.sliders['iclamp_amp']):
+                self.view.widgets.sliders['iclamp_amp'].value = 0
+            with remove_callbacks(self.view.widgets.sliders['iclamp_duration']):
+                self.view.widgets.sliders['iclamp_duration'].value = [100, 200]
             self.view.widgets.sliders['iclamp_duration'].visible = True
             self.view.widgets.sliders['iclamp_amp'].visible = True
             # self.view.widgets.selectors['iclamp_amp_unit'].visible = True

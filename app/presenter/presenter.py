@@ -289,8 +289,8 @@ class Presenter(IOMixin, NavigationMixin,
     @property
     def selected_channel(self):
         if self.view.widgets.selectors['channel'].visible:
-            value = self.view.widgets.selectors['channel'].value
-            return self.model.channels[value]
+            ch_name = self.view.widgets.selectors['channel'].value
+            return self.model.channels.get(ch_name, None)
         else:
             suffix = self.selected_param.replace('gbar_', '')
             chs = [ch for ch in self.model.channels.values() if ch.suffix == suffix]
@@ -483,12 +483,53 @@ class Presenter(IOMixin, NavigationMixin,
     #         slider.on_change('value_throttled', self.voltage_callback_on_change)
     #         sliders.append(slider.get_widget())
     #     self.view.DOM_elements['distribution_params'].children = sliders
+
+    def delete_subtree_callback(self, event):
+        sec = self.selected_sec
+        parent = sec.parentseg().sec
+        logger.debug(sec.parentseg())
+        segments_to_remove = [seg for sec in sec.subtree() for seg in sec]
+        # Remove the segments from channel groups
+        for ch in self.model.channels.values():
+            groups_to_remove = []
+            for group in ch.groups:
+                group.segments = [seg for seg in group.segments if seg not in segments_to_remove]
+                logger.debug(f'Group {group.name} has {len(group.segments)} segments')
+                if len(group.segments) == 0:
+                    groups_to_remove.append(group)
+            for group in groups_to_remove:
+                ch.remove_group(group)
+        # Remove the segments from capacitance the same way
+        groups_to_remove = []
+        for group in self.model.capacitance.groups:
+            group.segments = [seg for seg in group.segments if seg not in segments_to_remove]
+            if len(group.segments) == 0:
+                groups_to_remove.append(group)
+        for group in groups_to_remove:
+            self.model.capacitance.remove_group(group)
+
+        self.model.delete_subtree(sec)
+        self.selected_secs = set()
+        self.selected_segs = []
+        self.points = self.get_pts3d()
+        if hasattr(self.model.cell, 'segments'):
+            del self.model.cell.segments
+        if hasattr(self.model.cell, 'sections'):
+            del self.model.cell.sections
+
+        self.create_cell_renderer()
+        self.create_graph_renderer()
+        self.add_lasso_callback()
+
+        self.view.widgets.selectors['section'].options=[''] + list(self.model.cell.sections.keys())
+        
     
 
     @log
     def reduce_subtree_callback(self, event):
         sec = self.selected_sec
         parent = sec.parentseg().sec
+        logger.debug(sec.parentseg())
         segments_to_remove = [seg for sec in sec.subtree() for seg in sec]
         # Remove the segments from channel groups
         for ch in self.model.channels.values():

@@ -1,0 +1,304 @@
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+
+from dendrotweaks.utils import timeit
+
+from dendrotweaks.trees.trees import Node, Tree
+
+SWC_TYPES = {
+    1: 'soma',
+    2: 'axon',
+    3: 'dend',
+    4: 'apic'
+}
+
+
+class SWCNode(Node):
+
+    def __init__(self, idx: str, type_idx: int, x: float, y: float, z: float, r: float, parent_idx: str) -> None:
+        super().__init__(idx, parent_idx)
+        self.type_idx = type_idx
+        self.x = x
+        self.y = y
+        self.z = z
+        self.r = r
+        self._section = None
+
+    def info(self):
+        info = (
+            f"Node {self.idx}:\n"
+            f"  Type: {SWC_TYPES.get(self.type_idx, 'unknown')}\n"
+            f"  Coordinates: ({self.x}, {self.y}, {self.z})\n"
+            f"  Radius: {self.r}\n"
+            f"  Parent: {self.parent_idx}\n"
+            f"  Section: {self._section.idx if self._section else 'None'}"
+        )
+        print(info)
+    
+    @property
+    def domain(self):
+        return SWC_TYPES.get(self.type_idx, 'unknown')
+
+    @property
+    def distance_to_parent(self):
+        if not self.parent:
+            return 0
+        return np.sqrt((self.x - self.parent.x)**2 + (self.y - self.parent.y)**2 + (self.z - self.parent.z)**2)
+
+    @property
+    def distance_to_root(self):
+        if not self.parent:
+            return 0
+        return self.parent.distance_to_root + self.distance_to_parent
+
+    @property
+    def df(self):
+        # put the required data in a pandas dataframe
+        return pd.DataFrame({'idx': [self.idx],
+                             'type_idx': [self.type_idx],
+                             'x': [self.x],
+                             'y': [self.y],
+                             'z': [self.z],
+                             'r': [self.r],
+                             'parent_idx': [self.parent_idx]})
+
+    def copy(self):
+        new_node = SWCNode(self.idx, self.type_idx, self.x,
+                            self.y, self.z, self.r, self.parent_idx)
+        return new_node
+
+
+class SWCTree(Tree):
+
+    def __init__(self, nodes: list[SWCNode]) -> None:
+        super().__init__(nodes)
+        self._sections = []
+        self._is_extended = False
+
+    @property
+    def pts3d(self):
+        return self._nodes
+
+    @property
+    def is_sectioned(self):
+        return len(self._sections) > 0
+
+    @timeit
+    def split_to_sections(self):
+        """
+        Build the sections using bifurcation points.
+        """
+        from dendrotweaks.trees.sec_trees import Section
+        self._sections = []
+
+        bifurcations = self.bifurcations
+        bifurcation_children = [
+            child for b in bifurcations for child in b.children]
+        bifurcation_children = [self.root] + bifurcation_children
+        bifurcation_children = sorted(
+            bifurcation_children, key=lambda x: x.idx)
+
+        # Assign a section to each bifurcation child
+        for i, child in enumerate(bifurcation_children):
+            section = Section(i, -1, pts3d=[child])
+            self._sections.append(section)
+            child._section = section
+            while child.children:
+                next_child = child.children[0]
+                if next_child in bifurcation_children:
+                    break
+                next_child._section = section
+                section.pts3d.append(next_child)
+                child = next_child
+
+            section.parent = section.pts3d[0].parent._section if section.pts3d[0].parent else None
+            section.parent_idx = section.parent.idx if section.parent else -1
+            # section.parent_idx = section.pts3d[0].parent._section.idx if section.pts3d[0].parent else -1
+
+    def merge_soma(self):
+        """
+        If soma has 3PS notation, merge it into one section.
+        """
+        
+        pts3d = [pt for sec in self._soma_sections for pt in sec.pts3d]
+        pts3d.remove(self.root)
+        pts3d.insert(1, self.root)
+
+
+        # Create a new section for the soma
+        true_soma = self.root._section
+        true_soma.pts3d = pts3d # no need to update extended_pts3d for the soma
+        for pt in pts3d:
+            pt._section = true_soma
+
+        # Replace the soma sections with the new one
+        for sec in self._soma_sections:
+            self._sections.remove(sec)
+        self._sections = [true_soma] + self._sections
+
+        # Update the indices
+        for sec in self._sections:
+            sec.idx = sec.idx - 2 if sec.idx > 1 else sec.idx
+            sec.parent_idx = sec.parent_idx - 2 if sec.parent_idx > 1 else sec.parent_idx
+
+    def extend_sections(self):
+        """
+        Extends the section by adding a copy of the last node from the parent section
+        to the beginning of the section. This is done to ensure continuity between sections.
+        The method checks if the sections have already been extended to avoid duplication.
+
+        Attributes:
+            _is_extended (bool): A flag indicating whether the sections have 
+                        already been extended.
+            _sections (list): A list of sections in the tree structure.
+            soma (object): The root section.
+            soma_notation (str): The notation used for the soma.
+
+        Notes:
+            - The method is implemented similarly to the NEURON's approach to section extension.
+            - If the section's parent is the soma, it extends the section only if it has
+            a single point. 
+            - Given the above, for '3PS' notation, instead of the last point it copies 
+            the second point of the parent section (the root point).
+        """
+        if self._is_extended:
+            print('Sections are already extended.')
+            return
+        for sec in self._sections:
+            if not sec.parent:
+                continue
+            first_node = sec.pts3d[0]
+            if sec.parent is self.soma:
+                if len(sec.pts3d) > 1:
+                    continue # do not extend the soma children in general
+                if self.soma_notation == '3PS':
+                    node_to_copy = sec.parent.pts3d[1]
+                else:
+                    node_to_copy = sec.parent.pts3d[-1]
+            node_to_copy = sec.parent.pts3d[-1]
+            new_node = node_to_copy.copy()
+            # Copy SWC-specific attributes
+            new_node.type_idx = first_node.type_idx
+            new_node._section = first_node._section
+            # Insert the new node at the beginning of the section
+            self.insert_node(first_node.idx, new_node)
+            sec.pts3d.insert(0, new_node)
+        self._is_extended = True
+
+    @property
+    def _soma_sections(self):
+        return [sec for sec in self._sections
+                if all([pt.type_idx == 1 for pt in sec.pts3d])]
+
+    @property
+    def soma(self):
+        if not self._soma_sections:
+            raise ValueError('No soma sections found.')
+        return self.root._section
+
+    @property
+    def soma_notation(self):
+        if len(self.soma.pts3d) == 1:
+            return '1PS'
+        elif len(self.soma.pts3d) == 3:
+            return '3PS'
+        else:
+            return 'contour'
+
+    @property
+    def soma_center(self):
+        return np.mean([[pt.x, pt.y, pt.z] for pt in self.soma.pts3d], axis=0)
+
+    def shift_coordinates_to_soma_center(self):
+        """
+        Shift all coordinates so that the soma center is at the origin (0, 0, 0).
+        """
+        soma_x, soma_y, soma_z = self.soma_center
+        for pt in self.pts3d:
+            pt.x = round(pt.x - soma_x, 8)
+            pt.y = round(pt.y - soma_y, 8)
+            pt.z = round(pt.z - soma_z, 8)
+
+    def rotate(self, angle_deg):
+        """Rotate the point cloud around the y-axis at the soma center using pandas vectorized operations."""
+
+        # Get the rotation center point
+        rotation_point = self.soma_center
+
+        # Define rotation matrix for y-axis rotation
+        angle = np.radians(angle_deg)
+        rotation_matrix = np.array([
+            [np.cos(angle), 0, np.sin(angle)],
+            [0, 1, 0],
+            [-np.sin(angle), 0, np.cos(angle)]
+        ])
+
+        # TODO: Is translation needed here? There is a separate method for that.
+        # Subtract rotation point to translate the cloud to the origin
+        coords = np.array([[pt.x, pt.y, pt.z] for pt in self.pts3d])
+        coords -= rotation_point
+
+        rotated_coords = np.dot(coords, rotation_matrix.T)
+
+        rotated_coords += rotation_point
+
+        for pt, (x, y, z) in zip(self._nodes, rotated_coords):
+            pt.x, pt.y, pt.z = x, y, z
+
+    def plot_points(self, ax=None, edges=True, annotate=False):
+
+        if ax is None:
+            fig, ax = plt.subplots(figsize=(10, 10))
+
+        if edges:
+            edges = self.edges
+            for edge in edges:
+                xs = [edge[0].x, edge[1].x]
+                ys = [edge[0].y, edge[1].y]
+                ax.plot(xs, ys, color='red')
+
+        xs = [pt.x for pt in self.pts3d]
+        ys = [pt.y for pt in self.pts3d]
+        ax.plot(xs, ys, '.', color='k', markersize=5)
+
+        # annotate the node index
+        if annotate and len(self.pts3d) < 50:
+            for pt in self.pts3d:
+                ax.annotate(f'{pt.idx}', (pt.x, pt.y), fontsize=8)
+                # ax.annotate(f'{pt.idx}', (pt.x, pt.y), fontsize=8,
+                #             bbox=dict(facecolor='white', edgecolor='black', boxstyle='round,pad=0.3'))
+
+        ax.set_aspect('equal')
+
+    def plot_sections_as_points(self, ax=None, show_points=False, show_lines=True, extend=False, annotate=False):
+
+        if not self.is_sectioned:
+            raise ValueError('Tree is not sectioned. Use split_to_sections() method.')
+
+        if ax is None:
+            fig, ax = plt.subplots(figsize=(10, 10))
+
+        for sec in self._sections:
+            # if extend:
+            #     xs = [pt.x for pt in sec.extended_pts3d]
+            #     ys = [pt.y for pt in sec.extended_pts3d]
+            #     ax.plot(xs, ys, color='gray')
+
+            xs = [pt.x for pt in sec.pts3d]
+            ys = [pt.y for pt in sec.pts3d]
+            if show_points:
+                ax.plot(xs, ys, '.', color=plt.cm.jet(
+                    1-sec.idx/len(self._sections)), markersize=5)
+            if show_lines:
+                ax.plot(xs, ys, color=plt.cm.jet(
+                    1-sec.idx/len(self._sections)))
+
+            # annotate the section index
+            if annotate:
+                ax.annotate(f'{sec.idx}', (np.mean(
+                    xs), np.mean(ys)), fontsize=8)
+                ax.annotate(f'{sec.idx}', (np.mean(xs), np.mean(ys)), fontsize=8,
+                            bbox=dict(facecolor='white', edgecolor='black', boxstyle='round,pad=0.3'))
+
+        ax.set_aspect('equal')

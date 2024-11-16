@@ -76,6 +76,8 @@ view.figures['cell'] = figure(title='Cell',
        match_aspect=True,
        tools='pan, box_zoom,reset, tap, wheel_zoom, save')
 
+view.figures['cell'].toolbar.active_scroll = view.figures['cell'].select_one(WheelZoomTool)
+
 view.sources['cell'] = ColumnDataSource(data={'xs': [], 'ys': [], 'color': [], 'line_width': [], 'label': [], 'line_alpha': []})
 view.sources['soma'] = ColumnDataSource(data={'x': [], 'y': [], 'rad': [], 'color': ['red']})
 
@@ -90,7 +92,7 @@ view.figures['cell'].renderers[0].selection_glyph = MultiLine(line_alpha=0.8, li
 view.figures['cell'].renderers[0].nonselection_glyph = MultiLine(line_alpha=0.3, line_width='line_width', line_color='color')
 
 view.figures['cell'].circle(x='x', y='y', radius='rad', color='color', source=view.sources['soma'], alpha=0.9)
-view.widgets.sliders['rotate_cell'] = Slider(start=0, end=360, value=1, step=2, title="Angle", width=370)
+view.widgets.sliders['rotate_cell'] = Slider(start=0, end=360, value=1, step=2, title="Rotate", width=370)
 
 view.widgets.sliders['rotate_cell'].on_change('value', p.update_3D_callback)
 
@@ -293,7 +295,7 @@ view.figures['sim'] = figure(width=600, height=300,
                x_axis_label='Time (ms)',
                y_axis_label='Voltage (mV)',
                y_range=(-100, 50),
-               tools="pan, xwheel_zoom, ywheel_zoom, box_zoom, reset, save, tap",
+               tools="pan, xwheel_zoom, reset, save, ywheel_zoom, box_zoom, tap",
                output_backend="webgl")
 
 view.figures['sim'].grid.grid_line_alpha = 0.1
@@ -393,9 +395,10 @@ view.figures['spikes'] = figure(height=300,
                 sizing_mode='scale_width',
                 x_axis_label='Time (ms)',
                 x_range=(0, 300),
-                y_axis_label='Synapse index',
+                y_axis_label='Synapses',
                 y_range=FactorRange(factors=[]),
                 tools="pan, box_zoom, reset, save")
+
 view.figures['spikes'].toolbar.logo = None
 view.figures['spikes'].grid.grid_line_alpha = 0.1
 view.figures['spikes'].ygrid.visible = False
@@ -414,45 +417,66 @@ view.figures['sim'].x_range = view.figures['spikes'].x_range = view.figures['cur
 
 view.figures['inf'] = figure(width=300, height=300, title='Steady state',
                         x_axis_label='Voltage (mV)', y_axis_label='Inf, (1)',
-                        visible=False,
-                        )
+                        visible=False)
+
 view.sources['inf_orig'] = ColumnDataSource(data={'xs': [], 'ys': [], })
 view.figures['inf'].multi_line(xs='xs',
-                                            ys='ys',
-                                            source=view.sources['inf_orig'],
-                                            line_width=2,
-                                            color='color')
+                               ys='ys',
+                               source=view.sources['inf_orig'],
+                               line_width=2,
+                               color='color')
 
 view.sources['inf_fit'] = ColumnDataSource(data={'xs': [], 'ys': [], })
 view.figures['inf'].multi_line(xs='xs',
-                                            ys='ys',
-                                            source=view.sources['inf_fit'],
-                                            line_width=2,
-                                            line_dash='dashed',
-                                            color='color')
+                               ys='ys',
+                               source=view.sources['inf_fit'],
+                               line_width=2,
+                               line_dash='dashed',
+                               color='color')
+
+from bokeh.models import LogScale
+view.figures['inf_log'] = figure(width=300, height=300, title='Steady state',
+                        x_axis_label='Voltage (mV)', y_axis_label='Inf, (1)',
+                        visible=False, x_axis_type='log')
+
+view.figures['inf_log'].multi_line(xs='xs',
+                                   ys='ys',
+                                   source=view.sources['inf_orig'],
+                                   line_width=2,
+                                   color='color')
 
 view.figures['tau'] = figure(width=300, height=300, title='Time constant',
                         x_axis_label='Voltage (mV)', y_axis_label='Tau, ms',
-                        visible=False,
-                        )
+                        visible=False)
+
 view.sources['tau_orig'] = ColumnDataSource(data={'xs': [], 'ys': []})
 view.figures['tau'].multi_line(xs='xs',
-                                            ys='ys',
-                                            source=view.sources['tau_orig'],
-                                            line_width=2,
-                                            color='color')
+                               ys='ys',
+                               source=view.sources['tau_orig'],
+                               line_width=2,
+                               color='color')
+
+view.figures['tau_log'] = figure(width=300, height=300, title='Time constant',
+                        x_axis_label='Voltage (mV)', y_axis_label='Tau, ms',
+                        visible=False, x_axis_type='log')
+
+view.figures['tau_log'].multi_line(xs='xs',
+                                   ys='ys',
+                                   source=view.sources['tau_orig'],
+                                   line_width=2,
+                                   color='color')                        
 
 view.sources['tau_fit'] = ColumnDataSource(data={'xs': [], 'ys': []})
 view.figures['tau'].multi_line(xs='xs',
-                                            ys='ys',
-                                            source=view.sources['tau_fit'],
-                                            line_width=2,
-                                            line_dash='dashed',
-                                            color='color')
+                               ys='ys',
+                               source=view.sources['tau_fit'],
+                               line_width=2,
+                               line_dash='dashed',
+                               color='color')
 
 view.DOM_elements['runtime'] = Div(text='')
 
-view.widgets.buttons['run'] = Button(label='Run', button_type='primary', width=242, height=50)
+view.widgets.buttons['run'] = Button(label='Run', button_type='primary', width=242, height=50, disabled=True)
 
 
 runtime_callback = CustomJS(args=dict(runtime=view.DOM_elements['runtime']), code="""
@@ -475,8 +499,8 @@ current_panel = column(view.figures['curr'],
 
 
 view.widgets.tabs['simulation'] = Tabs(tabs=[TabPanel(child=voltage_panel, title='Voltage'),
-                                            TabPanel(child=view.figures['spikes'],title='Spikes'),
                                             TabPanel(child=current_panel, title='Current'),
+                                            TabPanel(child=view.figures['spikes'],title='Synaptic inputs'),
                                             ], width=600, height=300, 
                                             width_policy='fit',)
 
@@ -486,7 +510,9 @@ view.widgets.tabs['simulation'] = Tabs(tabs=[TabPanel(child=voltage_panel, title
 panel_simulation = row(
                        view.widgets.tabs['simulation'], 
                        view.figures['inf'], 
+                       view.figures['inf_log'],
                        view.figures['tau'], 
+                       view.figures['tau_log'],
                        name='panel_simulation', width=1200)
 
 
@@ -546,6 +572,9 @@ stats_panel = column([view.widgets.buttons['stats'],
                      ],
                      name='stats_panel')
 
+delete_button = Button(label='Delete subtree', button_type='danger')
+delete_button.on_event(ButtonClick, p.delete_subtree_callback)
+
 widgets_section_vars = column([
                         # row([selectors['root'], selectors['section']]),
                         # row([buttons['parent'], buttons['sibling'], buttons['child']]),
@@ -556,6 +585,7 @@ widgets_section_vars = column([
                         view.widgets.spinners['Ra'],
                         # panel_section,
                         row([view.widgets.buttons['reduce'], view.widgets.buttons['to_swc']]),
+                        delete_button,
                         stats_panel,
                         ], name='widgets_section_vars')
 
@@ -690,7 +720,7 @@ view.widgets.sliders['iclamp_amp'] = AdjustableSpinner(title="Amp (pA)", value=0
 view.widgets.sliders['iclamp_amp'].on_change('value_throttled', p.iclamp_amp_callback)
 
 view.widgets.switches['record'] = Switch(active=False)
-view.widgets.switches['record_from_all'] = Switch(active=False)
+view.widgets.switches['record_from_all'] = Switch(active=False, disabled=True)
 
 view.widgets.switches['record_from_all'].on_change('active', p.record_from_all_callback)
 view.widgets.switches['record_from_all'].on_change('active', p.voltage_callback_on_change)
@@ -737,6 +767,7 @@ widgets_point_processes = column([remove_all_button,
                           view.widgets.sliders['iclamp_duration'], 
                         #   row(view.widgets.sliders['iclamp_amp'], view.widgets.selectors['iclamp_amp_unit']),
                           view.widgets.sliders['iclamp_amp'].get_widget(),
+                          Div(text='<hr style="width:30em">'),
                           row([view.widgets.selectors['syn_type'], view.widgets.spinners['N_syn']]),
                         #   view.widgets.sliders['syn rate'],
                         #     view.widgets.sliders['noise'],
@@ -798,7 +829,9 @@ def toggle_activation_curves_callback(attr, old, new):
         view.DOM_elements['channel_panel'].visible = False
         view.widgets.tabs['section'].visible = True
         view.figures['inf'].visible = False
+        view.figures['inf_log'].visible = False
         view.figures['tau'].visible = False
+        view.figures['tau_log'].visible = False
         if view.widgets.tabs['section'].active == 0: panel_section.visible = True
     elif new == 1:
         view.widgets.tabs['section'].visible = False
@@ -835,15 +868,16 @@ curdoc().add_root(right_menu)
 
 # LEFT HAND MENU
 
-view.widgets.selectors['cell'] = Select(value=None,
-                       options=[f for f in os.listdir('app/model/swc') if f.endswith('.swc') or f.endswith('.asc')], 
+view.widgets.selectors['cell'] = Select(value='Select a cell to begin',
+                       options=['Select a cell to begin'] + [f for f in os.listdir('app/model/swc') if f.endswith('.swc') or f.endswith('.asc')], 
                        title='Cell:', 
                        width=242)
-view.widgets.selectors['cell'].description = 'Select an SWC file to load. To select another cell, reload the page.'
+view.widgets.selectors['cell'].description = 'Select an SWC file to load. To select another cell, reload the page.\nIt is recommended to choose d_lambda before loading a cell.'
 
 view.widgets.selectors['cell'].on_change('value', p.selector_cell_callback)
 
 view.widgets.sliders['d_lambda'] = Slider(start=0, end=0.2, value=0.1, step=0.01, title="d_lambda", width=200)
+
 view.widgets.sliders['d_lambda'].on_change('value_throttled', p.selector_cell_callback)
 
 view.widgets.buttons['to_json'] = Button(label='Export biophys', button_type='primary', disabled=True)
@@ -860,19 +894,9 @@ view.widgets.buttons['from_json'].on_event(ButtonClick, p.voltage_callback_on_ev
 json_panel = row(view.widgets.buttons['to_json'], 
                 view.widgets.buttons['from_json'])
 
-view.widgets.file_input['all'] = FileInput(accept='.swc, .asc, .mod', name='file', visible=True, width=242, disabled=True)
-view.widgets.text['filename_workaround'] = TextInput(value='', visible=False)
-# Define a CustomJS callback
-callback = CustomJS(args=dict(filename_workaround= view.widgets.text['filename_workaround'],
-                     file_input=view.widgets.file_input['all']), code="""
-    
-    filename_workaround.value = file_input.filename
-    
-""")
-
-# view.widgets.file_input['all'].js_on_change('change', callback)
-
-# view.widgets.file_input['all'].on_change('value', p.import_file_callback)
+view.widgets.file_input['all'] = FileInput(accept='.swc, .asc, .mod', name='file', visible=True, width=242, disabled=False)
+view.widgets.file_input['all'].on_change('filename', p.import_file_callback)
+view.widgets.file_input['all'].on_change('value', p.import_file_callback)
 
 view.widgets.multichoice['mod_files'] = MultiChoice(title='Mechanisms', 
                                     value=['Leak'],
@@ -923,6 +947,9 @@ tab_io = TabPanel(title='Input/Output',
                                 )
 
 view.widgets.switches['real_time'] = Switch(active=True)
+def enable_run_button(attr, old, new):
+    view.widgets.buttons['run'].disabled = new
+view.widgets.switches['real_time'].on_change('active', enable_run_button)
 
 tab_sim = TabPanel(title='Simulation',
                     child=column(view.widgets.sliders['duration'],
@@ -966,11 +993,23 @@ view.sources['stats_ephys'] = ColumnDataSource(data={'x': [], 'y': []})
 
 view.figures['stats_ephys'].circle(x='x', y='y', source=view.sources['stats_ephys'], color='red', size=5)
 
+view.widgets.buttons['clear_validation'] = Button(label='Clear', button_type='danger')
+
+def clear_validation_callback():
+    view.sources['stats_ephys'].data = {'x': [], 'y': []}
+    view.sources['detected_spikes'].data = {'x': [], 'y': []}
+    view.sources['frozen_v'].data = {'xs': [], 'ys': []}
+    view.widgets.switches['frozen_v'].active = False
+    view.figures['stats_ephys'].visible = False
+
+view.widgets.buttons['clear_validation'].on_event(ButtonClick, clear_validation_callback)
+
 tab_validation = TabPanel(title='Validation',
                     child=column(view.widgets.buttons['stats_ephys'],
                                   view.DOM_elements['stats_ephys'],
                                 #   view.widgets.buttons['iterate'],
-                                  view.figures['stats_ephys']
+                                  view.figures['stats_ephys'],
+                                  view.widgets.buttons['clear_validation'],
                                   )
                     )
 
@@ -1012,10 +1051,8 @@ curdoc().add_root(left_menu)
 
 ### Settings panel
 
-console = TextInput(value='Only for development', title='Console', width=500, height=50, name='console', disabled=True)
-
-
-# console.on_change('value', p.console_callback)
+console = TextInput(value='Only for development', title='Console', width=500, height=50, name='console', disabled=False)
+console.on_change('value', p.console_callback)
 
 status_bar = Div(text="""Launched GUI""", name='status_bar', styles={'width': '500px', 'height':'200px', 
                                                                      'overflow': 'auto', 'font-size': '12px'})
@@ -1051,6 +1088,13 @@ view.widgets.color_pickers['color_picker'].on_change('color', update_background_
 view.widgets.sliders['voltage_plot_x_range'] = RangeSlider(start=0, end=1000, value=(0, 300), step=1, title='Voltage plot x range', width=200)
 view.widgets.sliders['voltage_plot_y_range'] = RangeSlider(start=-200, end=200, value=(-100, 100), step=1, title='Voltage plot y range', width=200)
 
+view.widgets.switches['enable_record_from_all'] = Switch(active=False, name='enable_record_from_all')
+
+def enable_record_from_all_callback(attr, old, new):
+    view.widgets.switches['record_from_all'].disabled = not new
+
+view.widgets.switches['enable_record_from_all'].on_change('active', enable_record_from_all_callback)
+
 def update_voltage_plot_x_range(attr, old, new):
     view.figures['sim'].x_range.start = new[0]
     view.figures['sim'].x_range.end = new[1]
@@ -1070,6 +1114,7 @@ settings_panel = column(view.widgets.selectors['theme'],
                         view.widgets.sliders['voltage_plot_x_range'],
                         view.widgets.sliders['voltage_plot_y_range'],
                         row(view.widgets.switches['recompile'], Div(text='Recompile mod files')),
+                        row(view.widgets.switches['enable_record_from_all'], Div(text='Enable record from all')),
                         view.DOM_elements['controller'],
                         name='settings_panel')
 
@@ -1101,41 +1146,6 @@ for name, fig in view.figures.items():
 curdoc().theme = 'dark_minimal'
 
 
-# dummy_button = Button(label='Dummy button', button_type='primary', visible=True)
-
-# def callback_decorator(callback, instance):
-#     def wrapper(event):
-#         callback(instance, event)
-#     return wrapper
-
-# class Dummy:
-#     def __init__(self):
-#         ...
-
-#     @callback_decorator(instance=self)
-#     def callback(self, event):
-#         print('dummy callback')
-
-# dummy = Dummy()
-
-# dummy_button.on_event(ButtonClick, dummy.callback)
-
-# curdoc().add_root(dummy_button)
-
-
-
-
-class Dummy:
-    def __init__(self):
-        self.button = Button(label='Dummy button', button_type='primary', visible=True)
-        self.button.on_event(ButtonClick, self.callback)
-        self.x = 1
-
-    def callback(self, event):
-        print(f'dummy callback {self.x}')
-
-dummy = Dummy()
-# curdoc().add_root(dummy.button)
 
 
 custom_js = CustomJS(args=dict(), code="""
