@@ -16,7 +16,7 @@ Author: Zach Mainen, Salk Institute, 1995, zach@salk.edu
 ENDCOMMENT
 
 NEURON {
-	SUFFIX kca
+	SUFFIX KCa
 	USEION k READ ek WRITE ik
 	USEION ca READ cai
 	RANGE gbar, ik

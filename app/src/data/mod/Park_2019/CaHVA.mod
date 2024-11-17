@@ -15,7 +15,7 @@ Author: Zach Mainen, Salk Institute, 1994, zach@salk.edu
 ENDCOMMENT
 
 NEURON {
-	SUFFIX cahva
+	SUFFIX CaHVA
 	USEION ca READ eca WRITE ica
 	RANGE gbar, ica
 }

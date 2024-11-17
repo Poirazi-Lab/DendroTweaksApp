@@ -78,17 +78,6 @@ class ParametrizedFunction:
         'linear': {'func': linear, 'defaults': {'slope': 1, 'intercept': 0}}
     }
 
-    def __repr__(self):
-        """
-        Return a string representation of the function.
-
-        Returns
-        -------
-        str
-            The string representation of the function.
-        """
-        return f'{self.function.__name__}({self.parameters})'
-
     def __init__(self, function_name: str, **parameters: Dict[str, float]) -> None:
         """
         Create a new parameterized function.
@@ -106,6 +95,17 @@ class ParametrizedFunction:
         valid_params = {k: v for k, v in parameters.items()
                         if k in func_data['defaults']}
         self.parameters = {**func_data['defaults'], **valid_params}
+
+    def __repr__(self):
+        """
+        Return a string representation of the function.
+
+        Returns
+        -------
+        str
+            The string representation of the function.
+        """
+        return f'{self.function.__name__}({self.parameters})'
 
     def __call__(self, position):
         """

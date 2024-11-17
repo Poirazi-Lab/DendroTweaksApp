@@ -31,45 +31,46 @@ class SectionMixin():
     def get_nsegs_data(self):
         if len(self.selected_secs) == 1:
             selected_sec = self.selected_sec
-            x = (np.array([(2*i - 1) / (2 * selected_sec.nseg) for i in range(1, selected_sec.nseg + 1)])*selected_sec.L).tolist()
+            # x = (np.array([(2*i - 1) / (2 * selected_sec.nseg) for i in range(1, selected_sec.nseg + 1)])*selected_sec.L).tolist()
+            x = selected_sec.seg_centers
             y = [0] * selected_sec.nseg
             return {'x': x, 'y': y, 'marker': ['circle']*selected_sec.nseg}
         return {'x': [], 'y': [], 'marker': []}
 
     def update_section_diam_data(self):
         sec_name = self.view.widgets.selectors['section'].value
-        self.view.sources['section_diam'].data = self.get_diams_data()
+        self.view.sources['section_diam'].data = self.get_radii_data()
         self.view.figures['section_diam'].title.text = f'{sec_name}: diam (pts3d)'
 
-    def get_diams_data(self):
+    def get_radii_data(self):
         if len(self.selected_secs) == 1:
             
             selected_sec = self.selected_sec
-            lengths = self.get_diam_lengths(selected_sec)
-            diams = [selected_sec.diam3d(i) for i in range(selected_sec.n3d())]
-            # print('diams: ', diams)
+            lengths = selected_sec.distances
+            radii = selected_sec.radii
+            
             xs = [[lengths[i], lengths[i], lengths[i+1], lengths[i+1]] for i in range(len(lengths)-1)]
-            # print('xs: ', xs)
-            ys = [[0, diams[i], diams[i+1], 0] for i in range(len(diams) - 1)]
-            # print('ys: ', ys)
+            
+            ys = [[0, radii[i], radii[i+1], 0] for i in range(len(radii) - 1)]
+            
             return {'xs': xs, 'ys': ys}
-        logger.debug(f'There is {len(self.selected_secs)} selected sections')
+            
         return {'xs': [], 'ys': []}
 
-    def get_diam_lengths(self, sec):
-        x = np.diff([sec.x3d(i) for i in range(sec.n3d())])
-        y = np.diff([sec.y3d(i) for i in range(sec.n3d())])
-        z = np.diff([sec.z3d(i) for i in range(sec.n3d())])
-        lengths = np.sqrt(x**2 + y**2 + z**2)
-        levels = [0]
-        for i in range(len(lengths)):
-            levels.append(levels[i] + lengths[i])
-        # print('levels: ', levels)
-        return np.array(levels)
+    # def get_diam_lengths(self, sec):
+    #     x = np.diff([sec.x3d(i) for i in range(sec.n3d())])
+    #     y = np.diff([sec.y3d(i) for i in range(sec.n3d())])
+    #     z = np.diff([sec.z3d(i) for i in range(sec.n3d())])
+    #     lengths = np.sqrt(x**2 + y**2 + z**2)
+    #     levels = [0]
+    #     for i in range(len(lengths)):
+    #         levels.append(levels[i] + lengths[i])
+    #     # print('levels: ', levels)
+    #     return np.array(levels)
 
     def update_section_param_data(self):
         param_name = self.view.widgets.selectors['graph_param'].value
-        if param_name in ['type', 'Ra', 'recordings', 'AMPA', 'NMDA', 'GABAa', 'AMPA_NMDA', 'weights', 'iclamps']:
+        if param_name in ['', 'domain', 'Ra', 'recordings', 'AMPA', 'NMDA', 'GABAa', 'AMPA_NMDA', 'weights', 'iclamps']:
             param_name = 'diam'
         sec_name = self.view.widgets.selectors['section'].value
         self.view.sources['section_param'].data = self.get_param_data(param_name)
@@ -80,21 +81,21 @@ class SectionMixin():
         # if param_name.startswith('gbar_') or param_name in ['cm', 'g_pas']:
         if len(self.selected_secs) == 1:
             selected_sec = self.selected_sec
-            if param_name == 'area':
-                yp = [seg.area() for seg in selected_sec]
-            elif param_name == 'dist':
-                yp = [self.model.cell.distance_from_soma(seg) for seg in selected_sec]
+            if param_name == 'dist':
+                yp = [seg.distance_to_root for seg in selected_sec]
+            elif param_name == 'area':
+                raise NotImplementedError
+                # yp = [seg.area() for seg in selected_sec]
             elif param_name == '(unset)':
                 yp = [0 for seg in selected_sec]
             elif param_name == 'voltage':
                 yp = [0 for seg in selected_sec]
             else:
-                yp = [getattr(seg, param_name) for seg in selected_sec]
-            # print('yp: ', yp)
-            x = (np.array([(2*i - 1) / (2 * selected_sec.nseg) for i in range(1, selected_sec.nseg + 1)])*selected_sec.L).tolist()
-            # print('x: ', x)
+                yp = [getattr(seg._ref, param_name) for seg in selected_sec]
             
-            bar_width = [selected_sec.L / selected_sec.nseg] * selected_sec.nseg
+            x = selected_sec.seg_centers
+            
+            bar_width = [selected_sec._ref.L / selected_sec._ref.nseg] * selected_sec._ref.nseg
             return {'x': x, 'y': yp, 'width': bar_width}
         return {'x': [], 'y': [], 'width': []}
 
@@ -106,28 +107,28 @@ class SectionMixin():
         if len(self.selected_secs) == 1:
             self.view.widgets.sliders['n_seg'].value = self.selected_sec.nseg
             # self.view.widgets.sliders['length'].value = self.selected_sec.L
-            self.view.widgets.sliders['Ra'].value = self.selected_sec.Ra
+            self.view.widgets.sliders['Ra'].value = self.selected_sec._ref.Ra
 
         self.update_navigation_buttons_on_reaching_terminal_branch()
 
     def update_sec_selector(self):
         with remove_callbacks(self.view.widgets.selectors['section']):
             if len(self.selected_secs) == 1:
-                    self.view.widgets.selectors['section'].value = get_sec_name(self.selected_sec)
+                    self.view.widgets.selectors['section'].value = str(self.selected_sec.idx)
             else:
                 self.view.widgets.selectors['section'].value = ''
-            logger.debug(f"Updated section selector value: {self.view.widgets.selectors['section'].value}")
+            
         logger.debug('END\n')
 
     def update_seg_x_selector(self):
         with remove_callbacks(self.view.widgets.selectors['seg_x']):
             if len(self.selected_secs) == 1:
-                self.view.widgets.selectors['seg_x'].options = [str(round(seg.x, 5)) for seg in self.selected_segs[0].sec]
+                self.view.widgets.selectors['seg_x'].options = [str(round(seg.x, 5)) for seg in self.selected_segs[0]._section]
                 self.view.widgets.selectors['seg_x'].value = str(round(self.selected_segs[0].x, 5))
             else:
                 self.view.widgets.selectors['seg_x'].options = ['']
                 self.view.widgets.selectors['seg_x'].value = ''
-            logger.debug(f"Updated seg_x options: {self.view.widgets.selectors['seg_x'].options} and value: {self.view.widgets.selectors['seg_x'].value}")
+            
         logger.debug('END\n')
 
     def update_navigation_buttons_on_reaching_terminal_branch(self):
@@ -137,12 +138,12 @@ class SectionMixin():
 
         if len(self.selected_secs) == 1:
 
-            if self.selected_sec.children():
+            if self.selected_sec.children:
                 self.view.widgets.buttons['child'].disabled = False
             else:
                 self.view.widgets.buttons['child'].disabled = True
 
-            if self.selected_sec.parentseg() is None:
+            if self.selected_sec.parent is None:
                 self.view.widgets.buttons['parent'].disabled = True
                 self.view.widgets.buttons['sibling'].disabled = True
             else:
@@ -155,7 +156,7 @@ class SectionMixin():
 
     def update_status_message(self):
         if len(self.selected_secs) == 1:
-            preformatted_string = pprint.pformat(self.selected_sec.psection(), 
+            preformatted_string = pprint.pformat(self.selected_sec._ref.psection(), 
                                                     indent=4,
                                                     sort_dicts=False)
             spoiler = f'<details><summary>Toggle psection</summary><pre style="font-size:x-small">{preformatted_string}</pre></details>'

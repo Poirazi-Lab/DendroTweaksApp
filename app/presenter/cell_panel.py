@@ -14,126 +14,29 @@ class CellMixin():
         super().__init__()
         self.selected_secs = set()
         self.selected_segs = []
-        self.points = None
-        
-
-    def create_cell(self, path_to_swc):
-        self.model.create_cell(path_to_swc)
-        # self.cell = cell
-        # self.sections = {get_sec_name(sec):sec for sec in self.cell.all}
-        self.selected_secs = set()
-        self.selected_segs = []
-        # self.points = [sec.pts3d for sec in self.model.cell.sections.values()]
-        self.points = self.get_pts3d()
-
-    @log
-    def create_cell_renderer(self):
-        self.view.sources['cell'].data = self.get_cell_data()
-        self.view.sources['soma'].data = self.get_soma_data()
-        
-
-    def update_3D_callback(self, attr, old, new):
-        self.rotate_points(new - old)
-        self.view.sources['cell'].data = self.get_cell_data()
-
-    def get_pts3d(self):
-        """
-        Retrieves the 3D coordinates of all points in each section of the cell.
-
-        Returns:
-            list: A list of sections, each represented as a list of tuples containing 
-            the 3D coordinates (x, y, z) of each point in the section.
-        """
-        pts3d = []
-        for sec in self.model.cell.all:
-            sec_pts3d = [(sec.x3d(i), sec.y3d(i), sec.z3d(i)) for i in range(sec.n3d())]
-            pts3d.append(sec_pts3d)
-        return pts3d
-
 
     @property
     def selected_sec(self):
         return list(self.selected_secs)[0] if len(self.selected_secs) == 1 else None
 
-    ### Rotation methods ###         
-
-    def get_rotation_point(self):
-        soma = self.model.cell.soma[0]
-        x = np.mean([soma.x3d(i) for i in range(soma.n3d())])
-        y = np.mean([soma.y3d(i) for i in range(soma.n3d())])
-        z = np.mean([soma.z3d(i) for i in range(soma.n3d())])
-        return (x, y, z)
-
-    def rotate_points(self, angle_deg):
-        """Rotate a point cloud around the y-axis at a specific point"""
-
-        rotation_point = self.get_rotation_point()
-
-        angle = np.radians(angle_deg)
-        rotation_matrix = np.array([
-            [np.cos(angle), 0, np.sin(angle)],
-            [0, 1, 0],
-            [-np.sin(angle), 0, np.cos(angle)]
-        ])
-
-        rotated_points = []
-        for point_set in self.points:
-            rotated_set = []
-            for point in point_set:
-                # Translate the point so that the rotation point is at the origin
-                translated_point = np.subtract(point, rotation_point)
-                # Rotate the point
-                rotated_point = np.dot(translated_point, rotation_matrix)
-                # Translate the point back
-                final_point = np.add(rotated_point, rotation_point)
-                rotated_set.append(final_point)
-            rotated_points.append(rotated_set)
-        
-        self.points = rotated_points
-
-    
-
-    ### CELL methods ###
-
-    
-
-    def update_cell_panel(self):  
-        self.update_cell_selection()
-
-    def update_cell_selection(self):
-        with remove_callbacks(self.view.figures['cell'].renderers[0].data_source.selected):
-            sec_names = [get_sec_name(sec) for sec in self.selected_secs]
-            indices = [i for i, lbl in enumerate(self.labels) if lbl in sec_names]
-            self.view.figures['cell'].renderers[0].data_source.selected.indices = indices
-
-
-
-
     @property
     def xs(self):
-        return [[point[0] for point in point_set] for point_set in self.points]
+        return [[pt.x for pt in sec.pts3d] for sec in self.model.sec_tree]
 
     @property
     def ys(self):
-        return [[point[1] for point in point_set] for point_set in self.points]
+        return [[pt.y for pt in sec.pts3d] for sec in self.model.sec_tree]
             
     @property
     def colors(self):
-        color_map = {k:v for k,v in zip(['soma', 'axon', 'dend', 'apic'], self.view.theme.palettes['sec_type'])}
-        # dimmed_color_map = self.dimmed_color_map
-        selected_secs_set = set(self.selected_secs)
-        # return [color_map[get_sec_type(sec)] if not sec in selected_secs_set else self.view.theme.selected_sec for sec in self.cell.all]
-        return [color_map[get_sec_type(sec)] for sec in self.model.cell]
-        # return [color_map[get_sec_type(sec)] if sec in self.selected_secs else dimmed_color_map[get_sec_type(sec)] for sec in self.cell.all]
-
-    # @property
-    # def alphas(self):
-    #     return [1 if sec in self.selected_secs else 0.5 for sec in self.model.cell.all]
-
+        color_map = {k:v for k,v in zip(['soma', 'axon', 'dend', 'apic'], 
+                                        self.view.theme.palettes['sec_type'])}
+        return [color_map[get_sec_type(sec.domain)] for sec in self.model.sec_tree]
+        
     @property
     def line_widths(self):
         """Returns the diameters as line_widths normalized to the range [1, 10]"""
-        widths = np.array([sec.diam for sec in self.model.cell])
+        widths = np.array([np.mean(sec.radii) for sec in self.model.sec_tree])
         widths = 1 + (widths - np.min(widths)) * (9 / (np.max(widths) - np.min(widths)))
         widths *= 1.5
         widths = widths.tolist()
@@ -141,7 +44,38 @@ class CellMixin():
 
     @property
     def labels(self):
-        return [get_sec_name(sec) for sec in self.model.cell]
+        return [str(sec.idx) for sec in self.model.sec_tree]
+        
+    def create_cell(self, file_name):
+        """
+        Loads the selected cell from the SWC file. Builds the swc tree and sec tree.
+        Creates sections in the simulator and sets segmentation based on the geometry.
+        Builds the seg tree.
+        Creates the default "all" group.
+        """
+        # Create swc and sec tree
+        self.model.from_swc(file_name)
+
+        # Create and reference sections in simulator
+        self.model.create_and_reference_sections_in_simulator()
+
+        # Add default group
+        self.add_group('all', self.model.sec_tree.sections)
+
+        # Set initial nseg
+        d_lambda = self.view.widgets.sliders['d_lambda'].value
+        logger.info(f'Aimed for {1/d_lambda} segments per length constant at {100} Hz')
+        self.model.set_geom_nseg(d_lambda=d_lambda, f=100)
+        self.model.build_seg_tree()
+        logger.info(f'Total nseg: {len(self.model.seg_tree)}')
+
+    @log
+    def create_cell_renderer(self):
+        """
+        Create the cell renderer.
+        """
+        self.view.sources['cell'].data = self.get_cell_data()
+        # self.view.sources['soma'].data = self.get_soma_data()
 
     def get_cell_data(self):
         return {'xs': self.xs, 
@@ -151,9 +85,23 @@ class CellMixin():
                 'label': self.labels}
 
     def get_soma_data(self):
-        return {'x': [np.mean([self.model.cell.soma[0].x3d(i) for i in range(self.model.cell.soma[0].n3d())])], 
-                'y': [np.mean([self.model.cell.soma[0].y3d(i) for i in range(self.model.cell.soma[0].n3d())])], 
+        x, y, z = self.model.sec_tree.soma_center
+        return {'x': [x],
+                'y': [y],
                 'color': [self.view.theme.palettes['sec_type'][0]], 
-                'rad': [self.model.cell.soma[0].diam / 2]}
+                'rad': [self.model.sec_tree.soma._ref.diam / 2]}
 
+    def update_cell_renderer_selection(self):
+        """
+        Update the selected sections in the cell renderer.
+        """
+        with remove_callbacks(self.view.figures['cell'].renderers[0].data_source.selected):
+            sec_ids = [sec.idx for sec in self.selected_secs]
+            self.view.figures['cell'].renderers[0].data_source.selected.indices = sec_ids
 
+    def rotate_cell_renderer_callback(self, attr, old, new):
+        """
+        Rotate the cell renderer around the XY axis. Attaches to the rotation slider.
+        """
+        self.model.swc_tree.rotate(new - old)
+        self.view.sources['cell'].data = self.get_cell_data()

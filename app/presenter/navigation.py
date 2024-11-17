@@ -32,7 +32,7 @@ class NavigationMixin():
         self.update_selected_segments(old, new)
 
         # update cell selection
-        self.update_cell_panel()
+        self.update_cell_renderer_selection()
         
         self.update_section_panel()
         
@@ -40,9 +40,9 @@ class NavigationMixin():
         self.update_iclamp_switch()
         self.update_record_switch()
 
-        if self.view.widgets.tabs['section'].visible:
-            if self.view.widgets.tabs['section'].active == 1:
-                self.update_distribution_plot()
+        # if self.view.widgets.tabs['section'].visible:
+        #     if self.view.widgets.tabs['section'].active == 1:
+        #         self.update_distribution_plot()
 
     @log
     def update_selected_segments(self, old, new):
@@ -51,24 +51,26 @@ class NavigationMixin():
         add_set = new_set - old_set
         remove_set = old_set - new_set
 
-        data = self.view.figures['graph'].renderers[0].node_renderer.data_source.data['name']
-        seg_names_to_add = [data[i] for i in add_set]
-        seg_names_to_remove = [data[i] for i in remove_set]
+        logger.debug(f"{self.view.figures['graph'].renderers[0].node_renderer.data_source.data.keys()}")
 
-        if seg_names_to_remove:
-            self.remove_segments(seg_names_to_remove)
-        if seg_names_to_add:
-            self.add_segments(seg_names_to_add)
+        data = self.view.figures['graph'].renderers[0].node_renderer.data_source.data['index']
+        seg_ids_to_add = [data[i] for i in add_set]
+        seg_ids_to_remove = [data[i] for i in remove_set]
+
+        if seg_ids_to_remove:
+            self.remove_segments(seg_ids_to_remove)
+        if seg_ids_to_add:
+            self.add_segments(seg_ids_to_add)
 
         
 
-    def add_segments(self, seg_names):
-        self.selected_segs += [self.model.cell.sections[re.split(r'\(|\)', seg_name)[0]](float(re.split(r'\(|\)', seg_name)[1])) for seg_name in seg_names]
-        self.selected_secs.update({self.model.cell.sections[re.split(r'\(|\)', seg_name)[0]] for seg_name in seg_names})
+    def add_segments(self, seg_ids):
+        self.selected_segs += [self.model.seg_tree[seg_id] for seg_id in seg_ids]
+        self.selected_secs = set([seg._section for seg in self.selected_segs])
 
-    def remove_segments(self, seg_names):
-        self.selected_segs = [seg for seg in self.selected_segs if get_seg_name(seg) not in seg_names]
-        self.selected_secs = set([seg.sec for seg in self.selected_segs])
+    def remove_segments(self, seg_ids):
+        self.selected_segs = [seg for seg in self.selected_segs if seg.idx not in seg_ids]
+        self.selected_secs = set([seg._section for seg in self.selected_segs])
 
     def clear_segments(self):
         self.selected_secs = set()
@@ -78,32 +80,23 @@ class NavigationMixin():
     def cell_tap_callback(self, attr, old, new):
         
         if new:
-            logger.debug(f'New: {new}')
-            # sec_name = self.labels[new[0]]
-            sec_names = [self.labels[i] for i in new]
-            logger.debug(f'Sec name: {sec_names}')
-            # sec = self.model.cell.sections[sec_name]
-            secs = [self.model.cell.sections[sec_name] for sec_name in sec_names]
-            # seg_names = [get_seg_name(seg)for seg in sec]
-            seg_names = [get_seg_name(seg) for sec in secs for seg in sec]
+            secs = [sec for sec in self.model.sec_tree if sec.idx in new]
+            seg_ids = [seg.idx for sec in secs for seg in sec.segments]
         else: 
-            seg_names = []
+            seg_ids = []
 
-        self.select_seg_x(seg_names)
+        self.select_seg_x(seg_ids)
 
         with remove_callbacks(self.view.widgets.selectors['section']):
-            self.view.widgets.selectors['section'].value = sec_names[0] if new else ''
+            self.view.widgets.selectors['section'].value = str(secs[0].idx) if new else ''
 
 
-    def select_seg_x(self, seg_names):
+    def select_seg_x(self, seg_ids):
         """
         When a segment is selected from a dropdown menu (as opposite to tap or lasso selection), 
         update the graph selection. Setting the selection will trigger the graph selection callback
         """
-
-        logger.debug(f'Selecting segments: {seg_names}')    
-        indices = [i for i, name in enumerate(self.view.figures['graph'].renderers[0].node_renderer.data_source.data['name']) if name in seg_names]
-        self.view.figures['graph'].renderers[0].node_renderer.data_source.selected.indices = indices
+        self.view.figures['graph'].renderers[0].node_renderer.data_source.selected.indices = seg_ids
         
 
     def select_seg_x_callback(self, attr, old, new):
@@ -131,35 +124,34 @@ class NavigationMixin():
         """
         Selects a child by updating the section selector
         """
-        children = self.selected_sec.children()
+        children = self.selected_sec.children
         try:
-            child_name = get_sec_name(children[1])
+            child = children[1]
         except IndexError:
-            child_name = get_sec_name(children[0])
-        self.view.widgets.selectors['section'].value = child_name
+            child = children[0]
+        self.view.widgets.selectors['section'].value = str(child.idx)
             
 
     def button_parent_callback(self, event):
         """
         Selects a parent by updating the section selector
         """
-        parent = self.selected_sec.parentseg().sec
-        parent_name = get_sec_name(parent)
-        self.view.widgets.selectors['section'].value = parent_name
+        parent = self.selected_sec.parent
+        self.view.widgets.selectors['section'].value = str(parent.idx)
 
 
     def button_sibling_callback(self, event):
-        sigblings = [sec for sec in self.selected_sec.parentseg().sec.children() if sec != self.selected_sec]
-        logger.debug(f"Sigblings of {get_sec_name(self.selected_sec)}: {sigblings}")
+        sigblings = [sec for sec in self.selected_sec.parent.children if sec != self.selected_sec]
+
         if len(sigblings) == 1:
-            sigbling_name = get_sec_name(sigblings[0])
+            sigbling = sigblings[0]
         elif len(sigblings) > 1:
-            sigbling_name = get_sec_name(random.choice(sigblings))
+            sigbling = random.choice(sigblings)
         else:
-            sigbling_name = get_sec_name(self.selected_sec)
+            sigbling = self.selected_sec
             logger.warning('No sigblings found, returning to current section')
 
-        self.view.widgets.selectors['section'].value = sigbling_name
+        self.view.widgets.selectors['section'].value = str(sigbling.idx)
 
     @log
     def update_record_switch(self):

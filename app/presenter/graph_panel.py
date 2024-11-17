@@ -20,72 +20,72 @@ from neuron import h
 
 from logger import logger
 
-def neuron_to_seg_graph(cell):
-    logger.info('START')
-    G = nx.Graph()
-    soma = cell.soma[0]
-    total_nseg = sum([sec.nseg for sec in cell.all])
-    logger.debug(f'Total nseg: {total_nseg}')
-    add_sec_to_graph(G, soma, 0, cell, total_nseg)
-    return G
+# def neuron_to_seg_graph(cell):
+#     logger.info('START')
+#     G = nx.Graph()
+#     soma = cell.soma[0]
+#     total_nseg = sum([sec.nseg for sec in cell.all])
+#     logger.debug(f'Total nseg: {total_nseg}')
+#     add_sec_to_graph(G, soma, 0, cell, total_nseg)
+#     return G
 
-def get_gbars(sec):
-    return [f'gbar_{mech}'
-            for mech, params in sec.psection()['density_mechs'].items() 
-            if 'gbar' in params]
+# def get_gbars(sec):
+#     return [f'gbar_{mech}'
+#             for mech, params in sec.psection()['density_mechs'].items() 
+#             if 'gbar' in params]
 
-def get_sec_area(sec):
-    return sum([seg.area() for seg in sec])
+# def get_sec_area(sec):
+#     return sum([seg.area() for seg in sec])
 
-def add_sec_to_graph(G, sec, parent_id, cell, total_nseg):
-    # color_map = {'soma': 'red', 'dend': 'lawngreen', 'axon': 'pink', 'apic': 'dodgerblue'}
-    color_map = {'soma': 'orange', 'axon': 'magenta', 'dend': 'lawngreen', 'apic': 'dodgerblue'}
-    color_map = {'soma': '#E69F00', 'axon': '#F0E442', 'dend': '#019E73', 'apic': '#0072B2'}
-    nodes = {seg: idx + len(G.nodes) + 1 for idx, seg in enumerate(sec)}
-    if parent_id != 0:
-        G.add_edge(parent_id, len(G.nodes) + 1)
-    for seg, idx in nodes.items():
-        seg_params = {param: getattr(seg, param) for param in ['diam', 'cm', ]}
-        radius = int(200/np.sqrt(total_nseg)) if get_sec_type(sec) == 'soma' else int(150/np.sqrt(total_nseg))
-        gbars = {gb: getattr(seg, gb) for gb in get_gbars(sec)}
-        # logger.debug(f'gbars: {gbars}')
-        G.add_node(int(idx), 
-                   name=f'{get_sec_name(seg.sec)}({round(seg.x, 5)})', 
-                   type=get_sec_type(seg.sec), 
-                   sec=get_sec_name(seg.sec),
-                   radius=radius*0.002, 
-                   color=color_map[get_sec_type(seg.sec)],
-                   line_color='white',
-                   line_width=1,
-                   line_alpha=0.5,
-                   area=seg.area(), 
-                   Ra=seg.sec.Ra,
-                   dist=h.distance(seg, cell.soma[0](0.5)),
-                #    g_pas=seg.g_pas,
-                #    gbar_na=seg.gbar_na,
-                #    gbar_kv=seg.gbar_kv,
-                    cai = seg.cai if hasattr(seg, 'cai') else 0,
-                   recordings='None',
-                   iclamps=0,
-                   AMPA=0,
-                   NMDA=0,
-                   AMPA_NMDA=0,
-                   GABAa=0,
-                   weights=0,
-                   voltage=0,
-                   **gbars,
-                   **seg_params)
-        # print(h.distance(seg, cell.soma[0](0.5)))
-        if idx + 1 in nodes.values():
-            G.add_edge(idx, idx + 1)
-    for child in sec.children():
-        if child.parentseg().x == 1:
-            new_parent_id = list(nodes.values())[-1]
-        elif child.parentseg().x == 0:
-            new_parent_id = list(nodes.values())[0]
-        else:
-            new_parent_id = nodes[child.parentseg()]
-        add_sec_to_graph(G, child, new_parent_id, cell, total_nseg)
+# def add_sec_to_graph(G, sec, parent_id, cell, total_nseg):
+#     # color_map = {'soma': 'red', 'dend': 'lawngreen', 'axon': 'pink', 'apic': 'dodgerblue'}
+#     color_map = {'soma': 'orange', 'axon': 'magenta', 'dend': 'lawngreen', 'apic': 'dodgerblue'}
+#     color_map = {'soma': '#E69F00', 'axon': '#F0E442', 'dend': '#019E73', 'apic': '#0072B2'}
+#     nodes = {seg: idx + len(G.nodes) + 1 for idx, seg in enumerate(sec)}
+#     if parent_id != 0:
+#         G.add_edge(parent_id, len(G.nodes) + 1)
+#     for seg, idx in nodes.items():
+#         seg_params = {param: getattr(seg, param) for param in ['diam', 'cm', ]}
+#         radius = int(200/np.sqrt(total_nseg)) if get_sec_type(sec) == 'soma' else int(150/np.sqrt(total_nseg))
+#         gbars = {gb: getattr(seg, gb) for gb in get_gbars(sec)}
+#         # logger.debug(f'gbars: {gbars}')
+#         G.add_node(int(idx), 
+#                    name=f'{get_sec_name(seg.sec)}({round(seg.x, 5)})', 
+#                    type=get_sec_type(seg.sec), 
+#                    sec=get_sec_name(seg.sec),
+#                    radius=radius*0.002, 
+#                    color=color_map[get_sec_type(seg.sec)],
+#                    line_color='white',
+#                    line_width=1,
+#                    line_alpha=0.5,
+#                    area=seg.area(), 
+#                    Ra=seg.sec.Ra,
+#                    dist=h.distance(seg, cell.soma[0](0.5)),
+#                 #    g_pas=seg.g_pas,
+#                 #    gbar_na=seg.gbar_na,
+#                 #    gbar_kv=seg.gbar_kv,
+#                     cai = seg.cai if hasattr(seg, 'cai') else 0,
+#                    recordings='None',
+#                    iclamps=0,
+#                    AMPA=0,
+#                    NMDA=0,
+#                    AMPA_NMDA=0,
+#                    GABAa=0,
+#                    weights=0,
+#                    voltage=0,
+#                    **gbars,
+#                    **seg_params)
+#         # print(h.distance(seg, cell.soma[0](0.5)))
+#         if idx + 1 in nodes.values():
+#             G.add_edge(idx, idx + 1)
+#     for child in sec.children():
+#         if child.parentseg().x == 1:
+#             new_parent_id = list(nodes.values())[-1]
+#         elif child.parentseg().x == 0:
+#             new_parent_id = list(nodes.values())[0]
+#         else:
+#             new_parent_id = nodes[child.parentseg()]
+#         add_sec_to_graph(G, child, new_parent_id, cell, total_nseg)
 
 # def neuron_to_sec_graph(cell):
 #     color_map = {'soma': 'red', 'dend': 'lawngreen', 'axon': 'pink', 'apic': 'dodgerblue'}
@@ -107,10 +107,27 @@ class GraphMixin():
 
     def create_graph_nx(self):
 
-        self.G = neuron_to_seg_graph(self.model.cell)
-
-        for n in self.G.nodes:
-            self.G.nodes[n]['(unset)'] = 0
+        # self.G = neuron_to_seg_graph(self.model.cell)
+        self.G = nx.Graph()
+        total_nseg = len(self.model.seg_tree)
+        color_map = {'soma': '#E69F00', 'axon': '#F0E442', 'dend': '#019E73', 'apic': '#0072B2'}
+        for seg in self.model.seg_tree:
+            radius = int(200/np.sqrt(total_nseg)) if seg._section.domain == 'soma' else int(150/np.sqrt(total_nseg))
+            self.G.add_node(seg.idx, 
+                            domain=seg._section.domain,
+                            cm = seg._ref.cm,
+                            Ra = seg._section._ref.Ra,
+                            diam = seg.diam,
+                            area = seg.area,
+                            subtree_size = seg.subtree_size,
+                            dist = seg.distance_to_root,
+                            recordings='None',
+                            iclamps=0,
+                            radius=radius*0.002,
+                            color=color_map[seg._section.domain],
+                            )
+            if seg.parent is not None:
+                self.G.add_edge(seg.parent.idx, seg.idx)
 
         pos = nx.kamada_kawai_layout(self.G, scale=1, center=(0, 0), dim=2)
         nx.set_node_attributes(self.G, pos, 'pos')
@@ -141,7 +158,7 @@ class GraphMixin():
         graph_renderer.node_renderer.glyph.fill_alpha = 1
         color_mapper = CategoricalColorMapper(palette=['#E69F00', '#F0E442', '#019E73', '#0072B2'],
                                               factors=['soma', 'axon', 'dend', 'apic'])
-        graph_renderer.node_renderer.glyph.fill_color = {'field': 'type', 'transform': color_mapper}
+        graph_renderer.node_renderer.glyph.fill_color = {'field': 'domain', 'transform': color_mapper}
 
         graph_renderer.edge_renderer.glyph = MultiLine(line_color=self.view.theme.graph_line,
                                                        line_alpha=0.5, 
@@ -174,12 +191,14 @@ class GraphMixin():
         # graph_renderer.node_renderer.nonselection_glyph = graph_renderer.node_renderer.glyph
         graph_renderer.node_renderer.nonselection_glyph.fill_alpha = 0.3
         color_mapper = CategoricalColorMapper(palette=['#E69F00', '#F0E442', '#019E73', '#0072B2'], factors=['soma', 'axon', 'dend', 'apic'])
-        graph_renderer.node_renderer.nonselection_glyph.fill_color = {'field': 'type', 'transform': color_mapper}
+        graph_renderer.node_renderer.nonselection_glyph.fill_color = {'field': 'domain', 'transform': color_mapper}
         graph_renderer.node_renderer.nonselection_glyph.line_width = 0.3
         # graph_renderer.node_renderer.nonselection_glyph.fill_alpha = 0.5 #0.7
         graph_renderer.node_renderer.nonselection_glyph.line_alpha = 0.3 #0.7
 
         self.view.figures['graph'].renderers.append(graph_renderer)
+
+        self.view.widgets.selectors['graph_param'].options = list(self.view.params)
 
 
     def rotate_graph(self):
@@ -227,7 +246,8 @@ class GraphMixin():
         # If 'apic' and 'soma' nodes exist and the y-coordinate of the highest 'apic' node is not higher than any 'soma' node,
         # flip the graph by negating the y-coordinates
         # if highest_apic_id is not None and soma_ids and not all(pos_pca[highest_apic_id, 1] > pos_pca[soma_id, 1] for soma_id in soma_ids):
-        pos_pca[:, 1] = -pos_pca[:, 1]
+        
+        # pos_pca[:, 1] = -pos_pca[:, 1]
 
         # Update the positions in the graph
         for i, node in enumerate(self.G.nodes):
@@ -240,37 +260,43 @@ class GraphMixin():
     @timeit
     def update_graph_param(self, param_name):
         logger.info(f'Updating graph parameter {param_name}')
-        self.update_node_params_from_segments(param_name)
+        # self.update_node_params_from_segments(param_name)
         if not param_name == 'voltage':
-            self.view.figures['graph'].renderers[0].node_renderer.data_source.data[param_name] = [self.G.nodes[n][param_name] for n in self.G.nodes]
+            self.view.figures['graph'].renderers[0].node_renderer.data_source.data[param_name] = \
+                [self.get_param_value(seg, param_name) for seg in self.model.seg_tree]
         else:
+            raise NotImplementedError
             self.view.figures['graph'].renderers[0].node_renderer.data_source.data[param_name] = [self.G.nodes[n][param_name][0] for n in self.G.nodes]
         self.update_graph_colors()
 
 
-    def update_node_params_from_segments(self, param_name):
-        """Updates the specified parameter of each node in the graph 
-           with the corresponding value from the cell segment."""
-        for n in self.G.nodes:
-            seg_name = self.G.nodes[n]['name']
-            seg = self.model.cell.segments[seg_name]
-            if not self.G.nodes[n]["name"] == get_seg_name(seg):
-                raise Exception(f'Node name {self.G.nodes[n]["name"]} does not match segment name {get_seg_name(seg)}')
-            self.G.nodes[n][param_name] = self.get_param_value(seg, param_name)
-            # logger.debug(f'Updated {param_name} for {get_seg_name(seg)} to {self.G.nodes[n][param_name]}')
+    # def update_node_params_from_segments(self, param_name):
+    #     """Updates the specified parameter of each node in the graph 
+    #        with the corresponding value from the cell segment."""
+    #     for n in self.G.nodes:
+    #         seg_name = self.G.nodes[n]['name']
+    #         seg = self.model.cell.segments[seg_name]
+    #         if not self.G.nodes[n]["name"] == get_seg_name(seg):
+    #             raise Exception(f'Node name {self.G.nodes[n]["name"]} does not match segment name {get_seg_name(seg)}')
+    #         self.G.nodes[n][param_name] = self.get_param_value(seg, param_name)
+    #         # logger.debug(f'Updated {param_name} for {get_seg_name(seg)} to {self.G.nodes[n][param_name]}')
 
 
     def get_param_value(self, seg, param_name):
-        if param_name == 'type':
-            return get_sec_type(seg.sec)
+        """
+        Retrieves the value of the specified parameter for the given segment.
+        """
+        logger.debug(f'Getting {param_name} for {seg.idx}')
+        if param_name == 'domain':
+            return seg._section.domain
         elif param_name == 'area':
             return seg.area()
         elif param_name == 'Ra':
-            return seg.sec.Ra
+            return seg._section._ref.Ra
         elif param_name == 'dist':
-            return self.model.cell.distance_from_soma(seg)
+            return seg.distance_to_root
         elif param_name == 'recordings':
-            return get_seg_name(seg) if self.model.simulator.recordings.get(seg) is not None else 'None'
+            return str(seg.idx) if self.model.simulator.recordings.get(seg) is not None else 'None'
         elif param_name == 'iclamps':
             return 1 if self.model.iclamps.get(seg) is not None else 0
         elif param_name in ['AMPA', 'NMDA', 'GABAa', 'AMPA_NMDA']:
@@ -291,7 +317,7 @@ class GraphMixin():
         elif param_name == 'voltage':
             return self.model.simulator.recordings[seg].to_python()
         else:
-            return getattr(seg, param_name)
+            return getattr(seg._ref, param_name, 0)
 
 
     def update_graph_colors_callback(self, attr, old, new):
@@ -309,14 +335,15 @@ class GraphMixin():
         graph_renderer = self.view.figures['graph'].renderers[0]
         self.view.widgets.sliders['time_slice'].visible = False
 
-        if param == 'type': 
+        if param == 'domain': 
             color_mapper = CategoricalColorMapper(palette=self.view.theme.palettes['sec_type'], factors=['soma', 'axon', 'dend', 'apic'])
             graph_renderer.node_renderer.glyph.fill_color = {'field': param, 'transform': color_mapper}
             # color_mapper2 = CategoricalColorMapper(palette=DesaturatedSecTypePalette, factors=['soma', 'axon', 'dend', 'apic'])
             # graph_renderer.node_renderer.nonselection_glyph.fill_color = {'field': param, 'transform': color_mapper2}
             self.view.widgets.sliders['graph_param_high'].visible = False
         elif param == 'recordings':
-            factors = ['None'] + [get_seg_name(seg) for seg in self.recorded_segments] + [get_seg_name(seg) for seg in self.model.simulator.recordings.keys() if seg not in self.recorded_segments]
+            factors = ['None'] + [str(seg.idx) for seg in self.recorded_segments] + \
+                 [str(seg.idx) for seg in self.model.simulator.recordings.keys() if seg not in self.recorded_segments]
             # color_mapper = CategoricalColorMapper(palette=[self.view.theme.graph_fill] + self.view.theme.palettes['trace'], factors=factors)
             color_mapper = CategoricalColorMapper(palette=[self.view.theme.graph_fill] + cc.glasbey_cool[:len(self.recorded_segments)], factors=factors)
             graph_renderer.node_renderer.glyph.fill_color = {'field': param, 'transform': color_mapper}

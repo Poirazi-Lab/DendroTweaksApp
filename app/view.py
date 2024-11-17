@@ -69,14 +69,21 @@ THEMES = {
 }
 
 
+PARAMS_TO_UNITS = {
+    'gbar': 'Conductance (S/cm²)',
+}
+
 PARAMS = {
-    'morph': {'type': 'Section type',
+    'morph': {'domain': 'Section domain',
               'diam': 'Diameter (μm)',
               'area': 'Area (μm²)',
+              'subtree_size': 'Subtree size',
               'dist': 'Distance from soma (μm)', 
               'Ra': 'Axial resistance (Ωcm)',
               },
-    'ephys': {'cm': 'Capacitance (μF/cm²)'},
+    'ephys': {'cm': 'Capacitance (μF/cm²)',
+              'Ra': 'Axial resistance (Ωcm)'
+              },
     'sim': {'iclamps': 'Injected current (nA)',
             'AMPA': 'Number of synapses',
             'NMDA': 'Number of synapses',
@@ -111,9 +118,16 @@ class CellView():
     def ephys_params(self):
         return self._params['ephys']
 
-    def update_ephys_params(self, new_ephys_params):
-        #self._params['ephys'].update(new_ephys_params)
-        self._params['ephys'] = {**{'cm': 'Capacitance (μF/cm²)'}, **new_ephys_params}
+    # def update_ephys_params(self, new_ephys_params):
+    #     #self._params['ephys'].update(new_ephys_params)
+    #     self._params['ephys'] = {**{'cm': 'Capacitance (μF/cm²)'}, **new_ephys_params}
+    def add_ephys_param(self, param_name):
+        # check if any key from PARAMS_TO_UNITS is in the param_name string and use this key to get the unit
+        for key in PARAMS_TO_UNITS:
+            if key in param_name:
+                self._params['ephys'][param_name] = PARAMS_TO_UNITS[key]
+                return
+        self._params['ephys'][param_name] = f'{param_name} (unknown units)'
 
 
     def set_theme(self, theme_name):

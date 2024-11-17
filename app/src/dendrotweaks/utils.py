@@ -2,6 +2,8 @@
 Utility functions for dendrotweaks package.
 """
 
+
+
 import time
 import numpy as np
 
@@ -74,5 +76,8 @@ def dynamic_import(module_name, class_name):
 
     from importlib import import_module
 
+    import sys
+    sys.path.append('app/src')
+    print(module_name)
     module = import_module(module_name)
     return getattr(module, class_name)

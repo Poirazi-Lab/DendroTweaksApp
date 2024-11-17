@@ -30,7 +30,7 @@ class SimulationMixin():
             return
 
         ### Get labels for recorded segments ###
-        labels = [get_sec_name(seg.sec) + f'({seg.x})' for seg in self.model.simulator.recordings.keys()]
+        labels = [str(seg.idx) for seg in self.model.simulator.recordings.keys()]
         logger.info(f'Recording voltage from {labels}')
 
         duration = self.view.widgets.sliders['duration'].value
@@ -41,7 +41,7 @@ class SimulationMixin():
         ### Update color of voltage and current traces ###
         if self.model.simulator.recordings.keys():
             # color_mapper = CategoricalColorMapper(palette=self.view.theme.palettes['trace'], factors=labels)
-            factors = [get_seg_name(seg) for seg in self.recorded_segments]
+            factors = [str(seg.idx) for seg in self.recorded_segments]
             color_mapper = CategoricalColorMapper(palette=cc.glasbey_cool, factors=factors)
             self.view.figures['sim'].renderers[0].glyph.line_color = {'field': 'label', 'transform': color_mapper}
             if Is:

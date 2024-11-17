@@ -90,6 +90,29 @@ class Section(Node):
                     setattr(seg._ref, parameter_name,
                             distribution_function(seg.distance_to_root(0.5)))
 
+    def __call__(self, x: float):
+        """
+        Return the segment at a given position.
+        """
+        if self._ref is None:
+            raise ValueError('Section is not referenced in NEURON.')
+        return self._ref(x)
+
+    def __iter__(self):
+        """
+        Iterate over the segments in the section.
+        """
+        for seg in self.segments:
+            yield seg
+
+    @property
+    def subtree_size(self):
+        return len(self._subtree)
+
+    @property
+    def nseg(self):
+        return self._ref.nseg
+
     @property
     def radii(self):
         return [pt.r for pt in self.pts3d]

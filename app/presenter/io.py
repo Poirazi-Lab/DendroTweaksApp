@@ -2,7 +2,7 @@ from logger import logger
 from bokeh_utils import remove_callbacks
 from bokeh_utils import log
 
-from model.mechanisms.distributions import Distribution
+# from model.mechanisms.distributions import Distribution
 
 from bokeh.models.callbacks import CustomJS
 
@@ -15,54 +15,17 @@ class IOMixin():
     # INPUT METHODS
 
     @log
-    def update_graph_param_selector(self):
-        new_params = {f'gbar_{ch.suffix}': 
-                      f'Conductance {ch.suffix}, S/cm2' 
-                      for ch in self.model.channels.values()}
-        self.view.update_ephys_params(new_params)
-        logger.debug(f'Updating graph param selector with {new_params}')
-        logger.debug(f'Updating graph param selector with ephys params: {self.view.ephys_params}')
-        with remove_callbacks(self.view.widgets.selectors['graph_param']):
-            if self.view.widgets.tabs['section'].active == 1:
-                self.view.widgets.selectors['graph_param'].options = list(self.view.ephys_params)
-                self.view.widgets.selectors['graph_param'].value = self.view.widgets.selectors['graph_param'].options[0]
-            else:
-                self.view.widgets.selectors['graph_param'].options = list(self.view.params)
-                self.view.widgets.selectors['graph_param'].value = self.view.widgets.selectors['graph_param'].options[0]
-
-
-
-    @log
     def selector_cell_callback(self, attr, old, new):
+        """
+        Creates the cell and the renderers.
+        """
+        file_name = new
+        self.create_cell(file_name)
 
-        self.view.widgets.multichoice['mod_files'].value = ['Leak']
+        # # Add channel tabs ... 
+        # self.update_channel_selector()
 
-        # Create cell
-        path_to_swc=f"app/model/swc/{self.view.widgets.selectors['cell'].value}"
-        self.create_cell(path_to_swc)
-
-        # Set initial nseg
-        d_lambda = self.view.widgets.sliders['d_lambda'].value
-        logger.info(f'Aimed for {1/d_lambda} segments per length constant at {100} Hz')
-        self.model.cell.set_geom_nseg(d_lambda=d_lambda)
-        logger.info(f'Total nseg: {self.model.cell.total_nseg}')
-
-        for sec in self.model.cell.all:
-            sec.Ra = 100
-        self.model.add_capacitance()
-
-        
-        # Add channels
-        for mod_name in self.view.widgets.multichoice['mod_files'].value:
-            self.model.add_channel(mod_name, recompile=self.view.widgets.switches['recompile'].active)
-
-        # Add channel tabs ... 
-        self.update_channel_selector()
-
-        self.update_equilibtium_potentials()
-
-        # Update graph param selector with new channels
-        self.update_graph_param_selector()
+        # self.update_equilibtium_potentials()
 
         # add_callbacks_for_distributions_and_channels(app, cell_handler)
 
@@ -76,36 +39,40 @@ class IOMixin():
         self.create_graph_renderer()
         self.add_lasso_callback()
 
-        self.view.widgets.selectors['section'].options=[''] + list(self.model.cell.sections.keys())
-        logger.debug(f"Section selector value: {self.view.widgets.selectors['section'].value}")
+        sec_by_domain = {'soma': [], 'dend': [], 'axon': [], 'apic': [], 'none': ['']}
+        for sec in self.model.sec_tree.sections:
+            sec_by_domain[sec.domain].append(str(sec.idx))
+
+        self.view.widgets.selectors['section'].options=sec_by_domain
+        
 
 
-        def attach_download_js(button, file_path):
+        # def attach_download_js(button, file_path):
 
-            js_code = f"""
-            var filename = '{file_path}';
-            var xhr = new XMLHttpRequest();
-            xhr.open('GET', filename, true);
-            xhr.responseType = 'blob';
-            xhr.onload = function(e) {{
-                if (this.status == 200) {{
-                    var blob = this.response;
-                    var link = document.createElement('a');
-                    link.href = window.URL.createObjectURL(blob);
-                    link.download = filename.split('/').pop();
-                    link.click();
-                }}
-            }};
-            xhr.send();
-            console.log('Downloaded', filename);
-            """
+        #     js_code = f"""
+        #     var filename = '{file_path}';
+        #     var xhr = new XMLHttpRequest();
+        #     xhr.open('GET', filename, true);
+        #     xhr.responseType = 'blob';
+        #     xhr.onload = function(e) {{
+        #         if (this.status == 200) {{
+        #             var blob = this.response;
+        #             var link = document.createElement('a');
+        #             link.href = window.URL.createObjectURL(blob);
+        #             link.download = filename.split('/').pop();
+        #             link.click();
+        #         }}
+        #     }};
+        #     xhr.send();
+        #     console.log('Downloaded', filename);
+        #     """
             
-            button.js_on_event('button_click', CustomJS(code=js_code))
+        #     button.js_on_event('button_click', CustomJS(code=js_code))
 
-        attach_download_js(self.view.widgets.buttons['to_json'], 
-                           f'app/static/data/{self.model.cell.name}_ephys.json')
-        attach_download_js(self.view.widgets.buttons['to_swc'], 
-                           f'app/static/data/{self.model.cell.name}_3PS.swc')
+        # attach_download_js(self.view.widgets.buttons['to_json'], 
+        #                    f'app/static/data/{self.model.cell.name}_ephys.json')
+        # attach_download_js(self.view.widgets.buttons['to_swc'], 
+        #                    f'app/static/data/{self.model.cell.name}_3PS.swc')
         
         self.view.widgets.selectors['cell'].disabled = True
 
@@ -119,40 +86,53 @@ class IOMixin():
             self.model.remove_ca_dynamics()
 
     @log
-    def mod_files_callback(self, attr, old, new):
+    def mod_archives_callback(self, attr, old, new):
 
-        # Only update if cell is loaded
-        if self.model.cell is None:
-            return
+        self.view.widgets.selectors['mod_archives'].disabled = True
 
-        mod_to_add = list(set(new).difference(set(old)))
-        mod_to_remove = list(set(old).difference(set(new)))
+        self.model.add_archive('Base', recompile=self.view.widgets.switches['recompile'].active)
+        self.model.add_archive(new, recompile=self.view.widgets.switches['recompile'].active)
 
-        logger.info(f'ch_to_add: {mod_to_add}')
-        logger.info(f'ch_to_remove: {mod_to_remove}')
+        # TODO: Verify that the mod files are loaded successfully
 
-        if len(mod_to_add) > 1: logger.warning('Only one channel can be added at a time')
-        if len(mod_to_remove) > 1: logger.warning('Only one channel can be removed at a time')
+        self.view.widgets.multichoice['mechanisms'].options = list(self.model.mechanisms.keys())
+        logger.debug(f'Loaded mechanisms: {self.model.mechanisms.keys()}')
 
-        # Remove
-        if mod_to_remove:
-            self.model.remove_channel(mod_to_remove[0])
-            self.view.widgets.selectors['graph_param'].value = self.view.widgets.selectors['graph_param'].options[0]
+    # @log
+    # def mod_files_callback_old(self, attr, old, new):
 
-        # Add
-        if mod_to_add:
-            self.model.add_channel(mod_to_add[0], recompile=self.view.widgets.switches['recompile'].active)
-            self.update_graph_param(f'gbar_{self.model.channels[mod_to_add[0]].suffix}')
-            # P.add_channel(mod_to_add[0])
+    #     # Only update if cell is loaded
+    #     if self.model.cell is None:
+    #         return
+
+    #     mod_to_add = list(set(new).difference(set(old)))
+    #     mod_to_remove = list(set(old).difference(set(new)))
+
+    #     logger.info(f'ch_to_add: {mod_to_add}')
+    #     logger.info(f'ch_to_remove: {mod_to_remove}')
+
+    #     if len(mod_to_add) > 1: logger.warning('Only one channel can be added at a time')
+    #     if len(mod_to_remove) > 1: logger.warning('Only one channel can be removed at a time')
+
+    #     # Remove
+    #     if mod_to_remove:
+    #         self.model.remove_channel(mod_to_remove[0])
+    #         self.view.widgets.selectors['graph_param'].value = self.view.widgets.selectors['graph_param'].options[0]
+
+    #     # Add
+    #     if mod_to_add:
+    #         self.model.add_channel(mod_to_add[0], recompile=self.view.widgets.switches['recompile'].active)
+    #         self.update_graph_param(f'gbar_{self.model.channels[mod_to_add[0]].suffix}')
+    #         # P.add_channel(mod_to_add[0])
          
-        # Add channel tabs ...
-        self.update_channel_selector()
+    #     # Add channel tabs ...
+    #     self.update_channel_selector()
 
-        self.update_equilibtium_potentials()
+    #     self.update_equilibtium_potentials()
             
-        # Update graph param selector with new channels
+    #     # Update graph param selector with new channels
         
-        self.update_graph_param_selector()
+    #     self.update_graph_param_selector()
 
     @log
     def update_channel_selector(self):

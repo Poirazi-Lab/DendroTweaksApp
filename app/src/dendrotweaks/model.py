@@ -84,7 +84,7 @@ class Model():
             raise ValueError(
                 'Simulator name not recognized. Use NEURON or Jaxley.')
 
-        self.swcm = SWCManager()
+        self.swcm = SWCManager(path_to_data)
         self.modm = MODManager(simulator_name, path_to_data)
 
     @property
@@ -185,6 +185,23 @@ class Model():
             nseg = int((neuron_sec.L / (d_lambda * lambda_f) + 0.9) / 2) * 2 + 1
             sec._ref.nseg = nseg
 
+    # def set_geom_nseg(self, d_lambda=0.1, f=100):
+    #     """
+    #     Set the number of segments in each section based on the geometry.
+
+    #     Parameters
+    #     ----------
+    #     d_lambda : float
+    #         The lambda value to use.
+    #     f : float
+    #         The frequency value to use.
+    #     """
+    #     from neuron import h
+    #     for sec in self.sec_tree.sections:
+    #         lambda_f = h.lambda_f(f, sec=sec._ref)
+    #         nseg = int((sec._ref.L / (d_lambda * lambda_f) + 0.9) / 2) * 2 + 1
+    #         sec._ref.nseg = nseg
+
     def build_seg_tree(self):
         """
         Build the segment tree using the section tree.
@@ -277,7 +294,7 @@ class Model():
         # - their parameters will be distributed in the group sections
     # Base archive is added by default (Leak and Synapses)
 
-    def add_archive(self, archive_name: str):
+    def add_archive(self, archive_name: str, recompile=False):
         """
         Add a mechanism archive to the model.
         - Loads the mechanisms from the archive.
@@ -291,7 +308,7 @@ class Model():
         if self.modm._path_to_data != self.path_to_data:
             self.modm._path_to_data = self.path_to_data
         self.modm.load_archive(archive_name, 
-                                recompile=True)
+                                recompile=recompile)
 
         for mechanism_name in self.modm.list_archives()[archive_name]:
             # self.add_mechanism(mechanism_name, archive_name, groups_names)
@@ -299,6 +316,7 @@ class Model():
                 mechanism = LeakChannel()
             else:
                 mechanism = self.from_mod(mechanism_name, archive_name)
+            print(f'Mechanism {mechanism.name} added to model.')
             self.mechanisms[mechanism.name] = mechanism
 
     # def add_mechanism(self, mechanism_name: str, archive_name='', groups_names: List[str] = None):
@@ -333,6 +351,8 @@ class Model():
         self.modm.write(path_to_py_file)
 
         module_name = path_to_py_file.replace('.py', '').replace('/', '.')
+        module_name = module_name.split('src.')[-1]
+        print(f'Module name: {module_name}')
         class_name = self.modm.ast.suffix.capitalize()
         Mechanism = dynamic_import(module_name, class_name)
         return Mechanism()

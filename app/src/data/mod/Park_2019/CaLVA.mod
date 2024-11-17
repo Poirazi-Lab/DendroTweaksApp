@@ -8,7 +8,7 @@ changed for use with Ri18  (B.Kampa 2005)
 ENDCOMMENT
 
 NEURON {
-	SUFFIX calva
+	SUFFIX CaLVA
 	USEION ca READ eca WRITE ica
 	RANGE gbar, ica
 }

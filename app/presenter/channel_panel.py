@@ -13,9 +13,9 @@ from bokeh.layouts import row, column
 from bokeh.models import Div
 from bokeh.palettes import Bokeh
 
-from model.mechanisms.channels import StandardIonChannel
+# from model.mechanisms.channels import StandardIonChannel
 
-from model.mechanisms.distributions import Distribution
+# from model.mechanisms.distributions import Distribution
 
 
 class ChannelMixin():

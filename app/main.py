@@ -58,8 +58,10 @@ from collections import defaultdict
 from view import CellView
 view = CellView()
 
-from model.model import CellModel
-model = CellModel(path_to_model='app/model/')
+import sys
+sys.path.append('app/src')
+import dendrotweaks as dd
+model = dd.Model(name='model', path_to_data='app/src/data/')
 
 from presenter.presenter import Presenter
 p = Presenter(view=view, model=model)
@@ -94,7 +96,7 @@ view.figures['cell'].renderers[0].nonselection_glyph = MultiLine(line_alpha=0.3,
 view.figures['cell'].circle(x='x', y='y', radius='rad', color='color', source=view.sources['soma'], alpha=0.9)
 view.widgets.sliders['rotate_cell'] = Slider(start=0, end=360, value=1, step=2, title="Rotate", width=370)
 
-view.widgets.sliders['rotate_cell'].on_change('value', p.update_3D_callback)
+view.widgets.sliders['rotate_cell'].on_change('value', p.rotate_cell_renderer_callback)
 
 panel_cell = column(view.figures['cell'], view.widgets.sliders['rotate_cell'], name='panel_cell')
 panel_cell.background = None
@@ -228,7 +230,24 @@ graph_hover_callback = CustomJS(args=dict(plot=view.figures['graph']), code="""
     canvas.style.cursor = 'pointer';
 """)
 
-hover = HoverTool(callback=graph_hover_callback, tooltips=[("ID", "@index"), ("Name", "@name"), ("Type", "@type"), ("Area", "@area"), ("Diam", "@diam"), ("Dist", "@dist"), ("Ra", "@Ra"), ('g leak', '@gbar_leak{0.000000}'), ('g na', '@gbar_na{0.000000}'), ('g kv', '@gbar_kv{0.000000}'), ("Recordings", "@recordings"), ("AMPA", "@AMPA"), ("Weights", "@weights"), ("Iclamps", "@iclamps"), ("line_color", "@line_color"), ("voltage", "@voltage"), ("cai", "@cai")])
+hover = HoverTool(callback=graph_hover_callback, tooltips=[("ID", "@index"), 
+                                                           ("Name", "@name"), 
+                                                           ("Domain", "@domain"), 
+                                                           ("Area", "@area"), 
+                                                           ("Diam", "@diam"), 
+                                                           ("Dist", "@dist"), 
+                                                           ("cm", "@cm"),
+                                                           ("Ra", "@Ra"), 
+                                                        #    ('g leak', '@gbar_leak{0.000000}'), 
+                                                        #    ('g na', '@gbar_na{0.000000}'), 
+                                                        #    ('g kv', '@gbar_kv{0.000000}'), 
+                                                           ("Recordings", "@recordings"), 
+                                                           ("AMPA", "@AMPA"), 
+                                                           ("Weights", "@weights"), 
+                                                           ("Iclamps", "@iclamps"), 
+                                                        #    ("line_color", "@line_color"), 
+                                                           ("voltage", "@voltage"), 
+                                                           ("cai", "@cai")])
 view.figures['graph'].add_tools(hover)
 
 # Add select widget
@@ -248,7 +267,7 @@ view.widgets.selectors['graph_param'].on_change('value', p.update_graph_colors_c
 
 def update_high(attr, old, new):
     param = view.widgets.selectors['graph_param'].value
-    if param == 'type':
+    if param == 'domain':
         pass
     else:
         graph_renderer = view.figures['graph'].renderers[0]
@@ -591,105 +610,161 @@ widgets_section_vars = column([
 
 
 ### Distribution selector
-view.widgets.selectors['sec_type'] = MultiChoice(title='Section type', 
-                                                options=['soma', 'axon', 'dend', 'apic'],
-                                                width=242)
 
-view.widgets.selectors['sec_type'].on_change('value', p.select_type_callback)
+def create_equilibrium_panel():
+    view.widgets.spinners['e_leak'] = Spinner(value=-70, title='e_leak', width=60, step=1, visible=False)
+    view.widgets.spinners['ena'] = Spinner(value=50, title='ena', width=60, step=1, visible=False)
+    view.widgets.spinners['ek'] = Spinner(value=-77, title='ek', width=60, step=1, visible=False)
+    view.widgets.spinners['eca'] = Spinner(value=140, title='eca', width=60, step=1, visible=False)
 
-view.widgets.spinners['e_leak'] = Spinner(value=-70, title='e_leak', width=60, step=1, visible=False)
-view.widgets.spinners['ena'] = Spinner(value=50, title='ena', width=60, step=1, visible=False)
-view.widgets.spinners['ek'] = Spinner(value=-77, title='ek', width=60, step=1, visible=False)
-view.widgets.spinners['eca'] = Spinner(value=140, title='eca', width=60, step=1, visible=False)
+    view.widgets.spinners['ena'].on_change('value', p.update_ena_callback)
+    view.widgets.spinners['ek'].on_change('value', p.update_ek_callback)
+    view.widgets.spinners['eca'].on_change('value', p.update_eca_callback)
+    view.widgets.spinners['e_leak'].on_change('value', p.update_e_leak_callback)
 
-view.widgets.spinners['ena'].on_change('value', p.update_ena_callback)
-view.widgets.spinners['ek'].on_change('value', p.update_ek_callback)
-view.widgets.spinners['eca'].on_change('value', p.update_eca_callback)
-view.widgets.spinners['e_leak'].on_change('value', p.update_e_leak_callback)
+    view.widgets.spinners['e_leak'].on_change('value', p.voltage_callback_on_change)
+    view.widgets.spinners['ena'].on_change('value', p.voltage_callback_on_change)
+    view.widgets.spinners['ek'].on_change('value', p.voltage_callback_on_change)
+    view.widgets.spinners['eca'].on_change('value', p.voltage_callback_on_change)
 
-view.widgets.spinners['e_leak'].on_change('value', p.voltage_callback_on_change)
-view.widgets.spinners['ena'].on_change('value', p.voltage_callback_on_change)
-view.widgets.spinners['ek'].on_change('value', p.voltage_callback_on_change)
-view.widgets.spinners['eca'].on_change('value', p.voltage_callback_on_change)
+    equilibrium_panel = row([view.widgets.spinners['e_leak'],
+                                view.widgets.spinners['ena'],
+                                view.widgets.spinners['ek'],
+                                view.widgets.spinners['eca'],
+                                ])
 
+    return equilibrium_panel
 
+def create_add_remove_panel():
 
-equilibrium_panel = row([view.widgets.spinners['e_leak'],
-                            view.widgets.spinners['ena'],
-                            view.widgets.spinners['ek'],
-                            view.widgets.spinners['eca'],
-                            ])
+    view.widgets.text['group_name'] = TextInput(value='', 
+                                                title='Group name', 
+                                                placeholder='New group name',
+                                                width=150)
 
+    view.widgets.buttons['add_group'] = Button(label='Add group', 
+                                               button_type='primary', 
+                                               disabled=False,
+                                               width=100,
+                                               styles={"padding-top":"20px"}
+                                               )
+                                               
+    view.widgets.buttons['add_group'].on_event(ButtonClick, p.add_group_callback)
 
-view.widgets.selectors['graph_param'].on_change('value', p.update_distribution_selector_options_callback)
+    view.widgets.selectors['group'] = Select(options=[''], 
+                                         value='',
+                                         width=150,
+                                         title='Groups')
 
-view.widgets.selectors['distribution_type'] = Select(value='uniform',
+    view.widgets.selectors['group'].on_change('value', p.select_group_callback)                                         
+
+    view.widgets.buttons['remove_group'] = Button(label='Remove group',
+                                                    button_type='danger',
+                                                    disabled=False,
+                                                    width=100,
+                                                    styles={"padding-top":"20px"}
+                                                    )
+
+    view.widgets.buttons['remove_group'].on_event(ButtonClick, p.remove_group_callback)
+
+    add_panel = row([view.widgets.text['group_name'],
+                        view.widgets.buttons['add_group'],
+                        ])
+
+    remove_panel = row([view.widgets.selectors['group'],
+                        view.widgets.buttons['remove_group'],
+                        ])
+
+    add_remove_panel = column([add_panel, remove_panel])
+
+    return add_remove_panel
+
+def create_distribution_panel():
+
+    view.widgets.selectors['distribution_type'] = Select(value='uniform',
                                options=['uniform', 'linear', 'exponential', 'sigmoid', 'gaussian', 'step'],
                                title='Distribution type')
 
+    view.widgets.selectors['distribution_type'].on_change('value', p.update_distribution_type_callback)
 
-view.widgets.buttons['add_group'] = Button(label='Add distribution', button_type='primary', disabled=False)
-view.widgets.buttons['add_group'].on_event(ButtonClick, p.add_group_callback)
+    # view.widgets.buttons['remove_distribution'].on_event(ButtonClick, p.remove_group_callback)
+    # view.widgets.buttons['remove_distribution'].on_event(ButtonClick, p.update_plots_on_param_change_callback)
+    # view.widgets.buttons['remove_distribution'].on_event(ButtonClick, p.voltage_callback_on_event)
+
+    view.figures['distribution'] = figure(width=400,
+                                          height=150,
+                                          match_aspect=False,
+                                          tools='pan, box_zoom, hover, reset, save',)
+    # hide toolbar and show only on hover
+    view.figures['distribution'].toolbar.autohide = True
+    view.figures['distribution'].background_fill_color = None
+    view.figures['distribution'].border_fill_color = None
+
+    view.sources['distribution'] = ColumnDataSource(data={'x': [], 'y': []})
+
+    view.figures['distribution'].circle(x='x', y='y', source=view.sources['distribution'], line_width=2, color='color')
+    hspan = Span(location=0, dimension='width', line_color='white', line_width=1)
+    view.figures['distribution'].add_layout(hspan)
+    vspan = Span(location=0, dimension='height', line_color='white', line_width=1)
+    view.figures['distribution'].add_layout(vspan)
+
+    view.DOM_elements['distribution_panel'] = column(width=300)
+
+    distribution_panel = column([view.widgets.selectors['distribution_type'],
+                                 view.figures['distribution'], 
+                                 view.DOM_elements['distribution_panel'],
+                            ])
+
+    return distribution_panel
+
+def create_group_panel():
+
+    view.widgets.multichoice['mechanisms'] = MultiChoice(title='Mechanism', 
+                                                        options=[], 
+                                                        width=242)
+
+    view.widgets.multichoice['mechanisms'].on_change('value', p.group_mechanisms_callback)
+
+    view.widgets.selectors['params'] = Select(options=[],
+                                            title='Parameters',
+                                            width=242)
+
+    view.widgets.buttons['add_param'] = Button(label='Add as range', button_type='primary')
+    view.widgets.buttons['add_param'].on_event(ButtonClick, p.add_range_param_callback)
+
+    # view.widgets.selectors['range_params'] = Select(options=['cm', 'Ra'],
+    #                                                 value='cm',
+    #                                                 title='Range parameters',
+    #                                                 width=242)
+
+    # view.widgets.selectors['range_params'].on_change('value', p.update_graph_colors_callback)
+    view.widgets.selectors['graph_param'].on_change('value', p.select_range_param_callback)
+
+    group_panel = column([view.widgets.multichoice['mechanisms'],
+                          view.widgets.selectors['params'],
+                          view.widgets.buttons['add_param'],
+                          view.widgets.selectors['graph_param'],
+                          create_distribution_panel()
+                         ])
+                         
+    return group_panel
+
+def create_groups_tab():
+
+    panels = column([create_add_remove_panel(),  
+                     create_group_panel()])
+
+    groups_tab = TabPanel(title='Membrane', 
+                        child=panels)
+    
+    return groups_tab
 
 
 
-add_panel = column(row(view.widgets.selectors['graph_param'], 
-                        ),
-                row(view.widgets.selectors['distribution_type'], 
-                    ),
-                    view.widgets.buttons['add_group'],
-                    )
-                
-
-view.widgets.selectors['distribution'] = Select(options=[], title='Distributions')
-view.widgets.buttons['remove_distribution'] = Button(label='Remove', button_type='danger')
-
-
-view.widgets.buttons['remove_distribution'].on_event(ButtonClick, p.remove_group_callback)
-view.widgets.buttons['remove_distribution'].on_event(ButtonClick, p.update_plots_on_param_change_callback)
-view.widgets.buttons['remove_distribution'].on_event(ButtonClick, p.voltage_callback_on_event)
-
-remove_panel = column(view.widgets.selectors['distribution'], 
-                      view.widgets.buttons['remove_distribution'])
-
-view.figures['distribution'] = figure(width=400,
-                                    height=150,
-                                    match_aspect=False,
-                                    tools='pan, box_zoom, hover, reset, save',)
-
-from bokeh.models import NumeralTickFormatter
-# view.figures['distribution'].yaxis[0].formatter = NumeralTickFormatter(format="0.0000000")
-
-# hide toolbar and show only on hover
-view.figures['distribution'].toolbar.autohide = True
-view.figures['distribution'].background_fill_color = None
-view.figures['distribution'].border_fill_color = None
-
-view.sources['distribution'] = ColumnDataSource(data={'x': [], 'y': []})
-
-view.figures['distribution'].circle(x='x', y='y', source=view.sources['distribution'], line_width=2, color='color')
-hspan = Span(location=0, dimension='width', line_color='white', line_width=1)
-view.figures['distribution'].add_layout(hspan)
-vspan = Span(location=0, dimension='height', line_color='white', line_width=1)
-view.figures['distribution'].add_layout(vspan)
-
-
-view.widgets.selectors['distribution'].on_change('value', p.select_group_callback)
-
-
-view.DOM_elements['distribution_panel'] = column(width=300)
 
 
 
 
-widgets_range_vars = column([view.widgets.selectors['sec_type'],
-                             equilibrium_panel,
-                             add_panel, 
-                             remove_panel, 
-                             view.figures['distribution'], 
-                             view.DOM_elements['distribution_panel'],
-                             ]
-                             )
 
 
 view.widgets.switches['iclamp'] = Switch(active=False)
@@ -779,19 +854,20 @@ widgets_point_processes = column([remove_all_button,
 
 tab_section_vars = TabPanel(title='Morphology', 
                              child=widgets_section_vars)
-tab_rabge_vars = TabPanel(title='Membrane', 
-                             child=widgets_range_vars)
+
 tab_point_processes = TabPanel(title='Stimuli', 
                        child=widgets_point_processes)
 
-view.widgets.tabs['section'] = Tabs(tabs=[tab_section_vars, tab_rabge_vars, tab_point_processes])
+view.widgets.tabs['section'] = Tabs(tabs=[tab_section_vars, 
+                                          create_groups_tab(), 
+                                          tab_point_processes])
 
 def tab_section_callback(attr, old, new):
-    if p.model.cell is None:
+    if p.model.sec_tree is None:
         return
     if new in [0, 2]:
         view.widgets.selectors['graph_param'].options = list(view.params)
-        view.widgets.selectors['graph_param'].value = 'type' if new == 0 else 'recordings'
+        view.widgets.selectors['graph_param'].value = 'domain' if new == 0 else 'recordings'
         view.widgets.selectors['section'].value = 'soma[0]'
     elif new == 1:
         view.widgets.selectors['graph_param'].options = list(view.ephys_params)
@@ -869,7 +945,7 @@ curdoc().add_root(right_menu)
 # LEFT HAND MENU
 
 view.widgets.selectors['cell'] = Select(value='Select a cell to begin',
-                       options=['Select a cell to begin'] + [f for f in os.listdir('app/model/swc') if f.endswith('.swc') or f.endswith('.asc')], 
+                       options=['Select a cell to begin'] + model.swcm.list_files(), 
                        title='Cell:', 
                        width=242)
 view.widgets.selectors['cell'].description = 'Select an SWC file to load. To select another cell, reload the page.\nIt is recommended to choose d_lambda before loading a cell.'
@@ -898,27 +974,32 @@ view.widgets.file_input['all'] = FileInput(accept='.swc, .asc, .mod', name='file
 view.widgets.file_input['all'].on_change('filename', p.import_file_callback)
 view.widgets.file_input['all'].on_change('value', p.import_file_callback)
 
-view.widgets.multichoice['mod_files'] = MultiChoice(title='Mechanisms', 
-                                    value=['Leak'],
-                                    options = p.model.list_mod_files(),
+# view.widgets.multichoice['mod_files'] = MultiChoice(title='Mechanisms', 
+#                                     value=['Leak'],
+#                                     options = list(p.model.modm.list_archives().keys()),
+#                                     width=242)
+
+view.widgets.selectors['mod_archives'] = Select(title='Mechanism archives',
+                                    options = ['Select archive'] + [k for k in p.model.modm.list_archives().keys() if k != 'Base'],
+                                    value = 'Select archive',
                                     width=242)
 
-view.widgets.multichoice['mod_files_std'] = MultiChoice(title='Mechanisms standard', 
-                                    options = p.model.list_mod_files(mod_folder='mod_standard'),
-                                    width=242)
+# view.widgets.multichoice['mod_files_std'] = MultiChoice(title='Mechanisms standard', 
+#                                     options = p.model.list_mod_files(mod_folder='mod_standard'),
+#                                     width=242)
 
-view.widgets.selectors['mod_files_cadyn'] = Select(title='Ca dynamics',
-                                    options = p.model.list_mod_files(mod_folder='mod_cadyn') + [''],
-                                    value = '',
-                                    width=242)
+# view.widgets.selectors['mod_files_cadyn'] = Select(title='Ca dynamics',
+#                                     options = p.model.list_mod_files(mod_folder='mod_cadyn') + [''],
+#                                     value = '',
+#                                     width=242)
 
-
-view.widgets.multichoice['mod_files'].on_change('value', p.mod_files_callback)
-view.widgets.multichoice['mod_files'].on_change('value', p.voltage_callback_on_change)
-view.widgets.multichoice['mod_files_std'].on_change('value', p.mod_files_callback)
-view.widgets.multichoice['mod_files_std'].on_change('value', p.voltage_callback_on_change)
-view.widgets.selectors['mod_files_cadyn'].on_change('value', p.cadyn_files_callback)
-view.widgets.selectors['mod_files_cadyn'].on_change('value', p.voltage_callback_on_change)
+view.widgets.selectors['mod_archives'].on_change('value', p.mod_archives_callback)
+# view.widgets.multichoice['mod_files'].on_change('value', p.mod_files_callback)
+# view.widgets.multichoice['mod_files'].on_change('value', p.voltage_callback_on_change)
+# view.widgets.multichoice['mod_files_std'].on_change('value', p.mod_files_callback)
+# view.widgets.multichoice['mod_files_std'].on_change('value', p.voltage_callback_on_change)
+# view.widgets.selectors['mod_files_cadyn'].on_change('value', p.cadyn_files_callback)
+# view.widgets.selectors['mod_files_cadyn'].on_change('value', p.voltage_callback_on_change)
 
 view.widgets.sliders['duration'] = Slider(value=300, start=100, end=1000, step=100, title='Duration, ms', width=200, format='0[.]0')
 view.widgets.sliders['duration'].js_link('value', view.widgets.sliders['iclamp_duration'], 'end')
@@ -940,9 +1021,9 @@ tab_io = TabPanel(title='Input/Output',
                                           view.widgets.sliders['d_lambda'],
                                             view.widgets.file_input['all'],
                                             json_panel,
-                                            view.widgets.multichoice['mod_files'],
-                                            view.widgets.multichoice['mod_files_std'],
-                                            view.widgets.selectors['mod_files_cadyn'],
+                                            view.widgets.selectors['mod_archives'],
+                                            # view.widgets.multichoice['mod_files_std'],
+                                            # view.widgets.selectors['mod_files_cadyn'],
                              )
                                 )
 

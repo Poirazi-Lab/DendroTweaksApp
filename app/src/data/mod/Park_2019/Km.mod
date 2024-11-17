@@ -14,7 +14,7 @@ Author: Zach Mainen, Salk Institute, 1995, zach@salk.edu
 ENDCOMMENT
 
 NEURON {
-	SUFFIX km
+	SUFFIX Km
 	USEION k READ ek WRITE ik
 	RANGE gbar, i, v12, q
 }

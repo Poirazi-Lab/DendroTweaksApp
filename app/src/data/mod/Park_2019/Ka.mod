@@ -6,7 +6,7 @@ modified to be used with cvode  M.Migliore 2001
 ENDCOMMENT
 
 NEURON {
-	SUFFIX ka
+	SUFFIX Ka
 	USEION k READ ek WRITE ik
     RANGE gbar, ik
 }

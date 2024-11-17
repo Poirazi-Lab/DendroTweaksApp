@@ -1,7 +1,8 @@
 from ...trees import SWCNode, SWCTree, Section, SectionTree
-
+from dendrotweaks.file_managers.utils import list_folders, list_files
 import pandas as pd
 from io import StringIO
+import os
 
 # TODO: Think of the use cases.
 # - Change soma notation (1PS, 3PS, contour)
@@ -14,10 +15,17 @@ from io import StringIO
 
 class SWCManager():
 
-    def __init__(self):
+    def __init__(self, path_to_data='data'):
         self._df = None
         self.swc_tree = None
         self.sec_tree = None
+        self._path_to_data = path_to_data
+
+    # FILE MANAGEMENT
+
+    def list_files(self):
+        path_to_swc = os.path.join(self._path_to_data, 'swc')
+        return list_files(path_to_swc, extension='.swc')
 
     # READ
 

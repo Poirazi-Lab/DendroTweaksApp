@@ -7,7 +7,7 @@ from pprint import pprint
 # PATH_TO_TEMPLATE = "static/data/templates/template.py"
 TEMPLATES = {
     'NEURON': {
-        'template': 'dendrotweaks/file_managers/mod_manager/templates/template_dd.py',
+        'template': 'app/src/dendrotweaks/file_managers/mod_manager/templates/template_dd.py',
         'lib': 'np'
     },
     'Jaxley': {

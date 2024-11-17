@@ -22,6 +22,18 @@ class Segment(Node):
         return self._ref.x
 
     @property
+    def area(self):
+        return self._ref.area()
+
+    @property
+    def diam(self):
+        return self._ref.diam
+
+    @property
+    def subtree_size(self):
+        return self._section.subtree_size
+
+    @property
     def distance_to_root(self):
         return self._section.distance_to_root(self.x)
 

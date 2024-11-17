@@ -23,7 +23,7 @@ Neuron, 15(6), 1427–1439. doi:10.1016/0896-6273(95)90020-9
 ENDCOMMENT
 
 NEURON {
-	SUFFIX na
+	SUFFIX Na
 	USEION na READ ena WRITE ina
 	RANGE gbar, i, v12m, qm, v12ha, v12hb, qh, v12hinf, qhinf, Rma, Rmb, Rhb, Rha
 }

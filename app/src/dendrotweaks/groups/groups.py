@@ -46,6 +46,7 @@ class Group():
         self._nodes = nodes
         self.parameters = {'cm': ParametrizedFunction('uniform', value=1),
                            'Ra': ParametrizedFunction('uniform', value=100)}
+        self.mechanisms = {}
         for mechanism in mechanisms:
             self.add_mechanism(mechanism)
         for parameter_name in self.parameters:
@@ -103,6 +104,12 @@ class Group():
     #         node.insert_mechanism(mechanism.name)
     #     for parameter, value in mechanism.parameters.items():
     #         self.add_parameter(parameter, ParametrizedFunction('uniform', value=value))
+
+    def remove_mechanism(self, mechanism_name):
+        for node in self._nodes:
+            node.uninsert_mechanism(mechanism_name)
+        del self.mechanisms[mechanism_name]
+
 
     def add_parameter(self, parameter_name, distribution_function=None):
         """
