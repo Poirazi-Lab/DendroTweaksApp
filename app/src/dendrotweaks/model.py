@@ -9,6 +9,7 @@ from dendrotweaks.file_managers import SWCManager, MODManager
 from dendrotweaks.stimuli.iclamps import IClamp
 from dendrotweaks.utils import calculate_lambda_f, dynamic_import
 
+from collections import OrderedDict
 
 class Model():
     """
@@ -71,7 +72,7 @@ class Model():
 
         self.mechanisms = {}
         self._parameters = {}
-        self.groups = {}
+        self.groups = OrderedDict()
 
         self.iclamps = {}
         self.synapses = {}

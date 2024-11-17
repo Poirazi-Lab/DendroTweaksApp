@@ -637,6 +637,28 @@ def create_equilibrium_panel():
 
 def create_add_remove_panel():
 
+    view.widgets.selectors['sec_type'] = Select(options=['all', 'soma', 'axon', 'dend', 'apic'],
+                                                value='all',
+                                                title='Section type',
+                                                width=100)
+
+    view.widgets.selectors['sec_type'].on_change('value', p.select_by_condition_callback)
+
+    view.widgets.selectors['select_by'] = Select(options=['dist', 'diam'],
+                                            value='dist',
+                                            title='Select by',
+                                            width=100)
+
+    view.widgets.selectors['select_by'].on_change('value', p.select_by_condition_callback)                                            
+
+    view.widgets.text['condition'] = TextInput(value='',
+                                            title='Condition',
+                                            placeholder='0 < x < 10',
+                                            width=150)   
+
+    view.widgets.text['condition'].on_change('value', p.select_by_condition_callback)                                            
+
+
     view.widgets.text['group_name'] = TextInput(value='', 
                                                 title='Group name', 
                                                 placeholder='New group name',
@@ -667,6 +689,12 @@ def create_add_remove_panel():
 
     view.widgets.buttons['remove_group'].on_event(ButtonClick, p.remove_group_callback)
 
+    select_panel = row([
+                        view.widgets.selectors['sec_type'],
+                        view.widgets.selectors['select_by'],
+                        view.widgets.text['condition'],
+    ])
+
     add_panel = row([view.widgets.text['group_name'],
                         view.widgets.buttons['add_group'],
                         ])
@@ -675,9 +703,56 @@ def create_add_remove_panel():
                         view.widgets.buttons['remove_group'],
                         ])
 
-    add_remove_panel = column([add_panel, remove_panel])
+    add_remove_panel = column([select_panel, add_panel, remove_panel])
 
     return add_remove_panel
+
+
+
+def create_group_panel():
+
+    view.widgets.multichoice['mechanisms'] = MultiChoice(title='Mechanism', 
+                                                        options=[], 
+                                                        width=300)
+
+    view.widgets.multichoice['mechanisms'].on_change('value', p.update_group_mechanisms_callback)
+
+    view.widgets.multichoice['params'] = MultiChoice(title='Range parameters',
+                                            options=[],
+                                            width=300)
+
+    view.widgets.multichoice['params'].on_change('value', p.add_range_param_callback)
+
+    # view.widgets.buttons['add_param'] = Button(label='Add as range', button_type='primary')
+    # view.widgets.buttons['add_param'].on_event(ButtonClick, p.add_range_param_callback)
+
+    # view.widgets.selectors['range_params'] = Select(options=['cm', 'Ra'],
+    #                                                 value='cm',
+    #                                                 title='Range parameters',
+    #                                                 width=242)
+
+    # view.widgets.selectors['range_params'].on_change('value', p.update_graph_colors_callback)
+    
+
+    group_panel = column([view.widgets.multichoice['mechanisms'],
+                          view.widgets.multichoice['params'],
+                        #   view.widgets.buttons['add_param'],
+                        #   view.widgets.selectors['graph_param'],
+                         ])
+                         
+    return group_panel
+
+
+def create_groups_tab():
+
+    panels = column([create_add_remove_panel(),  
+                     create_group_panel()])
+
+    groups_tab = TabPanel(title='Groups', 
+                        child=panels)
+    
+    return groups_tab
+
 
 def create_distribution_panel():
 
@@ -717,49 +792,24 @@ def create_distribution_panel():
 
     return distribution_panel
 
-def create_group_panel():
+def create_distribution_tab():
 
-    view.widgets.multichoice['mechanisms'] = MultiChoice(title='Mechanism', 
-                                                        options=[], 
-                                                        width=242)
-
-    view.widgets.multichoice['mechanisms'].on_change('value', p.group_mechanisms_callback)
-
-    view.widgets.selectors['params'] = Select(options=[],
-                                            title='Parameters',
-                                            width=242)
-
-    view.widgets.buttons['add_param'] = Button(label='Add as range', button_type='primary')
-    view.widgets.buttons['add_param'].on_event(ButtonClick, p.add_range_param_callback)
-
-    # view.widgets.selectors['range_params'] = Select(options=['cm', 'Ra'],
-    #                                                 value='cm',
-    #                                                 title='Range parameters',
-    #                                                 width=242)
-
-    # view.widgets.selectors['range_params'].on_change('value', p.update_graph_colors_callback)
     view.widgets.selectors['graph_param'].on_change('value', p.select_range_param_callback)
 
-    group_panel = column([view.widgets.multichoice['mechanisms'],
-                          view.widgets.selectors['params'],
-                          view.widgets.buttons['add_param'],
-                          view.widgets.selectors['graph_param'],
-                          create_distribution_panel()
-                         ])
-                         
-    return group_panel
+    selection_panel = row([
+        view.widgets.selectors['group'],
+        view.widgets.selectors['graph_param'],
+    ])
 
-def create_groups_tab():
+    distibution_panel = column([
+        selection_panel,
+        create_distribution_panel(),
+    ])
 
-    panels = column([create_add_remove_panel(),  
-                     create_group_panel()])
-
-    groups_tab = TabPanel(title='Membrane', 
-                        child=panels)
+    distribution_tab = TabPanel(title='Distributions', 
+                                child=distibution_panel)
     
-    return groups_tab
-
-
+    return distribution_tab
 
 
 
@@ -860,18 +910,23 @@ tab_point_processes = TabPanel(title='Stimuli',
 
 view.widgets.tabs['section'] = Tabs(tabs=[tab_section_vars, 
                                           create_groups_tab(), 
+                                          create_distribution_tab(),
                                           tab_point_processes])
 
 def tab_section_callback(attr, old, new):
+    DEFAULT_TAB_PARAM = {0: 'domain', 1: 'domain', 2: 'cm', 3: 'recordings'}
     if p.model.sec_tree is None:
         return
-    if new in [0, 2]:
+    if new in [0, 3]:
         view.widgets.selectors['graph_param'].options = list(view.params)
-        view.widgets.selectors['graph_param'].value = 'domain' if new == 0 else 'recordings'
-        view.widgets.selectors['section'].value = 'soma[0]'
-    elif new == 1:
+        view.widgets.selectors['section'].value = '0'
+    elif new == 2:
+        logger.info('Switching to distribution tab')
         view.widgets.selectors['graph_param'].options = list(view.ephys_params)
-        view.widgets.selectors['graph_param'].value = 'cm'
+    elif new == 1:
+        logger.info('Switching to section tab')
+        p.select_group()
+    view.widgets.selectors['graph_param'].value = DEFAULT_TAB_PARAM[new]
         
     
     panel_section.visible = True if new in [0] else False

@@ -14,6 +14,30 @@ class IOMixin():
 
     # INPUT METHODS
 
+    def create_cell(self, file_name):
+        """
+        Loads the selected cell from the SWC file. Builds the swc tree and sec tree.
+        Creates sections in the simulator and sets segmentation based on the geometry.
+        Builds the seg tree.
+        Creates the default "all" group.
+        """
+        # Create swc and sec tree
+        self.model.from_swc(file_name)
+
+        # Create and reference sections in simulator
+        self.model.create_and_reference_sections_in_simulator()
+
+        # Add default group
+        self.add_group('all', self.model.sec_tree.sections)
+
+        # Set initial nseg
+        d_lambda = self.view.widgets.sliders['d_lambda'].value
+        logger.info(f'Aimed for {1/d_lambda} segments per length constant at {100} Hz')
+        self.model.set_geom_nseg(d_lambda=d_lambda, f=100)
+        self.model.build_seg_tree()
+        logger.info(f'Total nseg: {len(self.model.seg_tree)}')
+
+
     @log
     def selector_cell_callback(self, attr, old, new):
         """
@@ -45,7 +69,7 @@ class IOMixin():
 
         self.view.widgets.selectors['section'].options=sec_by_domain
         
-
+        self.add_archive('Base', recompile=False)
 
         # def attach_download_js(button, file_path):
 
@@ -85,18 +109,22 @@ class IOMixin():
         else: 
             self.model.remove_ca_dynamics()
 
-    @log
-    def mod_archives_callback(self, attr, old, new):
+    def add_archive(self, archive_name, recompile=False):
 
-        self.view.widgets.selectors['mod_archives'].disabled = True
-
-        self.model.add_archive('Base', recompile=self.view.widgets.switches['recompile'].active)
-        self.model.add_archive(new, recompile=self.view.widgets.switches['recompile'].active)
-
+        self.model.add_archive(archive_name, recompile=self.view.widgets.switches['recompile'].active)
         # TODO: Verify that the mod files are loaded successfully
 
         self.view.widgets.multichoice['mechanisms'].options = list(self.model.mechanisms.keys())
         logger.debug(f'Loaded mechanisms: {self.model.mechanisms.keys()}')
+
+    @log
+    def mod_archives_callback(self, attr, old, new):
+
+        self.view.widgets.selectors['mod_archives'].disabled = True
+        self.add_archive(new, recompile=self.view.widgets.switches['recompile'].active)
+
+        
+        
 
     # @log
     # def mod_files_callback_old(self, attr, old, new):

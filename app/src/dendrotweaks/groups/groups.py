@@ -128,6 +128,18 @@ class Group():
         # TODO: Instead of setting to 0 by default, extract value from the _ref (see add_mechanism)
         self.distribute(parameter_name)
 
+    def remove_parameter(self, parameter_name):
+        """
+        Removes a parameter from the group.
+
+        Parameters
+        ----------
+        parameter_name : str
+            The name of the parameter to remove.
+        """
+        # self.parameters[parameter_name] = ParametrizedFunction('uniform', value=0)
+        del self.parameters[parameter_name]
+
     def set_distribution(self, parameter_name, distribution_name):
         """
         For a given parameter, assignes the distribution with

@@ -46,29 +46,6 @@ class CellMixin():
     def labels(self):
         return [str(sec.idx) for sec in self.model.sec_tree]
         
-    def create_cell(self, file_name):
-        """
-        Loads the selected cell from the SWC file. Builds the swc tree and sec tree.
-        Creates sections in the simulator and sets segmentation based on the geometry.
-        Builds the seg tree.
-        Creates the default "all" group.
-        """
-        # Create swc and sec tree
-        self.model.from_swc(file_name)
-
-        # Create and reference sections in simulator
-        self.model.create_and_reference_sections_in_simulator()
-
-        # Add default group
-        self.add_group('all', self.model.sec_tree.sections)
-
-        # Set initial nseg
-        d_lambda = self.view.widgets.sliders['d_lambda'].value
-        logger.info(f'Aimed for {1/d_lambda} segments per length constant at {100} Hz')
-        self.model.set_geom_nseg(d_lambda=d_lambda, f=100)
-        self.model.build_seg_tree()
-        logger.info(f'Total nseg: {len(self.model.seg_tree)}')
-
     @log
     def create_cell_renderer(self):
         """

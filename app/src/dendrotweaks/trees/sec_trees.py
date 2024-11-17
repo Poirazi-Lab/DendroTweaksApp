@@ -77,18 +77,29 @@ class Section(Node):
             return
         self._ref.insert(name)
 
+    def uninsert_mechanism(self, name: str):
+        """
+        Uninsert a mechanism in the section.
+        """
+        # if already inserted, return
+        if not self._ref.has_membrane(name):
+            return
+        self._ref.uninsert(name)
+
     def update_parameter(self, parameter_name, distribution_function):
         """
         Update the parameter of the section.
         """
-        if hasattr(self._ref, parameter_name):
+        if self.segments and all([hasattr(seg._ref, parameter_name) for seg in self.segments]):
+            for seg in self.segments:
+                setattr(seg._ref, parameter_name,
+                        distribution_function(seg.distance_to_root))
+        elif hasattr(self._ref, parameter_name):
             setattr(self._ref, parameter_name,
                     distribution_function(self.distance_to_root(0.5)))
+            print(f'Updated parameter {parameter_name} in section.')
         else:
-            for seg in self.segments:
-                if hasattr(seg._ref, parameter_name):
-                    setattr(seg._ref, parameter_name,
-                            distribution_function(seg.distance_to_root(0.5)))
+            raise ValueError(f'Parameter {parameter_name} not found in section.')
 
     def __call__(self, x: float):
         """
