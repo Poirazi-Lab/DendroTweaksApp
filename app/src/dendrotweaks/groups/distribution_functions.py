@@ -123,6 +123,18 @@ class ParametrizedFunction:
         """
         return self.function(position, **self.parameters)
 
+    @property
+    def function_name(self):
+        """
+        Return the name of the function.
+
+        Returns
+        -------
+        str
+            The name of the function.
+        """
+        return self.function.__name__
+
     def update_parameters(self, **new_params):
         """
         Update the parameters of the function.

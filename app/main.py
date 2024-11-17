@@ -721,7 +721,7 @@ def create_group_panel():
                                             options=[],
                                             width=300)
 
-    view.widgets.multichoice['params'].on_change('value', p.add_range_param_callback)
+    view.widgets.multichoice['params'].on_change('value', p.update_group_parameters_callback)
 
     # view.widgets.buttons['add_param'] = Button(label='Add as range', button_type='primary')
     # view.widgets.buttons['add_param'].on_event(ButtonClick, p.add_range_param_callback)

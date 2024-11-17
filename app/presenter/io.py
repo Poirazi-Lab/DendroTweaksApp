@@ -100,14 +100,14 @@ class IOMixin():
         
         self.view.widgets.selectors['cell'].disabled = True
 
-    def cadyn_files_callback(self, attr, old, new):
-        logger.debug(f'cadyn_files_callback: {new}')
-        if new:
-            self.model.add_ca_dynamics(mod_name=new)
-            if self.model.cell.name == 'Hay_2011':
-                self.Ca_dyn_temp()
-        else: 
-            self.model.remove_ca_dynamics()
+    # def cadyn_files_callback(self, attr, old, new):
+    #     logger.debug(f'cadyn_files_callback: {new}')
+    #     if new:
+    #         self.model.add_ca_dynamics(mod_name=new)
+    #         if self.model.cell.name == 'Hay_2011':
+    #             self.Ca_dyn_temp()
+    #     else: 
+    #         self.model.remove_ca_dynamics()
 
     def add_archive(self, archive_name, recompile=False):
 
@@ -117,10 +117,10 @@ class IOMixin():
         self.view.widgets.multichoice['mechanisms'].options = list(self.model.mechanisms.keys())
         logger.debug(f'Loaded mechanisms: {self.model.mechanisms.keys()}')
 
-    @log
-    def mod_archives_callback(self, attr, old, new):
-
         self.view.widgets.selectors['mod_archives'].disabled = True
+
+    @log
+    def mod_archives_callback(self, attr, old, new):        
         self.add_archive(new, recompile=self.view.widgets.switches['recompile'].active)
 
         
@@ -174,52 +174,62 @@ class IOMixin():
         with open(path, 'r') as f:
             data = json.load(f)
 
-        for ch in data['channels']:
-            # mod_file = f"{data['path_to_model']}/mechanisms/{ch['name']}/{ch['name']}.mod"
-            if not self.model.channels.get(ch['name']):
-                self.model.add_channel(ch['name'], recompile=self.view.widgets.switches['recompile'].active)
-            for group in ch['groups']:
-                segments = [self.model.cell.segments[seg_name] for seg_name in group['seg_names']]
-                self.model.channels[ch['name']].add_group(segments,
-                                                          group['param_name'])
-                self.model.channels[ch['name']].groups[-1].distribution = Distribution.from_dict(group['distribution'])
-            self.update_graph_param(f"gbar_{ch['suffix']}")
-            self.update_section_param_data()
+        self.add_archive(data['archive_name'], 
+                        recompile=self.view.widgets.switches['recompile'].active)
 
-        with remove_callbacks(self.view.widgets.multichoice['mod_files']):
-            self.view.widgets.multichoice['mod_files'].value = [ch['name'] for ch in data['channels']]
+        for group_name, group_data in data['groups'].items():
+            self.model.add_group(group_name, [sec for sec in self.model.cell.sections if sec.idx in group_data['sec_ids']])
+            for mechanism_name, mechanism_data in group_data['mechanisms'].items():
+                self.add_mechanism(mechanism_name, mechanism_data['mod_name'])
+            for param_name, param_data in mechanism_data['parameters'].items():
+                self.model.groups[group_name].add_parameter(param_name, Distribution.from_dict(param_data))
 
-        self.update_channel_selector()
+        # for ch in data['channels']:
+        #     # mod_file = f"{data['path_to_model']}/mechanisms/{ch['name']}/{ch['name']}.mod"
+        #     if not self.model.channels.get(ch['name']):
+        #         self.model.add_channel(ch['name'], recompile=self.view.widgets.switches['recompile'].active)
+        #     for group in ch['groups']:
+        #         segments = [self.model.cell.segments[seg_name] for seg_name in group['seg_names']]
+        #         self.model.channels[ch['name']].add_group(segments,
+        #                                                   group['param_name'])
+        #         self.model.channels[ch['name']].groups[-1].distribution = Distribution.from_dict(group['distribution'])
+        #     self.update_graph_param(f"gbar_{ch['suffix']}")
+        #     self.update_section_param_data()
 
-        if data.get('capacitance') is not None:
-            self.model.capacitance.remove_all_groups()
-            for group in data['capacitance']['groups']:
-                segments = [self.model.cell.segments[seg_name] for seg_name in group['seg_names']]
-                self.model.capacitance.add_group(segments, group['param_name'])
-                self.model.capacitance.groups[-1].distribution = Distribution.from_dict(group['distribution'])
-            self.update_graph_param('cm')
-            self.update_section_param_data()
+        # with remove_callbacks(self.view.widgets.multichoice['mod_files']):
+        #     self.view.widgets.multichoice['mod_files'].value = [ch['name'] for ch in data['channels']]
 
-        if data.get('ca_dynamics') is not None:
-            self.view.widgets.selectors['mod_files_cadyn'].value = data['ca_dynamics']
+        # self.update_channel_selector()
 
-        self.update_equilibtium_potentials()
-        if data.get('equilibrium_potentials') is not None:
-            for ion, value in data['equilibrium_potentials'].items():
-                self.view.widgets.spinners[f'e{ion}'].value = value
+        # if data.get('capacitance') is not None:
+        #     self.model.capacitance.remove_all_groups()
+        #     for group in data['capacitance']['groups']:
+        #         segments = [self.model.cell.segments[seg_name] for seg_name in group['seg_names']]
+        #         self.model.capacitance.add_group(segments, group['param_name'])
+        #         self.model.capacitance.groups[-1].distribution = Distribution.from_dict(group['distribution'])
+        #     self.update_graph_param('cm')
+        #     self.update_section_param_data()
 
-        if data.get('simulator') is not None:
-            self.view.widgets.sliders['dt'].value = data['simulator']['dt']
-            self.model.simulator.dt = data['simulator']['dt']
-            self.view.widgets.sliders['celsius'].value = data['simulator']['celsius']
-            self.model.simulator.celsius = data['simulator']['celsius']
-            self.view.widgets.sliders['v_init'].value = data['simulator']['v_init']
-            self.model.simulator.v_init = data['simulator']['v_init']
+        # if data.get('ca_dynamics') is not None:
+        #     self.view.widgets.selectors['mod_files_cadyn'].value = data['ca_dynamics']
 
-        if self.model.cell.name == 'Poirazi_2003':
-            self.Ra_sigmoidal_temp()
+        # self.update_equilibtium_potentials()
+        # if data.get('equilibrium_potentials') is not None:
+        #     for ion, value in data['equilibrium_potentials'].items():
+        #         self.view.widgets.spinners[f'e{ion}'].value = value
 
-        self.update_graph_param_selector()
+        # if data.get('simulator') is not None:
+        #     self.view.widgets.sliders['dt'].value = data['simulator']['dt']
+        #     self.model.simulator.dt = data['simulator']['dt']
+        #     self.view.widgets.sliders['celsius'].value = data['simulator']['celsius']
+        #     self.model.simulator.celsius = data['simulator']['celsius']
+        #     self.view.widgets.sliders['v_init'].value = data['simulator']['v_init']
+        #     self.model.simulator.v_init = data['simulator']['v_init']
+
+        # if self.model.cell.name == 'Poirazi_2003':
+        #     self.Ra_sigmoidal_temp()
+
+        # self.update_graph_param_selector()
 
     def from_json_callback(self, event):
         if self.model.cell is None:

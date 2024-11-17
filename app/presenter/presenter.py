@@ -103,7 +103,7 @@ class Presenter(IOMixin, NavigationMixin,
         with remove_callbacks(self.view.widgets.text['group_name']):
             self.view.widgets.text['group_name'].value = ''
         
-        self.toggle_group_panel()
+        self._toggle_group_panel()
         
     def add_group(self, name, nodes):
         """
@@ -207,12 +207,16 @@ class Presenter(IOMixin, NavigationMixin,
 
         if params_to_remove:
             logger.debug(f'Mech to remove: {params_to_remove}')
-            self.remove_param_from_group(params_to_remove[0])
+            self._remove_param_from_group(params_to_remove[0])
+            self.update_graph_param(param_name)
         if params_to_add:
             logger.debug(f'Param to add: {params_to_add}')
-            self.add_param_to_group(params_to_add[0])
+            param_name = params_to_add[0]
+            self._add_param_to_group(param_name)
+            self.update_graph_param(param_name)
 
-    def add_param_to_group(self, param_name):
+
+    def _add_param_to_group(self, param_name):
         """
         Makes a parameter avaliable to be distributed within the group.
         When a parameter selected from the list of avaliable params and the
@@ -221,7 +225,7 @@ class Presenter(IOMixin, NavigationMixin,
         group = self.selected_group
         group.add_parameter(param_name)
 
-    def remove_param_from_group(self, param_name):
+    def _remove_param_from_group(self, param_name):
         """
         Removes a parameter that was deselected from the multiselect widget from the selected group.
         """
@@ -237,6 +241,13 @@ class Presenter(IOMixin, NavigationMixin,
 
     ### selectors['group']
 
+    @property
+    def selected_group(self):
+        group_name = self.view.widgets.selectors['group'].value
+        logger.debug(f'Selected group: {group_name}')
+        group = self.model.groups.get(group_name, None)
+        return group
+    
     @log
     def select_group_callback(self, attr, old, new):
         self.select_group()
@@ -247,6 +258,16 @@ class Presenter(IOMixin, NavigationMixin,
             self._toggle_group_panel()
         if self.view.widgets.tabs['section'].active == 2:
             self._update_graph_param_selector()
+            self._toggle_distribution_panel()
+            self._update_distribution_plot()
+
+    def select_group_secs_in_graph(self):
+        if self.view.widgets.selectors['group'].value != '':
+            group = self.selected_group
+            seg_ids = [seg.idx for sec in group.nodes for seg in sec.segments]
+            self.view.figures['graph'].renderers[0].node_renderer.data_source.selected.indices = seg_ids
+        else:
+            self.view.figures['graph'].renderers[0].node_renderer.data_source.selected.indices = []
 
     def _toggle_group_panel(self):
         """
@@ -266,8 +287,8 @@ class Presenter(IOMixin, NavigationMixin,
         with remove_callbacks(self.view.widgets.multichoice['mechanisms']):
             self.view.widgets.multichoice['mechanisms'].value = [mech_name for mech_name in group.mechanisms]
 
-        # Used in the IO
-    def _update_graph_param_selector(self, param_name):
+        
+    def _update_graph_param_selector(self):
         """
         Updates the selectors['graph_param'] widget.
         """
@@ -286,9 +307,13 @@ class Presenter(IOMixin, NavigationMixin,
         """
         if self.view.widgets.tabs['section'].active == 2:
             self._toggle_distribution_panel()
-        self.update_distribution_plot()
+            self._update_distribution_plot()
 
     def _toggle_distribution_panel(self):
+
+        with remove_callbacks(self.view.widgets.selectors['distribution_type']):
+                self.view.widgets.selectors['distribution_type'].value = \
+                    self.selected_group.parameters[self.selected_param].function_name
 
         group = self.selected_group
         param_name = self.selected_param
@@ -301,7 +326,7 @@ class Presenter(IOMixin, NavigationMixin,
             def slider_callback(attr, old, new):
                 group.update_distribution_parameters(param_name, **{slider_title: new})
                 self.update_graph_param(param_name)
-                self.update_distribution_plot()
+                self._update_distribution_plot()
             return slider_callback
 
         sliders = []
@@ -315,35 +340,37 @@ class Presenter(IOMixin, NavigationMixin,
             sliders.append(slider.get_widget())
         self.view.DOM_elements['distribution_panel'].children = sliders
 
+    ### selectors['distribution']
+
     def update_distribution_type_callback(self, attr, old, new):
+        """
+        Callback for the selectors['distribution_type'] widget.
+        """
         group = self.selected_group
         param_name = self.selected_param
         group.set_distribution(param_name, new)
         self._toggle_distribution_panel()
-        self.update_distribution_plot()
+        self._update_distribution_plot()
 
-
-
-
-    def update_distribution_selector_options_callback(self, attr, old, new):
-        if self.view.widgets.tabs['section'].active == 1:
-            ch = self.selected_channel
-            self.view.widgets.selectors['distribution'].options = [group.name for group in ch.groups]
-            self.view.widgets.selectors['distribution'].value = ch.groups[-1].name if ch.groups else None
-
-    @log
-    def update_distribution_plot(self):
+    
+    def _update_distribution_plot(self):
 
         param_name = self.selected_param
         group = self.selected_group
 
-        sec_type_to_index = {'soma': 0, 'axon': 1, 'dend': 2, 'apic': 3}
+        SEC_TYPE_TO_IDX = {'soma': 0, 'axon': 1, 'dend': 2, 'apic': 3}
 
-        segs = self.selected_segs
-        data = {'x': [seg.distance_to_root for seg in segs],
-                'y': [getattr(seg._ref, param_name, 0) for seg in segs],
-                'color': [self.view.theme.palettes['sec_type'][sec_type_to_index[seg._section.domain]] for seg in segs], 
-                'label': [str(seg.idx) for seg in segs]}
+        selected_segs = self.selected_segs
+
+        if param_name == 'Ra':
+            y = [getattr(seg._section._ref, param_name, 0) for seg in selected_segs]
+        else:
+            y = [getattr(seg._ref, param_name, 0) for seg in selected_segs]
+
+        data = {'x': [seg.distance_to_root for seg in selected_segs],
+                'y': y,
+                'color': [self.view.theme.palettes['sec_type'][SEC_TYPE_TO_IDX[seg._section.domain]] for seg in selected_segs], 
+                'label': [str(seg.idx) for seg in selected_segs]}
 
         self.view.sources['distribution'].data = data
 
@@ -543,12 +570,7 @@ class Presenter(IOMixin, NavigationMixin,
     # def selected_domain(self):
     #     return self.view.widgets.selectors['domain'].labels[self.view.widgets.selectors['domain'].active]
     
-    @property
-    def selected_group(self):
-        group_name = self.view.widgets.selectors['group'].value
-        logger.debug(f'Selected group: {group_name}')
-        group = self.model.groups.get(group_name, None)
-        return group
+
 
     @property
     def selected_syn_group(self):
@@ -557,14 +579,6 @@ class Presenter(IOMixin, NavigationMixin,
         group = syn.get_by_name(group_name)
         return group
         
-    def select_group_secs_in_graph(self):
-        if self.view.widgets.selectors['group'].value != '':
-            group = self.selected_group
-            seg_ids = [seg.idx for sec in group.nodes for seg in sec.segments]
-            self.view.figures['graph'].renderers[0].node_renderer.data_source.selected.indices = seg_ids
-        else:
-            self.view.figures['graph'].renderers[0].node_renderer.data_source.selected.indices = []
-
     @log
     def select_channel_callback(self, attr, old, new):
         self.toggle_channel_panel()

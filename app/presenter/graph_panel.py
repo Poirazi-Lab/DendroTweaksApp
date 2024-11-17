@@ -321,9 +321,11 @@ class GraphMixin():
 
 
     def update_graph_colors_callback(self, attr, old, new):
+        param_name = new
         if new == 'voltage':
             self.update_graph_param('voltage')
         else:
+            # self.update_graph_param(param_name)
             self.update_graph_colors()
             self.update_section_param_data()
 
