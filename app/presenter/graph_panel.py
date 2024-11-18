@@ -327,7 +327,7 @@ class GraphMixin():
         else:
             # self.update_graph_param(param_name)
             self.update_graph_colors()
-            self.update_section_param_data()
+            self.update_section_param_data(param_name)
 
 
     @log

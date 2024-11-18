@@ -78,6 +78,23 @@ class ParametrizedFunction:
         'linear': {'func': linear, 'defaults': {'slope': 1, 'intercept': 0}}
     }
 
+    @staticmethod
+    def from_dict(data: Dict[str, any]) -> 'ParametrizedFunction':
+        """
+        Create a new ParametrizedFunction from a dictionary.
+
+        Parameters
+        ----------
+        data : dict
+            The dictionary containing the function data.
+
+        Returns
+        -------
+        ParametrizedFunction
+            The new ParametrizedFunction instance.
+        """
+        return ParametrizedFunction(data['function'], **data['parameters'])
+
     def __init__(self, function_name: str, **parameters: Dict[str, float]) -> None:
         """
         Create a new parameterized function.

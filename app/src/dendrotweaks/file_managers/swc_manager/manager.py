@@ -20,6 +20,14 @@ class SWCManager():
         self.swc_tree = None
         self.sec_tree = None
         self._path_to_data = path_to_data
+        self._file_name = None
+
+        
+
+    def to_dict(self):
+        return {
+            'swc_file_name': self._file_name,
+        }
 
     # FILE MANAGEMENT
 
@@ -29,10 +37,11 @@ class SWCManager():
 
     # READ
 
-    def read(self, path_to_file=None, file_content=None):
+    def read(self, file_name=None, file_content=None):
 
-        if path_to_file:
-            self._path_to_file = path_to_file
+        if file_name:
+            self._file_name = file_name
+            path_to_file = f'{self._path_to_data}/swc/{file_name}'.replace('//', '/')
             self.df = pd.read_csv(path_to_file,
                                   sep=' ',
                                   header=None,

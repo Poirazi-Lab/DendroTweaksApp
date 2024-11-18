@@ -5,13 +5,17 @@ from dendrotweaks.file_managers.mod_manager.reader import MODReader
 import os
 from pprint import pprint
 # PATH_TO_TEMPLATE = "static/data/templates/template.py"
+import sys
+base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
+print(base_path)
+
 TEMPLATES = {
     'NEURON': {
-        'template': 'app/src/dendrotweaks/file_managers/mod_manager/templates/template_dd.py',
+        'template': os.path.join(base_path, 'dendrotweaks', 'file_managers', 'mod_manager', 'templates', 'template_dd.py'),
         'lib': 'np'
     },
     'Jaxley': {
-        'template': 'dendrotweaks/file_managers/mod_manager/templates/template_jaxley.py',
+        'template': f'{base_path}dendrotweaks/file_managers/mod_manager/templates/template_jaxley.py',
         'lib': 'jnp'
     }
 }
@@ -22,6 +26,7 @@ class MODManager():
     def __init__(self, simulator_name='NEURON', path_to_data='data'):
 
         self._path_to_data = path_to_data
+        self._archive = None
         self._simulator_name = simulator_name
 
         self.reader = MODReader()
@@ -55,6 +60,11 @@ class MODManager():
         print(f"PARSED    : {True if self.ast else False}")
         print(f"GENERATED : {True if self.py_code else False}")
 
+    def to_dict(self):
+        return {
+            'archive': self._archive,
+        }
+
     # FILE MANAGEMENT METHODS
 
     def list_archives(self, path_to_mod=''):
@@ -69,6 +79,7 @@ class MODManager():
 
     def load_archive(self, archive, recompile=False):
 
+        self._archive = archive
         self._replace_suffix_with_name(archive)
 
         path_to_archive = os.path.join(self._path_to_data, 'mod', archive)

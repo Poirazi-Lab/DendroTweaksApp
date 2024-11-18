@@ -68,8 +68,8 @@ class SectionMixin():
     #     # print('levels: ', levels)
     #     return np.array(levels)
 
-    def update_section_param_data(self):
-        param_name = self.view.widgets.selectors['graph_param'].value
+    def update_section_param_data(self, param_name: str = None) -> None:
+        param_name = param_name or self.view.widgets.selectors['graph_param'].value
         if param_name in ['', 'domain', 'Ra', 'recordings', 'AMPA', 'NMDA', 'GABAa', 'AMPA_NMDA', 'weights', 'iclamps']:
             param_name = 'diam'
         sec_name = self.view.widgets.selectors['section'].value

@@ -97,7 +97,6 @@ class Section(Node):
         elif hasattr(self._ref, parameter_name):
             setattr(self._ref, parameter_name,
                     distribution_function(self.distance_to_root(0.5)))
-            print(f'Updated parameter {parameter_name} in section.')
         else:
             raise ValueError(f'Parameter {parameter_name} not found in section.')
 

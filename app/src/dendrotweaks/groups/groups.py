@@ -41,16 +41,18 @@ class Group():
 
     def __init__(self, name: str,
                  nodes: List[Node],
-                 mechanisms: List[Mechanism] = []) -> None:
+                 mechanisms: List[str] = [],
+                 parameters: Dict[str, ParametrizedFunction] = {}):
         self.name = name
         self._nodes = nodes
-        self.parameters = {'cm': ParametrizedFunction('uniform', value=1),
-                           'Ra': ParametrizedFunction('uniform', value=100)}
+        self.parameters = {}
+        # self._add_default_parameters()
         self.mechanisms = {}
         for mechanism in mechanisms:
             self.add_mechanism(mechanism)
-        for parameter_name in self.parameters:
-            self.distribute(parameter_name)
+        for parameter, function_dict in parameters.items():
+            func = ParametrizedFunction.from_dict(function_dict)
+            self.add_parameter(parameter, func)
 
     @property
     def nodes(self):
@@ -64,6 +66,10 @@ class Group():
         """
         return self._nodes
 
+    # def _add_default_parameters(self):
+    #     self.add_parameter('cm', ParametrizedFunction('uniform', value=1))
+    #     self.add_parameter('Ra', ParametrizedFunction('uniform', value=100))
+
     def __repr__(self):
         """
         Returns a string representation of the group.
@@ -75,9 +81,11 @@ class Group():
         """
         return f'Group({self.name}) with {len(self._nodes)} nodes\nParameters: {list(self.parameters.keys())}'
 
-    # ADD and SET UP
+    # ------------------------------------------------------------
+    # MECHANISMS
+    # ------------------------------------------------------------
 
-    def add_mechanism(self, mechanism):
+    def insert_mechanism(self, mechanism):
         """
         Adds a mechanism to the group, updating parameters accordingly.
 
@@ -89,6 +97,20 @@ class Group():
         for node in self._nodes:
             node.insert_mechanism(mechanism.name)
         self.mechanisms[mechanism.name] = mechanism
+
+    def uninsert_mechanism(self, mechanism_name, node_ids=None):
+        """
+        Removes a mechanism from the group. If node_ids are provided,
+        the mechanism is removed only from the specified nodes.
+        """
+        if node_ids is not None:
+            nodes = [node for node in self._nodes if node.idx in node_ids]
+        else:
+            nodes = self._nodes
+
+        for node in nodes:
+            node.uninsert_mechanism(mechanism_name)
+        del self.mechanisms[mechanism_name]
 
     # TODO: Should be done manually one by one since not all needed.
     # def add_parameters_from_mechanism(self, mechanism):
@@ -105,13 +127,8 @@ class Group():
     #     for parameter, value in mechanism.parameters.items():
     #         self.add_parameter(parameter, ParametrizedFunction('uniform', value=value))
 
-    def remove_mechanism(self, mechanism_name):
-        for node in self._nodes:
-            node.uninsert_mechanism(mechanism_name)
-        del self.mechanisms[mechanism_name]
 
-
-    def add_parameter(self, parameter_name, distribution_function=None):
+    def add_parameter(self, parameter_name, default_value=None):
         """
         Adds a parameter to the group with an optional distribution function.
 
@@ -122,11 +139,22 @@ class Group():
         distribution_function : ParametrizedFunction
             The distribution function to use for the parameter. Defaults to None.
         """
-        if distribution_function is None:
-            distribution_function = ParametrizedFunction('uniform')
+        value = default_value or 0
+        distribution_function = ParametrizedFunction('uniform', value=value)
+        self._add_parameter(parameter_name, distribution_function)
+
+    def _add_parameter(self, parameter_name, distribution_function):
+        """
+        Adds a parameter to the group with an optional distribution function.
+
+        Parameters
+        ----------
+        parameter_name : str
+            The name of the parameter to add.
+        distribution_function : ParametrizedFunction
+            The distribution function to use for the parameter.
+        """
         self.parameters[parameter_name] = distribution_function
-        # TODO: Instead of setting to 0 by default, extract value from the _ref (see add_mechanism)
-        self.distribute(parameter_name)
 
     def remove_parameter(self, parameter_name):
         """
@@ -173,8 +201,17 @@ class Group():
         self.distribute(parameter_name)
 
     # APPLY
+    # @timeit
+    # def distribute_all(self):
+    #     """
+    #     Distributes all parameters to the nodes based on the distribution function.
+    #     """
+    #     for parameter_name in self.parameters.keys():
+    #         print(f'Distributing {parameter_name}')
+    #         self.distribute(parameter_name)
+
     @timeit
-    def distribute(self, parameter_name):
+    def distribute(self, parameter_name: str) -> None:
         """
         Distributes the parameter values to the nodes based on the distribution function.
 
@@ -202,6 +239,7 @@ class Group():
             'group': {
                 'name': self.name,
                 'nodes': [node.idx for node in self._nodes],
+                'mechanisms': [mechanism_name for mechanism_name in self.mechanisms],
                 'parameters': [
                     self._parameter_to_dict(parameter_name, distribution_function)
                     for parameter_name, distribution_function in self.parameters.items()
@@ -212,18 +250,6 @@ class Group():
     def _parameter_to_dict(self, parameter_name, distribution_function):
         """
         Helper method to convert a parameter and its distribution function to a dictionary format.
-
-        Parameters
-        ----------
-        parameter_name : str
-            The name of the parameter.
-        distribution_function : ParametrizedFunction
-            The distribution function for the parameter.
-
-        Returns
-        --------
-        dict: 
-            The parameter and its distribution function in dictionary format.
         """
         return {
             'name': parameter_name,

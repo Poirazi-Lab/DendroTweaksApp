@@ -577,7 +577,7 @@ view.widgets.buttons['reduce'].on_event(ButtonClick, p.reduce_subtree_callback)
 view.widgets.buttons['reduce'].on_event(ButtonClick, p.voltage_callback_on_event)
 
 view.widgets.buttons['to_swc'] = Button(label='Export to SWC', button_type='default')
-view.widgets.buttons['to_swc'].on_event(ButtonClick, p.export_to_swc_callback)
+view.widgets.buttons['to_swc'].on_event(ButtonClick, p.to_swc_callback)
 
 view.DOM_elements['stats'] = Div(text='Stats:')
 
@@ -664,6 +664,15 @@ def create_add_remove_panel():
                                                 placeholder='New group name',
                                                 width=150)
 
+    def check_name_exists_callback(attr, old, new):
+        logger.debug(f'Checking if name {new} exists')
+        if new in view.widgets.selectors['group'].options:
+            view.widgets.buttons['add_group'].disabled = True
+        else:
+            view.widgets.buttons['add_group'].disabled = False
+
+    view.widgets.text['group_name'].on_change('value_input', check_name_exists_callback)
+
     view.widgets.buttons['add_group'] = Button(label='Add group', 
                                                button_type='primary', 
                                                disabled=False,
@@ -703,7 +712,10 @@ def create_add_remove_panel():
                         view.widgets.buttons['remove_group'],
                         ])
 
-    add_remove_panel = column([select_panel, add_panel, remove_panel])
+    add_remove_panel = column([select_panel, 
+                               add_panel,
+                               Div(text='<hr style="width:30em; margin-top:3em">'), 
+                               remove_panel])
 
     return add_remove_panel
 
@@ -745,7 +757,7 @@ def create_group_panel():
 
 def create_groups_tab():
 
-    panels = column([create_add_remove_panel(),  
+    panels = column([create_add_remove_panel(),
                      create_group_panel()])
 
     groups_tab = TabPanel(title='Groups', 
@@ -797,8 +809,8 @@ def create_distribution_tab():
     view.widgets.selectors['graph_param'].on_change('value', p.select_range_param_callback)
 
     selection_panel = row([
-        view.widgets.selectors['group'],
         view.widgets.selectors['graph_param'],
+        view.widgets.selectors['group'],
     ])
 
     distibution_panel = column([
@@ -922,7 +934,7 @@ def tab_section_callback(attr, old, new):
         view.widgets.selectors['section'].value = '0'
     elif new == 2:
         logger.info('Switching to distribution tab')
-        view.widgets.selectors['graph_param'].options = list(view.ephys_params)
+        view.widgets.selectors['graph_param'].options = list(p.model.parameters_to_groups.keys())
     elif new == 1:
         logger.info('Switching to section tab')
         p.select_group()
@@ -996,65 +1008,70 @@ curdoc().add_root(right_menu)
 
 
 
+# ====================================================================================
+# LEFT MENU
+# ====================================================================================
 
-# LEFT HAND MENU
+# ------------------------------------------------------------------------------------
+## I/O TAB
+# ------------------------------------------------------------------------------------
 
-view.widgets.selectors['cell'] = Select(value='Select a cell to begin',
-                       options=['Select a cell to begin'] + model.swcm.list_files(), 
+# Loading a model from JSON
+view.widgets.selectors['from_json'] = Select(value='Load a cell from JSON',
+                                options=['Load a cell from JSON'] + os.listdir('app/static/data/json'),
+                                title='Load JSON',
+                                width=242)
+
+view.widgets.selectors['from_json'].on_change('value', p.from_json_callback)
+
+view.widgets.selectors['from_json'].description = 'Select a cell to load. To select another cell, reload the page.'
+
+# Loading morphology from SWC
+view.widgets.selectors['from_swc'] = Select(value='Load morphology from SWC',
+                       options=['Load morphology from SWC'] + model.swcm.list_files(), 
                        title='Cell:', 
                        width=242)
-view.widgets.selectors['cell'].description = 'Select an SWC file to load. To select another cell, reload the page.\nIt is recommended to choose d_lambda before loading a cell.'
 
-view.widgets.selectors['cell'].on_change('value', p.selector_cell_callback)
+view.widgets.selectors['from_swc'].on_change('value', p.from_swc_callback)
 
+# Segmentation
 view.widgets.sliders['d_lambda'] = Slider(start=0, end=0.2, value=0.1, step=0.01, title="d_lambda", width=200)
+view.widgets.sliders['d_lambda'].on_change('value_throttled', p.build_seg_tree_callback)                                            
 
-view.widgets.sliders['d_lambda'].on_change('value_throttled', p.selector_cell_callback)
-
-view.widgets.buttons['to_json'] = Button(label='Export biophys', button_type='primary', disabled=True)
+# Export to JSON
+view.widgets.buttons['to_json'] = Button(label='Export as JSON', button_type='primary', disabled=False)
 view.widgets.buttons['to_json'].on_event(ButtonClick, p.to_json_callback)
 
-
-
-
-view.widgets.buttons['from_json'] = Button(label='Import biophys', button_type='primary')
-view.widgets.buttons['from_json'].on_event(ButtonClick, p.from_json_callback)
-view.widgets.buttons['from_json'].on_event(ButtonClick, p.voltage_callback_on_event)
-
-
-json_panel = row(view.widgets.buttons['to_json'], 
-                view.widgets.buttons['from_json'])
-
+# File import
 view.widgets.file_input['all'] = FileInput(accept='.swc, .asc, .mod', name='file', visible=True, width=242, disabled=False)
 view.widgets.file_input['all'].on_change('filename', p.import_file_callback)
 view.widgets.file_input['all'].on_change('value', p.import_file_callback)
 
-# view.widgets.multichoice['mod_files'] = MultiChoice(title='Mechanisms', 
-#                                     value=['Leak'],
-#                                     options = list(p.model.modm.list_archives().keys()),
-#                                     width=242)
-
+# Load mechanism from mod files archives
 view.widgets.selectors['mod_archives'] = Select(title='Mechanism archives',
                                     options = ['Select archive'] + [k for k in p.model.modm.list_archives().keys() if k != 'Base'],
                                     value = 'Select archive',
                                     width=242)
 
-# view.widgets.multichoice['mod_files_std'] = MultiChoice(title='Mechanisms standard', 
-#                                     options = p.model.list_mod_files(mod_folder='mod_standard'),
-#                                     width=242)
-
-# view.widgets.selectors['mod_files_cadyn'] = Select(title='Ca dynamics',
-#                                     options = p.model.list_mod_files(mod_folder='mod_cadyn') + [''],
-#                                     value = '',
-#                                     width=242)
-
 view.widgets.selectors['mod_archives'].on_change('value', p.mod_archives_callback)
-# view.widgets.multichoice['mod_files'].on_change('value', p.mod_files_callback)
-# view.widgets.multichoice['mod_files'].on_change('value', p.voltage_callback_on_change)
-# view.widgets.multichoice['mod_files_std'].on_change('value', p.mod_files_callback)
-# view.widgets.multichoice['mod_files_std'].on_change('value', p.voltage_callback_on_change)
-# view.widgets.selectors['mod_files_cadyn'].on_change('value', p.cadyn_files_callback)
-# view.widgets.selectors['mod_files_cadyn'].on_change('value', p.voltage_callback_on_change)
+
+
+tab_io = TabPanel(title='Input/Output', 
+                child=column(
+                    view.widgets.selectors['from_json'],
+                    view.widgets.selectors['from_swc'],
+                    view.widgets.sliders['d_lambda'],
+                    view.widgets.selectors['mod_archives'],
+                    Div(text='<hr style="width:15em; margin-top:3em">'), 
+                    view.widgets.file_input['all'],
+                    view.widgets.buttons['to_json'],
+                    Div(text='<hr style="width:15em; margin-top:3em">'), 
+                )
+                )
+
+# ------------------------------------------------------------------------------------
+## Simulation tab                                
+# ------------------------------------------------------------------------------------
 
 view.widgets.sliders['duration'] = Slider(value=300, start=100, end=1000, step=100, title='Duration, ms', width=200, format='0[.]0')
 view.widgets.sliders['duration'].js_link('value', view.widgets.sliders['iclamp_duration'], 'end')
@@ -1071,16 +1088,6 @@ view.widgets.sliders['dt'].on_change('value_throttled', p.voltage_callback_on_ch
 view.widgets.sliders['celsius'].on_change('value_throttled', p.voltage_callback_on_change)
 view.widgets.sliders['v_init'].on_change('value_throttled', p.voltage_callback_on_change)
 
-tab_io = TabPanel(title='Input/Output', 
-                             child=column(view.widgets.selectors['cell'],
-                                          view.widgets.sliders['d_lambda'],
-                                            view.widgets.file_input['all'],
-                                            json_panel,
-                                            view.widgets.selectors['mod_archives'],
-                                            # view.widgets.multichoice['mod_files_std'],
-                                            # view.widgets.selectors['mod_files_cadyn'],
-                             )
-                                )
 
 view.widgets.switches['real_time'] = Switch(active=True)
 def enable_run_button(attr, old, new):
@@ -1097,6 +1104,10 @@ tab_sim = TabPanel(title='Simulation',
                                   view.DOM_elements['runtime'],
                                   )
                     )
+
+# ------------------------------------------------------------------------------------
+## Validation tab
+# ------------------------------------------------------------------------------------
 
 view.DOM_elements['stats_ephys'] = Div(text='Validation results:')
 
@@ -1184,8 +1195,9 @@ curdoc().add_root(left_menu)
 
 
 
-
-### Settings panel
+# ====================================================================================
+# SETTINGS
+# ====================================================================================
 
 console = TextInput(value='Only for development', title='Console', width=500, height=50, name='console', disabled=False)
 console.on_change('value', p.console_callback)
@@ -1284,19 +1296,19 @@ curdoc().theme = 'dark_minimal'
 
 
 
-custom_js = CustomJS(args=dict(), code="""
-    console.log('Before');
+# custom_js = CustomJS(args=dict(), code="""
+#     console.log('Before');
     
-    const columnElement = document.querySelector('.bk-Column');
-    const TabsElement = columnElement.shadowRoot.querySelector('.bk-Tabs');
-    const columnElement2 = TabsElement.shadowRoot.querySelector('.bk-Column');
-    const MultiChoiceElement = columnElement2.shadowRoot.querySelector('.bk-MultiChoice');
-    const choicesInner = MultiChoiceElement.shadowRoot.querySelector('.choices__inner');
+#     const columnElement = document.querySelector('.bk-Column');
+#     const TabsElement = columnElement.shadowRoot.querySelector('.bk-Tabs');
+#     const columnElement2 = TabsElement.shadowRoot.querySelector('.bk-Column');
+#     const MultiChoiceElement = columnElement2.shadowRoot.querySelector('.bk-MultiChoice');
+#     const choicesInner = MultiChoiceElement.shadowRoot.querySelector('.choices__inner');
 
-    choicesInner.style.height = '100px';
-    choicesInner.style.overflow = 'auto';
+#     choicesInner.style.height = '100px';
+#     choicesInner.style.overflow = 'auto';
 
-    console.log('After');
-""")
+#     console.log('After');
+# """)
 
-view.widgets.buttons['from_json'].js_on_event(ButtonClick, custom_js)
+# view.widgets.buttons['from_json'].js_on_event(ButtonClick, custom_js)

@@ -12,9 +12,82 @@ class IOMixin():
         logger.debug('IOMixin init')
         super().__init__()
 
+    # =========================================================================
     # INPUT METHODS
+    # =========================================================================
 
-    def create_cell(self, file_name):
+    @log
+    def from_swc_callback(self, attr, old, new):
+        """
+        Creates the cell and the renderers.
+        """
+
+        # MORPHOLOGY --------------------------------------------
+        swc_file_name = new
+        self.create_morpohlogy(swc_file_name)
+
+        # MECHANISMS ----------------------------------------------
+        self.add_archive('Base', recompile=False)
+
+        # GROUPS -------------------------------------------------
+        self.add_default_group()
+
+        # SEGMENTATION --------------------------------------------
+        d_lambda = self.view.widgets.sliders['d_lambda'].value
+        self.build_seg_tree(d_lambda)
+        
+        # MISC ---------------------------------------------------
+        self._attach_download_js()
+
+    def from_json_callback(self, attr, old, new):
+        import os
+        import json
+
+        path_to_json = os.path.join('app', 'static', 'data', 'json', f'{self.model.name}_ephys.json')
+
+        with open(path_to_json, 'r') as f:
+            data = json.load(f)
+
+        # MORPHOLOGY --------------------------------------------
+        swc_file_name = data['swc_data']['swc_file_name']
+        self.create_morpohlogy(swc_file_name)
+
+        # MECHANISMS ----------------------------------------------
+        self.add_archive('Base', recompile=False)
+        self.add_archive(data['mod_data']['archive_name'], 
+                        recompile=self.view.widgets.switches['recompile'].active)
+
+        # GROUPS -------------------------------------------------
+        self._load_groups_from_json(data['groups'])
+
+        # SEGMENTATION --------------------------------------------
+        # Rebuild the seg tree
+        self.build_seg_tree(data['d_lambda'])
+
+        # MISC ---------------------------------------------------
+        self._attach_download_js() # needed to update the names of the files to download
+
+
+    def _load_groups_from_json(self, groups):
+        for group_name, group_data in data['groups'].items():
+            # Create a group with corresponding sections
+            sections = [sec for sec in self.model.cell.sections 
+                        if sec.idx in group_data['sec_ids']]
+            self.model.add_group(group_name, sections)
+            # Add mechanisms to the group
+            for mechanism_name in group_data['mechanisms']:
+                mechanism = self.model.mechanisms[mechanism_name]
+                self.model.groups[group_name].add_mechanism(mechanism)
+            # Add parameters to the group
+            for param_name, param_data in mechanism_data['parameters'].items():
+                func = ParametrizedFunction.from_dict(param_data)
+                self.model.groups[group_name].add_parameter(param_name, func)
+
+        self.distribute() # all parameters within all groups
+
+    # MORPHOLOGY
+
+    def create_morpohlogy(self, swc_file_name):
         """
         Loads the selected cell from the SWC file. Builds the swc tree and sec tree.
         Creates sections in the simulator and sets segmentation based on the geometry.
@@ -22,94 +95,46 @@ class IOMixin():
         Creates the default "all" group.
         """
         # Create swc and sec tree
-        self.model.from_swc(file_name)
+        self.model.from_swc(swc_file_name)
 
         # Create and reference sections in simulator
         self.model.create_and_reference_sections_in_simulator()
 
-        # Add default group
-        self.add_group('all', self.model.sec_tree.sections)
+        self.create_cell_renderer()
+        self._init_cell_widgets()
 
-        # Set initial nseg
-        d_lambda = self.view.widgets.sliders['d_lambda'].value
-        logger.info(f'Aimed for {1/d_lambda} segments per length constant at {100} Hz')
-        self.model.set_geom_nseg(d_lambda=d_lambda, f=100)
-        self.model.build_seg_tree()
-        logger.info(f'Total nseg: {len(self.model.seg_tree)}')
-
-
-    @log
-    def selector_cell_callback(self, attr, old, new):
+    def _init_cell_widgets(self):
         """
-        Creates the cell and the renderers.
+        Configures the widgets after the cell is loaded.
         """
-        file_name = new
-        self.create_cell(file_name)
+        SEC_TO_DOMAIN = {'soma': [], 'dend': [], 'axon': [], 'apic': [], 'none': ['']}
+        for sec in self.model.sec_tree.sections:
+            SEC_TO_DOMAIN[sec.domain].append(str(sec.idx))
 
-        # # Add channel tabs ... 
-        # self.update_channel_selector()
+        self.view.widgets.selectors['section'].options=SEC_TO_DOMAIN
 
-        # self.update_equilibtium_potentials()
-
-        # add_callbacks_for_distributions_and_channels(app, cell_handler)
-
-        # Initialize navigation buttons
         self.view.widgets.buttons['child'].disabled = False
         self.view.widgets.buttons['parent'].disabled = True
         self.view.widgets.buttons['sibling'].disabled = True
-        
-        # Update panels
-        self.create_cell_renderer()
-        self.create_graph_renderer()
-        self.add_lasso_callback()
 
-        sec_by_domain = {'soma': [], 'dend': [], 'axon': [], 'apic': [], 'none': ['']}
-        for sec in self.model.sec_tree.sections:
-            sec_by_domain[sec.domain].append(str(sec.idx))
+        self.view.widgets.selectors['from_swc'].disabled = True
 
-        self.view.widgets.selectors['section'].options=sec_by_domain
-        
-        self.add_archive('Base', recompile=False)
+    # MECHANISMS
 
-        # def attach_download_js(button, file_path):
+    @log
+    def mod_archives_callback(self, attr, old, new):
+        """
+        Callback for the selectors['mod_archives'] widget.
+        """
+        self.add_archive(new, recompile=self.view.widgets.switches['recompile'].active)
+        self.view.widgets.selectors['mod_archives'].disabled = True
 
-        #     js_code = f"""
-        #     var filename = '{file_path}';
-        #     var xhr = new XMLHttpRequest();
-        #     xhr.open('GET', filename, true);
-        #     xhr.responseType = 'blob';
-        #     xhr.onload = function(e) {{
-        #         if (this.status == 200) {{
-        #             var blob = this.response;
-        #             var link = document.createElement('a');
-        #             link.href = window.URL.createObjectURL(blob);
-        #             link.download = filename.split('/').pop();
-        #             link.click();
-        #         }}
-        #     }};
-        #     xhr.send();
-        #     console.log('Downloaded', filename);
-        #     """
-            
-        #     button.js_on_event('button_click', CustomJS(code=js_code))
-
-        # attach_download_js(self.view.widgets.buttons['to_json'], 
-        #                    f'app/static/data/{self.model.cell.name}_ephys.json')
-        # attach_download_js(self.view.widgets.buttons['to_swc'], 
-        #                    f'app/static/data/{self.model.cell.name}_3PS.swc')
-        
-        self.view.widgets.selectors['cell'].disabled = True
-
-    # def cadyn_files_callback(self, attr, old, new):
-    #     logger.debug(f'cadyn_files_callback: {new}')
-    #     if new:
-    #         self.model.add_ca_dynamics(mod_name=new)
-    #         if self.model.cell.name == 'Hay_2011':
-    #             self.Ca_dyn_temp()
-    #     else: 
-    #         self.model.remove_ca_dynamics()
 
     def add_archive(self, archive_name, recompile=False):
+        """
+        Creates Mechanism object from an archive of mod files 
+        and adds them to model.mechanisms.
+        """
 
         self.model.add_archive(archive_name, recompile=self.view.widgets.switches['recompile'].active)
         # TODO: Verify that the mod files are loaded successfully
@@ -117,127 +142,51 @@ class IOMixin():
         self.view.widgets.multichoice['mechanisms'].options = list(self.model.mechanisms.keys())
         logger.debug(f'Loaded mechanisms: {self.model.mechanisms.keys()}')
 
-        self.view.widgets.selectors['mod_archives'].disabled = True
+    # GROUPS
 
-    @log
-    def mod_archives_callback(self, attr, old, new):        
-        self.add_archive(new, recompile=self.view.widgets.switches['recompile'].active)
-
+    def add_default_group(self):
+        self.add_group('all', self.model.sec_tree.sections)
+        self.model.groups['all'].add_parameter('cm', 1)
+        self.model.groups['all'].distribute('cm')
+        self.model.groups['all'].add_parameter('Ra', 100)
+        self.model.groups['all'].distribute('Ra')
         
-        
+        # self.model.add_parameters(params=params,
+        #                           group_names=['all'])
+        # self.distribute(param_names=['cm', 'Ra'], group_names=['all'])
 
+    # SEGMENTATION
+
+    def build_seg_tree_callback(self, attr, old, new):
+
+        d_lambda = new
+        self.build_seg_tree(d_lambda)
+
+        self.create_graph_renderer()
+        self.add_lasso_callback()
+
+    def build_seg_tree(self, d_lambda):
+        """
+        Updates the segmentation based on the current d_lambda
+        and builds the seg tree.
+        """
+        if not 'cm' in self.model.parameters_to_groups:
+            raise ValueError('Capacitance is not set for any group.')
+        logger.info(f'Aimed for {1/d_lambda} segments per length constant at {100} Hz')
+        self.model.set_geom_nseg(d_lambda=d_lambda, f=100)
+        self.model.build_seg_tree()
+        logger.info(f'Total nseg: {len(self.model.seg_tree)}')
+
+        self.create_graph_renderer()
+        self.add_lasso_callback()
+
+    # TODO: Implement for the channel panel!
     # @log
-    # def mod_files_callback_old(self, attr, old, new):
+    # def update_channel_selector(self):
+    #     logger.debug(f'Updating channel selector options')
+    #     self.view.widgets.selectors['channel'].options = [ch.name for ch in self.model.channels.values() if ch.name != 'Leak']
 
-    #     # Only update if cell is loaded
-    #     if self.model.cell is None:
-    #         return
-
-    #     mod_to_add = list(set(new).difference(set(old)))
-    #     mod_to_remove = list(set(old).difference(set(new)))
-
-    #     logger.info(f'ch_to_add: {mod_to_add}')
-    #     logger.info(f'ch_to_remove: {mod_to_remove}')
-
-    #     if len(mod_to_add) > 1: logger.warning('Only one channel can be added at a time')
-    #     if len(mod_to_remove) > 1: logger.warning('Only one channel can be removed at a time')
-
-    #     # Remove
-    #     if mod_to_remove:
-    #         self.model.remove_channel(mod_to_remove[0])
-    #         self.view.widgets.selectors['graph_param'].value = self.view.widgets.selectors['graph_param'].options[0]
-
-    #     # Add
-    #     if mod_to_add:
-    #         self.model.add_channel(mod_to_add[0], recompile=self.view.widgets.switches['recompile'].active)
-    #         self.update_graph_param(f'gbar_{self.model.channels[mod_to_add[0]].suffix}')
-    #         # P.add_channel(mod_to_add[0])
-         
-    #     # Add channel tabs ...
-    #     self.update_channel_selector()
-
-    #     self.update_equilibtium_potentials()
-            
-    #     # Update graph param selector with new channels
-        
-    #     self.update_graph_param_selector()
-
-    @log
-    def update_channel_selector(self):
-        logger.debug(f'Updating channel selector options')
-        self.view.widgets.selectors['channel'].options = [ch.name for ch in self.model.channels.values() if ch.name != 'Leak']
-
-    def from_json(self, path):
-        
-        import json
-
-        with open(path, 'r') as f:
-            data = json.load(f)
-
-        self.add_archive(data['archive_name'], 
-                        recompile=self.view.widgets.switches['recompile'].active)
-
-        for group_name, group_data in data['groups'].items():
-            self.model.add_group(group_name, [sec for sec in self.model.cell.sections if sec.idx in group_data['sec_ids']])
-            for mechanism_name, mechanism_data in group_data['mechanisms'].items():
-                self.add_mechanism(mechanism_name, mechanism_data['mod_name'])
-            for param_name, param_data in mechanism_data['parameters'].items():
-                self.model.groups[group_name].add_parameter(param_name, Distribution.from_dict(param_data))
-
-        # for ch in data['channels']:
-        #     # mod_file = f"{data['path_to_model']}/mechanisms/{ch['name']}/{ch['name']}.mod"
-        #     if not self.model.channels.get(ch['name']):
-        #         self.model.add_channel(ch['name'], recompile=self.view.widgets.switches['recompile'].active)
-        #     for group in ch['groups']:
-        #         segments = [self.model.cell.segments[seg_name] for seg_name in group['seg_names']]
-        #         self.model.channels[ch['name']].add_group(segments,
-        #                                                   group['param_name'])
-        #         self.model.channels[ch['name']].groups[-1].distribution = Distribution.from_dict(group['distribution'])
-        #     self.update_graph_param(f"gbar_{ch['suffix']}")
-        #     self.update_section_param_data()
-
-        # with remove_callbacks(self.view.widgets.multichoice['mod_files']):
-        #     self.view.widgets.multichoice['mod_files'].value = [ch['name'] for ch in data['channels']]
-
-        # self.update_channel_selector()
-
-        # if data.get('capacitance') is not None:
-        #     self.model.capacitance.remove_all_groups()
-        #     for group in data['capacitance']['groups']:
-        #         segments = [self.model.cell.segments[seg_name] for seg_name in group['seg_names']]
-        #         self.model.capacitance.add_group(segments, group['param_name'])
-        #         self.model.capacitance.groups[-1].distribution = Distribution.from_dict(group['distribution'])
-        #     self.update_graph_param('cm')
-        #     self.update_section_param_data()
-
-        # if data.get('ca_dynamics') is not None:
-        #     self.view.widgets.selectors['mod_files_cadyn'].value = data['ca_dynamics']
-
-        # self.update_equilibtium_potentials()
-        # if data.get('equilibrium_potentials') is not None:
-        #     for ion, value in data['equilibrium_potentials'].items():
-        #         self.view.widgets.spinners[f'e{ion}'].value = value
-
-        # if data.get('simulator') is not None:
-        #     self.view.widgets.sliders['dt'].value = data['simulator']['dt']
-        #     self.model.simulator.dt = data['simulator']['dt']
-        #     self.view.widgets.sliders['celsius'].value = data['simulator']['celsius']
-        #     self.model.simulator.celsius = data['simulator']['celsius']
-        #     self.view.widgets.sliders['v_init'].value = data['simulator']['v_init']
-        #     self.model.simulator.v_init = data['simulator']['v_init']
-
-        # if self.model.cell.name == 'Poirazi_2003':
-        #     self.Ra_sigmoidal_temp()
-
-        # self.update_graph_param_selector()
-
-    def from_json_callback(self, event):
-        if self.model.cell is None:
-            logger.warning('No cell loaded')
-            return
-        import os
-        path_to_json = os.path.join('app', 'static', 'data', f'{self.model.cell.name}_ephys.json')
-        self.from_json(path_to_json)
+    # FILE IMPORT
 
     def import_file_callback(self, attr, old, new):
         import base64
@@ -262,7 +211,7 @@ class IOMixin():
                 with open(f'app/model/swc/{filename}', 'wb') as file:
                     file.write(file_content)
                 logger.info(f'File {filename} saved to app/model/swc')
-                self.view.widgets.selectors['cell'].options = [f for f in os.listdir('app/model/swc') if f.endswith('.swc') or f.endswith('.asc')]
+                self.view.widgets.selectors['swc'].options = [f for f in os.listdir('app/model/swc') if f.endswith('.swc') or f.endswith('.asc')]
 
             elif filename.endswith('.mod'):
                 mod_folder = 'mod_cadyn' if 'cadyn' in filename else 'mod'
@@ -273,14 +222,51 @@ class IOMixin():
                 logger.info(f'File {filename} saved to app/model/mechanisms/{mod_folder}/{filename.replace(".mod", "")}')
                 self.view.widgets.multichoice[widget_name].options = self.model.list_mod_files(mod_folder=mod_folder)
 
-    ## OUTPUT METHODS
+    # =========================================================================
+    # OUTPUT METHODS
+    # =========================================================================
 
     def to_json_callback(self, event):
         import os
-        path_to_json = os.path.join('app', 'static', 'data', f'{self.model.cell.name}_ephys.json')
-        self.model.to_json(path_to_json)
-
-    def export_to_swc_callback(self, event):
+        path_to_json = os.path.join('app', 'static', 'data', 'json', f'{self.model.name}.json')
+        self.model.to_json(path_to_json, indent=4)
+        
+    def to_swc_callback(self, event):
         import os
         path_to_swc = os.path.join('app', 'static', 'data', f'{self.model.cell.name}.swc')
         self.model.to_swc(path_to_swc)
+
+    # MISC
+
+    def _attach_download_js(self):
+        """
+        Attaches a JS callback to the download buttons.
+        A workaround for the inability to download files from bokeh.
+        """
+
+        def attach_download_js(button, file_path):
+
+            js_code = f"""
+            var filename = '{file_path}';
+            var xhr = new XMLHttpRequest();
+            xhr.open('GET', filename, true);
+            xhr.responseType = 'blob';
+            xhr.onload = function(e) {{
+                if (this.status == 200) {{
+                    var blob = this.response;
+                    var link = document.createElement('a');
+                    link.href = window.URL.createObjectURL(blob);
+                    link.download = filename.split('/').pop();
+                    link.click();
+                }}
+            }};
+            xhr.send();
+            console.log('Downloaded', filename);
+            """
+            
+            button.js_on_event('button_click', CustomJS(code=js_code))
+
+        attach_download_js(self.view.widgets.buttons['to_json'], 
+                           f'app/static/data/{self.model.name}_ephys.json')
+        attach_download_js(self.view.widgets.buttons['to_swc'], 
+                           f'app/static/data/{self.model.name}_3PS.swc')
