@@ -26,7 +26,7 @@ class MODManager():
     def __init__(self, simulator_name='NEURON', path_to_data='data'):
 
         self._path_to_data = path_to_data
-        self._archive = None
+        self._archives = []
         self._simulator_name = simulator_name
 
         self.reader = MODReader()
@@ -62,7 +62,7 @@ class MODManager():
 
     def to_dict(self):
         return {
-            'archive': self._archive,
+            'archives': self._archives,
         }
 
     # FILE MANAGEMENT METHODS
@@ -79,7 +79,10 @@ class MODManager():
 
     def load_archive(self, archive, recompile=False):
 
-        self._archive = archive
+        if archive in self._archives:
+            print(f'Archive "{archive}" already loaded')
+            return
+        self._archives.append(archive)
         self._replace_suffix_with_name(archive)
 
         path_to_archive = os.path.join(self._path_to_data, 'mod', archive)

@@ -11,6 +11,8 @@ from dendrotweaks.utils import calculate_lambda_f, dynamic_import
 
 from collections import OrderedDict, defaultdict
 
+from logger import logger
+
 class Model():
     """
     A model object that represents a neuron model.
@@ -319,11 +321,11 @@ class Model():
         return [node.idx for node in nonoverlapping_nodes]
 
     def uninsert_mechs(self, mech_names: List[str] = None, 
-                            groups_names: List[str] = None):
+                            group_names: List[str] = None):
         """
         """
         group_names = group_names or list(self.groups.keys())
-        mech_names = mechanism_names or list(self.mechanisms.keys())
+        mech_names = mech_names or list(self.mechanisms.keys())
 
         group_names = [group_names] if isinstance(group_names, str) else group_names
         mech_names = [mech_names] if isinstance(mech_names, str) else mech_names
@@ -387,7 +389,7 @@ class Model():
                 if parameter_name in group.parameters:
                     group.add_parameter(parameter_name)
     
-    def distribute_parameters(self, parameter_names: List[str] = None, groups_names: List[str] = None):
+    def distribute_params(self, param_names: List[str] = None, groups_names: List[str] = None):
         """
         Distribute parameters to the sections in the specified groups.
 
@@ -398,34 +400,21 @@ class Model():
         groups_names : List[str], optional
             The names of the groups to distribute parameters to. If None, parameters will be distributed to all groups.
         """
-        parameter_names = parameter_names or []
+        param_names = param_names or []
         groups_names = groups_names or list(self.groups.keys())
         
-        print(f'Distributing within groups: {groups_names}')
-        
         for group_name in groups_names:
+            logger.debug(f'Distributing within group: {group_name}')
             group = self.groups[group_name]
-            parameters_to_distribute = parameter_names or group.parameters
-            
-            for parameter_name in parameters_to_distribute:
-                if parameter_name in group.parameters:
-                    group.distribute(parameter_name)
+            params_to_distribute = param_names or group.parameters
+            logger.debug(f'Parameters to distribute: {params_to_distribute}')
+            for param_name in params_to_distribute:
+                if param_name in group.parameters:
+                    logger.debug(f'Distributing parameter {param_name} in group {group_name}')
+                    print(f'Distributing parameter {param_name} in group {group_name}')
+                    group.distribute(param_name)
 
 
-    def add_parameters_from_mechanism(self, mechanism_name, group_names=None):
-        if isinstance(group_names, str):
-            group_names = [group_names]
-        mechanism = self.mechanisms[mechanism_name]
-        if group_names is None:
-            groups = self.groups.values()
-        else:
-            groups = [self.groups[name] for name in group_names]
-        for group in groups:
-            group.add_parameters_from_mechanism(mechanism)
-
-    # def add_parameter(self, parameter):
-    #     for group in self.groups.values():
-    #         group.add_parameter(parameter)
 
     # ========================================================================
     # GROUPS
@@ -587,21 +576,25 @@ class Model():
             The dictionary representation of the model.
         """
         return {
-            'model': {
-                'name': self.name,
-                'data': {
+                'metadata': {
+                    'name': self.name,
+                    'simulator_name': self.modm._simulator_name,
+                    'group_by': self._group_by,
                     'path_to_data': self.path_to_data,
                     'swc_data': self.swcm.to_dict(),
                     'mod_data': self.modm.to_dict(),
                 },
-                'simulator_name': self.modm._simulator_name,
-                'd_lambda': self._d_lambda,
-                'groups': [
-                    group.to_dict()
-                    for group in self.groups.values()
-                ],
+                'simulation': {
+                    'd_lambda': self._d_lambda,
+                    **self.simulator.to_dict(),
+                },
+                'groups': {
+                    group_name : group.to_dict()
+                    for group_name, group in self.groups.items()
+                },
+                # 'stimuli': {
+                #     {}
             }
-        }
 
     def to_json(self, path_to_json, **kwargs):
         """

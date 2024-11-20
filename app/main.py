@@ -665,7 +665,6 @@ def create_add_remove_panel():
                                                 width=150)
 
     def check_name_exists_callback(attr, old, new):
-        logger.debug(f'Checking if name {new} exists')
         if new in view.widgets.selectors['group'].options:
             view.widgets.buttons['add_group'].disabled = True
         else:
@@ -735,21 +734,9 @@ def create_group_panel():
 
     view.widgets.multichoice['params'].on_change('value', p.update_group_parameters_callback)
 
-    # view.widgets.buttons['add_param'] = Button(label='Add as range', button_type='primary')
-    # view.widgets.buttons['add_param'].on_event(ButtonClick, p.add_range_param_callback)
-
-    # view.widgets.selectors['range_params'] = Select(options=['cm', 'Ra'],
-    #                                                 value='cm',
-    #                                                 title='Range parameters',
-    #                                                 width=242)
-
-    # view.widgets.selectors['range_params'].on_change('value', p.update_graph_colors_callback)
     
-
     group_panel = column([view.widgets.multichoice['mechanisms'],
                           view.widgets.multichoice['params'],
-                        #   view.widgets.buttons['add_param'],
-                        #   view.widgets.selectors['graph_param'],
                          ])
                          
     return group_panel
@@ -932,12 +919,13 @@ def tab_section_callback(attr, old, new):
     if new in [0, 3]:
         view.widgets.selectors['graph_param'].options = list(view.params)
         view.widgets.selectors['section'].value = '0'
-    elif new == 2:
-        logger.info('Switching to distribution tab')
-        view.widgets.selectors['graph_param'].options = list(p.model.parameters_to_groups.keys())
     elif new == 1:
-        logger.info('Switching to section tab')
-        p.select_group()
+        logger.debug('Switching to Groups tab')
+        view.widgets.selectors['group'].options = list(p.model.groups.keys())
+        p._select_group()
+    elif new == 2:
+        logger.debug('Switching to Distributions tab')
+        view.widgets.selectors['graph_param'].options = list(p.model.parameters_to_groups.keys())
     view.widgets.selectors['graph_param'].value = DEFAULT_TAB_PARAM[new]
         
     

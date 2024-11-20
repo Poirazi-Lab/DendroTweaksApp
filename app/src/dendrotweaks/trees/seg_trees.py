@@ -18,6 +18,10 @@ class Segment(Node):
         self._ref = neuron_seg
 
     @property
+    def domain(self):
+        return self._section.domain
+
+    @property
     def x(self):
         return self._ref.x
 
@@ -37,6 +41,13 @@ class Segment(Node):
     def distance_to_root(self):
         return self._section.distance_to_root(self.x)
 
+    def set_param_value(self, param_name, distribution_function):
+        setattr(self._ref, param_name,
+                distribution_function(self.distance_to_root))
+
+    def get_param_value(self, param_name):
+        return getattr(self, param_name, 
+                        getattr(self._ref, param_name, 0))
 
 class SegmentTree(Tree):
 

@@ -89,7 +89,7 @@ class NEURONSimulator(Simulator):
 
     def to_dict(self):
         return {
-            'celsius': self.celsius,
+            'temperature': self.celsius,
             'v_init': self.v_init,
             'dt': self.dt,
         }

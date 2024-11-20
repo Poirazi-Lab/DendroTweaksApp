@@ -46,8 +46,8 @@ class CellMixin():
     def labels(self):
         return [str(sec.idx) for sec in self.model.sec_tree]
         
-    @log
-    def create_cell_renderer(self):
+    
+    def _create_cell_renderer(self):
         """
         Create the cell renderer.
         """

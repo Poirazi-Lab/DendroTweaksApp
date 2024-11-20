@@ -20,83 +20,6 @@ from neuron import h
 
 from logger import logger
 
-# def neuron_to_seg_graph(cell):
-#     logger.info('START')
-#     G = nx.Graph()
-#     soma = cell.soma[0]
-#     total_nseg = sum([sec.nseg for sec in cell.all])
-#     logger.debug(f'Total nseg: {total_nseg}')
-#     add_sec_to_graph(G, soma, 0, cell, total_nseg)
-#     return G
-
-# def get_gbars(sec):
-#     return [f'gbar_{mech}'
-#             for mech, params in sec.psection()['density_mechs'].items() 
-#             if 'gbar' in params]
-
-# def get_sec_area(sec):
-#     return sum([seg.area() for seg in sec])
-
-# def add_sec_to_graph(G, sec, parent_id, cell, total_nseg):
-#     # color_map = {'soma': 'red', 'dend': 'lawngreen', 'axon': 'pink', 'apic': 'dodgerblue'}
-#     color_map = {'soma': 'orange', 'axon': 'magenta', 'dend': 'lawngreen', 'apic': 'dodgerblue'}
-#     color_map = {'soma': '#E69F00', 'axon': '#F0E442', 'dend': '#019E73', 'apic': '#0072B2'}
-#     nodes = {seg: idx + len(G.nodes) + 1 for idx, seg in enumerate(sec)}
-#     if parent_id != 0:
-#         G.add_edge(parent_id, len(G.nodes) + 1)
-#     for seg, idx in nodes.items():
-#         seg_params = {param: getattr(seg, param) for param in ['diam', 'cm', ]}
-#         radius = int(200/np.sqrt(total_nseg)) if get_sec_type(sec) == 'soma' else int(150/np.sqrt(total_nseg))
-#         gbars = {gb: getattr(seg, gb) for gb in get_gbars(sec)}
-#         # logger.debug(f'gbars: {gbars}')
-#         G.add_node(int(idx), 
-#                    name=f'{get_sec_name(seg.sec)}({round(seg.x, 5)})', 
-#                    type=get_sec_type(seg.sec), 
-#                    sec=get_sec_name(seg.sec),
-#                    radius=radius*0.002, 
-#                    color=color_map[get_sec_type(seg.sec)],
-#                    line_color='white',
-#                    line_width=1,
-#                    line_alpha=0.5,
-#                    area=seg.area(), 
-#                    Ra=seg.sec.Ra,
-#                    dist=h.distance(seg, cell.soma[0](0.5)),
-#                 #    g_pas=seg.g_pas,
-#                 #    gbar_na=seg.gbar_na,
-#                 #    gbar_kv=seg.gbar_kv,
-#                     cai = seg.cai if hasattr(seg, 'cai') else 0,
-#                    recordings='None',
-#                    iclamps=0,
-#                    AMPA=0,
-#                    NMDA=0,
-#                    AMPA_NMDA=0,
-#                    GABAa=0,
-#                    weights=0,
-#                    voltage=0,
-#                    **gbars,
-#                    **seg_params)
-#         # print(h.distance(seg, cell.soma[0](0.5)))
-#         if idx + 1 in nodes.values():
-#             G.add_edge(idx, idx + 1)
-#     for child in sec.children():
-#         if child.parentseg().x == 1:
-#             new_parent_id = list(nodes.values())[-1]
-#         elif child.parentseg().x == 0:
-#             new_parent_id = list(nodes.values())[0]
-#         else:
-#             new_parent_id = nodes[child.parentseg()]
-#         add_sec_to_graph(G, child, new_parent_id, cell, total_nseg)
-
-# def neuron_to_sec_graph(cell):
-#     color_map = {'soma': 'red', 'dend': 'lawngreen', 'axon': 'pink', 'apic': 'dodgerblue'}
-#     G = nx.Graph()
-#     nodes = {sec: idx + 1 for idx, sec in enumerate(cell.all)}
-#     for sec, idx in nodes.items():
-#         size = int(300/np.sqrt(len(cell.all))) if get_sec_type(sec) == 'soma' else int(150/np.sqrt(len(cell.all)))
-#         G.add_node(idx, name=get_sec_name(sec), type=get_sec_type(sec), size=size, color=color_map[get_sec_type(sec)], area=get_sec_area(sec), length=sec.L, diam=sec.diam)
-#         for child in sec.children():
-#             G.add_edge(idx, nodes[child])
-#     return G
 
 class GraphMixin():
 
@@ -105,7 +28,13 @@ class GraphMixin():
         super().__init__()
         self.G = None
 
-    def create_graph_nx(self):
+    # ========================================================================================================
+    # CREATE GRAPH
+    # ========================================================================================================
+
+    # CREATE NX
+
+    def _create_graph_nx(self):
 
         # self.G = neuron_to_seg_graph(self.model.cell)
         self.G = nx.Graph()
@@ -131,22 +60,43 @@ class GraphMixin():
 
         pos = nx.kamada_kawai_layout(self.G, scale=1, center=(0, 0), dim=2)
         nx.set_node_attributes(self.G, pos, 'pos')
-        self.rotate_graph()
+        self._rotate_graph()
+
+    # CREATE GRAPH RENDERER
 
     @log
-    def create_graph_renderer(self):
-        # remove old graph
+    def _create_graph_renderer(self):
+        
+        # REMOVE OLD GRAPH RENDERER
         self.view.figures['graph'].renderers = []
-        # self.clear_segments()
-        # add new graph
-        self.create_graph_nx()
+        
+        # CREATE NEW GRAPH RENDERER
+        self._create_graph_nx()
         graph_renderer = from_networkx(graph=self.G,
                                        layout_function=nx.layout.spring_layout,
                                        pos=nx.get_node_attributes(self.G,
                                                                   'pos'),
                                        iterations=0)
 
-        # Change glyph
+        # UPDATE GLYPH
+        self._update_glyph(graph_renderer)
+
+        # UPDATE SELECTION GLYPH
+        self._update_selection_glyph(graph_renderer)
+
+        # UPDATE NONSELECTION GLYPH
+        self._update_nonselection_glyph(graph_renderer)
+
+        # ADD RENDEER TO FIGURE
+        self.view.figures['graph'].renderers.append(graph_renderer)
+
+        # UPDATE PARAM OPTIONS
+        self.view.widgets.selectors['graph_param'].options = list(self.view.params)
+
+        self.add_lasso_callback()
+
+    def _update_glyph(self, graph_renderer):
+
         graph_renderer.node_renderer.glyph = Circle(radius='radius',
                                                     radius_units='data',
                                                     fill_color='color',
@@ -166,7 +116,7 @@ class GraphMixin():
 
         # graph_renderer.selection_policy
 
-        # Change selection glyph
+    def _update_selection_glyph(self, graph_renderer):
         graph_renderer.node_renderer.selection_glyph = Circle(radius='radius',
                                                               radius_units='data',
                                                               fill_color='color',
@@ -180,13 +130,13 @@ class GraphMixin():
         # graph_renderer.node_renderer.selection_glyph.line_width = int(G.nodes[1]['size']) * 0.1
         # graph_renderer.node_renderer.selection_glyph.line_color = view.theme.graph_line
 
-        # Change nonselection glyph
+    def _update_nonselection_glyph(self, graph_renderer):
         graph_renderer.node_renderer.nonselection_glyph = Circle(radius='radius', 
-                                                                 radius_units='data',
-                                                                 fill_color='color', 
-                                                                 line_color=self.view.theme.graph_line, 
-                                                                 line_alpha='line_alpha', 
-                                                                 line_width='line_width')
+                                                            radius_units='data',
+                                                            fill_color='color', 
+                                                            line_color=self.view.theme.graph_line, 
+                                                            line_alpha='line_alpha', 
+                                                            line_width='line_width')
         # graph_renderer.node_renderer.nonselection_glyph = graph_renderer.node_renderer.glyph
         # graph_renderer.node_renderer.nonselection_glyph = graph_renderer.node_renderer.glyph
         graph_renderer.node_renderer.nonselection_glyph.fill_alpha = 0.3
@@ -195,145 +145,87 @@ class GraphMixin():
         graph_renderer.node_renderer.nonselection_glyph.line_width = 0.3
         # graph_renderer.node_renderer.nonselection_glyph.fill_alpha = 0.5 #0.7
         graph_renderer.node_renderer.nonselection_glyph.line_alpha = 0.3 #0.7
-
-        self.view.figures['graph'].renderers.append(graph_renderer)
-
-        self.view.widgets.selectors['graph_param'].options = list(self.view.params)
-
-
-    def rotate_graph(self):
-        # Get the positions of the nodes
-        pos = nx.get_node_attributes(self.G, 'pos')
-        pos_array = np.array(list(pos.values()))
-
-        # If the graph has less than two nodes, or all nodes have the same position,
-        # return the original graph
-        if len(pos) < 2 or np.all(pos_array == pos_array[0]):
-            return
-
-        # Center the data
-        pos_centered = pos_array - np.mean(pos_array, axis=0)
-
-        # Compute the covariance matrix
-        cov_matrix = np.cov(pos_centered.T)
-
-        # Compute the eigenvalues and eigenvectors
-        eigenvalues, eigenvectors = np.linalg.eig(cov_matrix)
-
-        # Sort the eigenvectors based on the eigenvalues
-        idx = eigenvalues.argsort()[::-1]
-        eigenvalues = eigenvalues[idx]
-        eigenvectors = eigenvectors[:, idx]
-
-        # The first principal component is now the last column in eigenvectors
-        # We want this to be the y-axis, so we swap the columns if necessary.
-        if eigenvalues[0] > eigenvalues[1]:
-            eigenvectors = eigenvectors[:, ::-1]
-
-        # Transform the centered data
-        pos_pca = np.dot(pos_centered, eigenvectors)
-
-        # Get the types of the nodes
-        # types = nx.get_node_attributes(self.G, 'type')
-
-        # Find the highest node id of type 'apic'
-        # apic_ids = [node for node, _type in types.items() if _type == 'apic']
-        # highest_apic_id = max(apic_ids) if apic_ids else None
-
-        # Find the nodes of type 'soma'
-        # soma_ids = [node for node, _type in types.items() if _type == 'soma']
-
-        # If 'apic' and 'soma' nodes exist and the y-coordinate of the highest 'apic' node is not higher than any 'soma' node,
-        # flip the graph by negating the y-coordinates
-        # if highest_apic_id is not None and soma_ids and not all(pos_pca[highest_apic_id, 1] > pos_pca[soma_id, 1] for soma_id in soma_ids):
-        
-        # pos_pca[:, 1] = -pos_pca[:, 1]
-
-        # Update the positions in the graph
-        for i, node in enumerate(self.G.nodes):
-            self.G.nodes[node]['pos'] = pos_pca[i]
-
     
-    
+    # ========================================================================================================
+    # UPDATE GRAPH
+    # ========================================================================================================
+
+    # --------------------------------------------------------------------------------------------
+    # UPDATE PARAMS
+    # --------------------------------------------------------------------------------------------
     
     @log
-    @timeit
-    def update_graph_param(self, param_name):
+    def _update_graph_param(self, param_name, update_colors=True):
+        """
+        Updates the parameter values of the graph extracting the values
+        from the model.
+        Also updates the colors of the graph based on the parameter values.
+        """
         logger.info(f'Updating graph parameter {param_name}')
-        # self.update_node_params_from_segments(param_name)
+
         if not param_name == 'voltage':
             self.view.figures['graph'].renderers[0].node_renderer.data_source.data[param_name] = \
-                [self.get_param_value(seg, param_name) for seg in self.model.seg_tree]
+                [self._get_param_value(seg, param_name) for seg in self.model.seg_tree]
         else:
             raise NotImplementedError
-            self.view.figures['graph'].renderers[0].node_renderer.data_source.data[param_name] = [self.G.nodes[n][param_name][0] for n in self.G.nodes]
-        self.update_graph_colors()
+            # self.view.figures['graph'].renderers[0].node_renderer.data_source.data[param_name] = [self.G.nodes[n][param_name][0] for n in self.G.nodes]
+
+        if update_colors: self._update_graph_colors(param_name)
 
 
-    # def update_node_params_from_segments(self, param_name):
-    #     """Updates the specified parameter of each node in the graph 
-    #        with the corresponding value from the cell segment."""
-    #     for n in self.G.nodes:
-    #         seg_name = self.G.nodes[n]['name']
-    #         seg = self.model.cell.segments[seg_name]
-    #         if not self.G.nodes[n]["name"] == get_seg_name(seg):
-    #             raise Exception(f'Node name {self.G.nodes[n]["name"]} does not match segment name {get_seg_name(seg)}')
-    #         self.G.nodes[n][param_name] = self.get_param_value(seg, param_name)
-    #         # logger.debug(f'Updated {param_name} for {get_seg_name(seg)} to {self.G.nodes[n][param_name]}')
-
-
-    def get_param_value(self, seg, param_name):
+    def _get_param_value(self, seg, param_name):
         """
         Retrieves the value of the specified parameter for the given segment.
         """
-        logger.debug(f'Getting {param_name} for {seg.idx}')
-        if param_name == 'domain':
-            return seg._section.domain
-        elif param_name == 'area':
-            return seg.area()
-        elif param_name == 'Ra':
-            return seg._section._ref.Ra
-        elif param_name == 'dist':
-            return seg.distance_to_root
-        elif param_name == 'recordings':
+
+        # RECORDINGS
+        if param_name == 'recordings':
             return str(seg.idx) if self.model.simulator.recordings.get(seg) is not None else 'None'
+
+        elif param_name == 'voltage':
+            self.model.simulator.recordings[seg].to_python() if param_name == 'voltage' else 0,
+
+        # STIMULI
         elif param_name == 'iclamps':
             return 1 if self.model.iclamps.get(seg) is not None else 0
-        elif param_name in ['AMPA', 'NMDA', 'GABAa', 'AMPA_NMDA']:
-            if len(self.model.synapses[param_name].groups):
-                return sum([group.n_per_seg[seg] for group in self.model.synapses[param_name].groups if seg in group.segments])
-            return 0
-        elif param_name == 'weights':
-            logger.debug(f'Updating weights for {get_seg_name(seg)}')
-            if self.model.synapses.get(seg) is not None:
-        
-                logger.debug(f'weights: {sum([con.weight[0] * (1 if syn.e >=0 else -1) for con, syn in zip(self.cell.synapses[seg][2], self.cell.synapses[seg][0])])}')
 
-                return sum([con.weight[0] * (1 if syn.e >=0 else -1) for con, syn in zip(self.cell.synapses[seg][2], self.cell.synapses[seg][0])])
-            logger.debug('weights: 0')
+        elif param_name in ['AMPA', 'NMDA', 'GABAa', 'AMPA_NMDA']:
+            return sum(group.n_per_seg[seg] for group in self.model.synapses[param_name].groups if seg in group.segments) if self.model.synapses[param_name].groups else 0
+
+        elif param_name == 'weights':
+            if self.model.synapses.get(seg) is not None:
+                weights = sum(con.weight[0] * (1 if syn.e >= 0 else -1) for con, syn in zip(self.cell.synapses[seg][2], self.cell.synapses[seg][0]))
+                return weights
             return 0
-        elif param_name == '(unset)':
-            return 0
-        elif param_name == 'voltage':
-            return self.model.simulator.recordings[seg].to_python()
+        
+        # NORMAL PARAMS
         else:
-            return getattr(seg._ref, param_name, 0)
+            return seg.get_param_value(param_name)
+
+
+    # --------------------------------------------------------------------------------------------
+    # UPDATE COLORS
+    # --------------------------------------------------------------------------------------------
 
 
     def update_graph_colors_callback(self, attr, old, new):
+        """
+        Updates graph colors without updating the parameters.
+        Needed to visualize the distribution on selecting a parameter.
+        """
         param_name = new
         if new == 'voltage':
             self.update_graph_param('voltage')
         else:
             # self.update_graph_param(param_name)
-            self.update_graph_colors()
-            self.update_section_param_data(param_name)
+            self._update_graph_colors(param_name)
+            # self.update_section_param_data(param_name)
 
 
     @log
-    def update_graph_colors(self):
+    def _update_graph_colors(self, param):
 
-        param = self.view.widgets.selectors['graph_param'].value
+        # param = self.view.widgets.selectors['graph_param'].value
         graph_renderer = self.view.figures['graph'].renderers[0]
         self.view.widgets.sliders['time_slice'].visible = False
 
@@ -410,3 +302,60 @@ class GraphMixin():
         time_stemp = int(t / dt)
             
         self.view.figures['graph'].renderers[0].node_renderer.data_source.data['voltage'] = [self.G.nodes[n]['voltage'][time_stemp] for n in self.G.nodes]
+
+
+    # ========================================================================================================
+    # TRANSFORM GRAPH
+    # ========================================================================================================
+
+    def _rotate_graph(self):
+        # Get the positions of the nodes
+        pos = nx.get_node_attributes(self.G, 'pos')
+        pos_array = np.array(list(pos.values()))
+
+        # If the graph has less than two nodes, or all nodes have the same position,
+        # return the original graph
+        if len(pos) < 2 or np.all(pos_array == pos_array[0]):
+            return
+
+        # Center the data
+        pos_centered = pos_array - np.mean(pos_array, axis=0)
+
+        # Compute the covariance matrix
+        cov_matrix = np.cov(pos_centered.T)
+
+        # Compute the eigenvalues and eigenvectors
+        eigenvalues, eigenvectors = np.linalg.eig(cov_matrix)
+
+        # Sort the eigenvectors based on the eigenvalues
+        idx = eigenvalues.argsort()[::-1]
+        eigenvalues = eigenvalues[idx]
+        eigenvectors = eigenvectors[:, idx]
+
+        # The first principal component is now the last column in eigenvectors
+        # We want this to be the y-axis, so we swap the columns if necessary.
+        if eigenvalues[0] > eigenvalues[1]:
+            eigenvectors = eigenvectors[:, ::-1]
+
+        # Transform the centered data
+        pos_pca = np.dot(pos_centered, eigenvectors)
+
+        # Get the types of the nodes
+        # types = nx.get_node_attributes(self.G, 'type')
+
+        # Find the highest node id of type 'apic'
+        # apic_ids = [node for node, _type in types.items() if _type == 'apic']
+        # highest_apic_id = max(apic_ids) if apic_ids else None
+
+        # Find the nodes of type 'soma'
+        # soma_ids = [node for node, _type in types.items() if _type == 'soma']
+
+        # If 'apic' and 'soma' nodes exist and the y-coordinate of the highest 'apic' node is not higher than any 'soma' node,
+        # flip the graph by negating the y-coordinates
+        # if highest_apic_id is not None and soma_ids and not all(pos_pca[highest_apic_id, 1] > pos_pca[soma_id, 1] for soma_id in soma_ids):
+        
+        # pos_pca[:, 1] = -pos_pca[:, 1]
+
+        # Update the positions in the graph
+        for i, node in enumerate(self.G.nodes):
+            self.G.nodes[node]['pos'] = pos_pca[i]

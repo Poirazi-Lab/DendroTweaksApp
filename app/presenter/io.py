@@ -6,6 +6,8 @@ from bokeh_utils import log
 
 from bokeh.models.callbacks import CustomJS
 
+import dendrotweaks as dd
+
 class IOMixin():
 
     def __init__(self):
@@ -26,67 +28,69 @@ class IOMixin():
         swc_file_name = new
         self.create_morpohlogy(swc_file_name)
 
-        # MECHANISMS ----------------------------------------------
+        # LOAD MECHANISMS ----------------------------------------------
         self.add_archive('Base', recompile=False)
 
         # GROUPS -------------------------------------------------
         self.add_default_group()
+        self.distribute_params(param_names=['cm', 'Ra']) # needed for segmentation
+        
 
         # SEGMENTATION --------------------------------------------
         d_lambda = self.view.widgets.sliders['d_lambda'].value
         self.build_seg_tree(d_lambda)
         
+        
         # MISC ---------------------------------------------------
         self._attach_download_js()
+
+
 
     def from_json_callback(self, attr, old, new):
         import os
         import json
 
-        path_to_json = os.path.join('app', 'static', 'data', 'json', f'{self.model.name}_ephys.json')
+        path_to_json = os.path.join('app', 'static', 'data', 'json', new)
 
         with open(path_to_json, 'r') as f:
             data = json.load(f)
 
+        self.model.name = data['metadata']['name']
+
         # MORPHOLOGY --------------------------------------------
-        swc_file_name = data['swc_data']['swc_file_name']
+        swc_file_name = data['metadata']['swc_data']['swc_file_name']
         self.create_morpohlogy(swc_file_name)
 
-        # MECHANISMS ----------------------------------------------
+        # LOAD MECHANISMS ----------------------------------------------
         self.add_archive('Base', recompile=False)
-        self.add_archive(data['mod_data']['archive_name'], 
+        for archive in data['metadata']['mod_data']['archives']:
+            self.add_archive(archive, 
                         recompile=self.view.widgets.switches['recompile'].active)
 
-        # GROUPS -------------------------------------------------
-        self._load_groups_from_json(data['groups'])
+        # GROUPS fetch params ------------------------------------------
+        self.add_groups_from_json(data)
+        # DISTRIBUTE SECTION PARAMETERS --------------------------------
+        self.distribute_params(param_names=['cm', 'Ra']) # needed for segmentation
 
-        # SEGMENTATION --------------------------------------------
+        # SEGMENTATION ------------------------------------------------
         # Rebuild the seg tree
-        self.build_seg_tree(data['d_lambda'])
+        d_lambda = data['simulation']['d_lambda']
+        self.build_seg_tree(d_lambda)
+        
+        # DISTRIBUTE SEGMENT PARAMETERS push to segments --------------
+        for group in self.model.groups.values():
+            for param_name in group.parameters:
+                group.distribute(param_name)
 
-        # MISC ---------------------------------------------------
+        # UPDATE GRAPH (pull from segments) ---------------------------
+        for param_name in self.model.parameters_to_groups:
+            self._update_graph_param(param_name, update_colors=False)
+
+        # MISC --------------------------------------------------------
         self._attach_download_js() # needed to update the names of the files to download
 
-
-    def _load_groups_from_json(self, groups):
-        for group_name, group_data in data['groups'].items():
-            # Create a group with corresponding sections
-            sections = [sec for sec in self.model.cell.sections 
-                        if sec.idx in group_data['sec_ids']]
-            self.model.add_group(group_name, sections)
-            # Add mechanisms to the group
-            for mechanism_name in group_data['mechanisms']:
-                mechanism = self.model.mechanisms[mechanism_name]
-                self.model.groups[group_name].add_mechanism(mechanism)
-            # Add parameters to the group
-            for param_name, param_data in mechanism_data['parameters'].items():
-                func = ParametrizedFunction.from_dict(param_data)
-                self.model.groups[group_name].add_parameter(param_name, func)
-
-        self.distribute() # all parameters within all groups
-
     # MORPHOLOGY
-
+    @log
     def create_morpohlogy(self, swc_file_name):
         """
         Loads the selected cell from the SWC file. Builds the swc tree and sec tree.
@@ -100,7 +104,7 @@ class IOMixin():
         # Create and reference sections in simulator
         self.model.create_and_reference_sections_in_simulator()
 
-        self.create_cell_renderer()
+        self._create_cell_renderer()
         self._init_cell_widgets()
 
     def _init_cell_widgets(self):
@@ -121,7 +125,7 @@ class IOMixin():
 
     # MECHANISMS
 
-    @log
+    
     def mod_archives_callback(self, attr, old, new):
         """
         Callback for the selectors['mod_archives'] widget.
@@ -129,7 +133,7 @@ class IOMixin():
         self.add_archive(new, recompile=self.view.widgets.switches['recompile'].active)
         self.view.widgets.selectors['mod_archives'].disabled = True
 
-
+    @log
     def add_archive(self, archive_name, recompile=False):
         """
         Creates Mechanism object from an archive of mod files 
@@ -143,17 +147,33 @@ class IOMixin():
         logger.debug(f'Loaded mechanisms: {self.model.mechanisms.keys()}')
 
     # GROUPS
-
+    @log
     def add_default_group(self):
-        self.add_group('all', self.model.sec_tree.sections)
-        self.model.groups['all'].add_parameter('cm', 1)
-        self.model.groups['all'].distribute('cm')
-        self.model.groups['all'].add_parameter('Ra', 100)
-        self.model.groups['all'].distribute('Ra')
-        
-        # self.model.add_parameters(params=params,
-        #                           group_names=['all'])
-        # self.distribute(param_names=['cm', 'Ra'], group_names=['all'])
+        """
+        Adds the default 'all' group to the model.
+        """
+        # Add the group to the model
+        sections = self.model.sec_tree.sections
+        self.add_group('all', sections)
+        # Add parameters to the group
+        self.model.groups['all'].add_parameter('cm', dd.ParametrizedFunction('uniform', value=1.1))
+        self.model.groups['all'].add_parameter('Ra', dd.ParametrizedFunction('uniform', value=100))
+    
+    def add_groups_from_json(self, data):
+        for group_name, group_data in data['groups'].items():
+            # Add the group to the model
+            sections = [sec for sec in self.model.sec_tree.sections 
+                        if sec.idx in group_data['nodes']]
+            self.model.add_group(group_name, sections)
+            # Add mechanisms to the group
+            for mech_name in group_data['mechanisms']:
+                self.insert_mechs(mech_names=[mech_name], 
+                                  group_names=[group_name])
+            # Add parameters to the group
+            for param_name, param_data in group_data['parameters'].items():
+                func = dd.ParametrizedFunction.from_dict(param_data)
+                self.model.groups[group_name].add_parameter(param_name, func)
+
 
     # SEGMENTATION
 
@@ -161,10 +181,8 @@ class IOMixin():
 
         d_lambda = new
         self.build_seg_tree(d_lambda)
-
-        self.create_graph_renderer()
-        self.add_lasso_callback()
-
+        
+    @log
     def build_seg_tree(self, d_lambda):
         """
         Updates the segmentation based on the current d_lambda
@@ -177,8 +195,9 @@ class IOMixin():
         self.model.build_seg_tree()
         logger.info(f'Total nseg: {len(self.model.seg_tree)}')
 
-        self.create_graph_renderer()
-        self.add_lasso_callback()
+        self._create_graph_renderer()
+
+
 
     # TODO: Implement for the channel panel!
     # @log
@@ -229,7 +248,7 @@ class IOMixin():
     def to_json_callback(self, event):
         import os
         path_to_json = os.path.join('app', 'static', 'data', 'json', f'{self.model.name}.json')
-        self.model.to_json(path_to_json, indent=4)
+        self.model.to_json(path_to_json, indent=4, sort_keys=False)
         
     def to_swc_callback(self, event):
         import os

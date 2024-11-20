@@ -127,23 +127,22 @@ class Group():
     #     for parameter, value in mechanism.parameters.items():
     #         self.add_parameter(parameter, ParametrizedFunction('uniform', value=value))
 
+    # def add_parameter(self, parameter_name, default_value=None):
+    #     """
+    #     Adds a parameter to the group with an optional distribution function.
 
-    def add_parameter(self, parameter_name, default_value=None):
-        """
-        Adds a parameter to the group with an optional distribution function.
+    #     Parameters
+    #     ----------
+    #     parameter_name : str
+    #         The name of the parameter to add.
+    #     distribution_function : ParametrizedFunction
+    #         The distribution function to use for the parameter. Defaults to None.
+    #     """
+    #     value = default_value or 0
+    #     distribution_function = ParametrizedFunction('uniform', value=value)
+    #     self._add_parameter(parameter_name, distribution_function)
 
-        Parameters
-        ----------
-        parameter_name : str
-            The name of the parameter to add.
-        distribution_function : ParametrizedFunction
-            The distribution function to use for the parameter. Defaults to None.
-        """
-        value = default_value or 0
-        distribution_function = ParametrizedFunction('uniform', value=value)
-        self._add_parameter(parameter_name, distribution_function)
-
-    def _add_parameter(self, parameter_name, distribution_function):
+    def add_parameter(self, parameter_name, distribution_function=None):
         """
         Adds a parameter to the group with an optional distribution function.
 
@@ -154,7 +153,8 @@ class Group():
         distribution_function : ParametrizedFunction
             The distribution function to use for the parameter.
         """
-        self.parameters[parameter_name] = distribution_function
+        function = distribution_function or ParametrizedFunction('uniform', value=0)
+        self.parameters[parameter_name] = function
 
     def remove_parameter(self, parameter_name):
         """
@@ -180,9 +180,10 @@ class Group():
         distribution_name : str
             The new distribution to use for the parameter. Avaliable distributions
             are: 'uniform', 'linear', 
-            
+
         """
-        self.parameters[parameter_name] = ParametrizedFunction(distribution_name)
+        self.parameters[parameter_name] = ParametrizedFunction(
+            distribution_name)
         self.distribute(parameter_name)
 
     def update_distribution_parameters(self, parameter_name, **new_parameters):
@@ -222,7 +223,7 @@ class Group():
         """
         distribution_function = self.parameters[parameter_name]
         for node in self._nodes:
-            node.update_parameter(parameter_name, distribution_function)
+            node.set_param_value(parameter_name, distribution_function)
 
     # EXPORT
 
@@ -236,22 +237,10 @@ class Group():
             The group in dictionary format.
         """
         return {
-            'group': {
-                'name': self.name,
-                'nodes': [node.idx for node in self._nodes],
-                'mechanisms': [mechanism_name for mechanism_name in self.mechanisms],
-                'parameters': [
-                    self._parameter_to_dict(parameter_name, distribution_function)
-                    for parameter_name, distribution_function in self.parameters.items()
-                ]
+            'nodes': [node.idx for node in self._nodes],
+            'mechanisms': [mechanism_name for mechanism_name in self.mechanisms],
+            'parameters': {
+                parameter_name: distribution_function.to_dict()
+                for parameter_name, distribution_function in self.parameters.items()
             }
-        }
-
-    def _parameter_to_dict(self, parameter_name, distribution_function):
-        """
-        Helper method to convert a parameter and its distribution function to a dictionary format.
-        """
-        return {
-            'name': parameter_name,
-            'distribution_function': distribution_function.to_dict()
         }

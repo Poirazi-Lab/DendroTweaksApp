@@ -86,15 +86,16 @@ class Section(Node):
             return
         self._ref.uninsert(name)
 
-    def update_parameter(self, parameter_name, distribution_function):
+    def set_param_value(self, parameter_name, distribution_function):
         """
         Update the parameter of the section.
         """
         if self.segments and all([hasattr(seg._ref, parameter_name) for seg in self.segments]):
+            print(f'Setting {parameter_name} in segments')
             for seg in self.segments:
-                setattr(seg._ref, parameter_name,
-                        distribution_function(seg.distance_to_root))
+                seg.set_param_value(parameter_name, distribution_function)
         elif hasattr(self._ref, parameter_name):
+            print(f'Setting {parameter_name} in section')
             setattr(self._ref, parameter_name,
                     distribution_function(self.distance_to_root(0.5)))
         else:
