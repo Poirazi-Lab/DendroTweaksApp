@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 
 from dendrotweaks.utils import timeit
 
-from dendrotweaks.trees.trees import Node, Tree
+from dendrotweaks.morphology.trees import Node, Tree
 
 SWC_TYPES = {
     1: 'soma',
@@ -89,7 +89,7 @@ class SWCTree(Tree):
         """
         Build the sections using bifurcation points.
         """
-        from dendrotweaks.trees.sec_trees import Section
+        from dendrotweaks.morphology.sec_trees import Section
         self._sections = []
 
         bifurcations = self.bifurcations
@@ -246,29 +246,32 @@ class SWCTree(Tree):
         for pt, (x, y, z) in zip(self._nodes, rotated_coords):
             pt.x, pt.y, pt.z = x, y, z
 
-    def plot_points(self, ax=None, edges=True, annotate=False):
+    def plot_points(self, ax=None, edges=True, annotate=False, projection='XY'):
 
         if ax is None:
             fig, ax = plt.subplots(figsize=(10, 10))
 
+        # Create a dictionary for coordinates
+        coords = {'X': [pt.x for pt in self.pts3d],
+                  'Y': [pt.y for pt in self.pts3d],
+                  'Z': [pt.z for pt in self.pts3d]}
+
         if edges:
-            edges = self.edges
-            for edge in edges:
-                xs = [edge[0].x, edge[1].x]
-                ys = [edge[0].y, edge[1].y]
-                ax.plot(xs, ys, color='red')
+            for edge in self.edges:
+                edge_coords = {'X': [edge[0].x, edge[1].x],
+                               'Y': [edge[0].y, edge[1].y],
+                               'Z': [edge[0].z, edge[1].z]}
+                ax.plot(edge_coords[projection[0]], edge_coords[projection[1]], color='red')
 
-        xs = [pt.x for pt in self.pts3d]
-        ys = [pt.y for pt in self.pts3d]
-        ax.plot(xs, ys, '.', color='k', markersize=5)
+        ax.plot(coords[projection[0]], coords[projection[1]], '.', color='k', markersize=5)
 
-        # annotate the node index
+        # Annotate the node index
         if annotate and len(self.pts3d) < 50:
             for pt in self.pts3d:
-                ax.annotate(f'{pt.idx}', (pt.x, pt.y), fontsize=8)
-                # ax.annotate(f'{pt.idx}', (pt.x, pt.y), fontsize=8,
-                #             bbox=dict(facecolor='white', edgecolor='black', boxstyle='round,pad=0.3'))
+                ax.annotate(f'{pt.idx}', (coords[projection[0]][pt.idx], coords[projection[1]][pt.idx]), fontsize=8)
 
+        ax.set_xlabel(projection[0])
+        ax.set_ylabel(projection[1])
         ax.set_aspect('equal')
 
     def plot_sections_as_points(self, ax=None, show_points=False, show_lines=True, extend=False, annotate=False):

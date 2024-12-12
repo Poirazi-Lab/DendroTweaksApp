@@ -2,14 +2,14 @@ import re
 import pprint
 from typing import List, Dict, Union, Any
 
-from dendrotweaks.file_managers.mod_manager.grammar_blocks import title, comment_block
-from dendrotweaks.file_managers.mod_manager.grammar_blocks import neuron_block
-from dendrotweaks.file_managers.mod_manager.grammar_blocks import units_block, parameter_block, assigned_block
-from dendrotweaks.file_managers.mod_manager.grammar_blocks import state_block
-from dendrotweaks.file_managers.mod_manager.grammar_blocks import breakpoint_block, derivative_block, initial_block
-from dendrotweaks.file_managers.mod_manager.grammar_blocks import function_block, procedure_block
+from dendrotweaks.file_managers.mod.grammar_blocks import title, comment_block
+from dendrotweaks.file_managers.mod.grammar_blocks import neuron_block
+from dendrotweaks.file_managers.mod.grammar_blocks import units_block, parameter_block, assigned_block
+from dendrotweaks.file_managers.mod.grammar_blocks import state_block
+from dendrotweaks.file_managers.mod.grammar_blocks import breakpoint_block, derivative_block, initial_block
+from dendrotweaks.file_managers.mod.grammar_blocks import function_block, procedure_block
 
-from dendrotweaks.file_managers.mod_manager.ast import AbstracSyntaxTree
+from dendrotweaks.file_managers.mod.ast import AbstracSyntaxTree
 
 
 class MODParser():

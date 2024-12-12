@@ -46,8 +46,8 @@ def linear(position, slope=1, intercept=0):
     return slope * position + intercept
 
 
-
-class ParametrizedFunction:
+# aka ParametrizedFunction
+class DistributionFunction:
     """
     A callable class for creating and managing distribution functions.
 
@@ -68,7 +68,7 @@ class ParametrizedFunction:
     Examples
     --------
 
-    >>> func = ParametrizedFunction('uniform', value=0)
+    >>> func = Distribution('uniform', value=0)
     >>> func(5)
     0
     """
@@ -79,9 +79,9 @@ class ParametrizedFunction:
     }
 
     @staticmethod
-    def from_dict(data: Dict[str, any]) -> 'ParametrizedFunction':
+    def from_dict(data: Dict[str, any]) -> 'Distribution':
         """
-        Create a new ParametrizedFunction from a dictionary.
+        Create a new Distribution from a dictionary.
 
         Parameters
         ----------
@@ -90,10 +90,10 @@ class ParametrizedFunction:
 
         Returns
         -------
-        ParametrizedFunction
-            The new ParametrizedFunction instance.
+        Distribution
+            The new Distribution instance.
         """
-        return ParametrizedFunction(data['function'], **data['parameters'])
+        return DistributionFunction(data['function'], **data['parameters'])
 
     def __init__(self, function_name: str, **parameters: Dict[str, float]) -> None:
         """

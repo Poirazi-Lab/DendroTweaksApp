@@ -1,17 +1,17 @@
 from typing import List
 
-from dendrotweaks.trees.swc_trees import SWCTree
-from dendrotweaks.trees.seg_trees import Segment, SegmentTree
+from dendrotweaks.morphology.swc_trees import SWCTree
+from dendrotweaks.morphology.seg_trees import Segment, SegmentTree
 from dendrotweaks.simulators import NEURONSimulator
-from dendrotweaks.groups import Group
-from dendrotweaks.mechanisms import Mechanism, LeakChannel
+from dendrotweaks.membrane.groups import SectionGroup
+from dendrotweaks.membrane.mechanisms import Mechanism, LeakChannel
 from dendrotweaks.file_managers import SWCManager, MODManager
 from dendrotweaks.stimuli.iclamps import IClamp
 from dendrotweaks.utils import calculate_lambda_f, dynamic_import
 
 from collections import OrderedDict, defaultdict
 
-from logger import logger
+# from .logger import logger
 
 class Model():
     """
@@ -404,13 +404,13 @@ class Model():
         groups_names = groups_names or list(self.groups.keys())
         
         for group_name in groups_names:
-            logger.debug(f'Distributing within group: {group_name}')
+            # logger.debug(f'Distributing within group: {group_name}')
             group = self.groups[group_name]
             params_to_distribute = param_names or group.parameters
-            logger.debug(f'Parameters to distribute: {params_to_distribute}')
+            # logger.debug(f'Parameters to distribute: {params_to_distribute}')
             for param_name in params_to_distribute:
                 if param_name in group.parameters:
-                    logger.debug(f'Distributing parameter {param_name} in group {group_name}')
+                    # logger.debug(f'Distributing parameter {param_name} in group {group_name}')
                     print(f'Distributing parameter {param_name} in group {group_name}')
                     group.distribute(param_name)
 
@@ -433,7 +433,7 @@ class Model():
         """
         if group_name in self.groups:
             raise ValueError(f'Group {group_name} already exists')
-        group = Group(group_name, nodes)
+        group = SectionGroup(group_name, nodes)
         self.groups[group.name] = group
 
     def remove_group(self, group_name):

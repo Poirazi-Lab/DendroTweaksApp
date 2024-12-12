@@ -1,4 +1,4 @@
-from dendrotweaks.trees.trees import Node, Tree
+from dendrotweaks.morphology.trees import Node, Tree
 
 
 class Segment(Node):

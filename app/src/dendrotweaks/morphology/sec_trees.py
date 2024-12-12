@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 
 from neuron import h
 
-from dendrotweaks.trees.trees import Node, Tree
+from dendrotweaks.morphology.trees import Node, Tree
 
 class Section(Node):
     """
@@ -91,11 +91,11 @@ class Section(Node):
         Update the parameter of the section.
         """
         if self.segments and all([hasattr(seg._ref, parameter_name) for seg in self.segments]):
-            print(f'Setting {parameter_name} in segments')
+            # print(f'Setting {parameter_name} in segments')
             for seg in self.segments:
                 seg.set_param_value(parameter_name, distribution_function)
         elif hasattr(self._ref, parameter_name):
-            print(f'Setting {parameter_name} in section')
+            # print(f'Setting {parameter_name} in section')
             setattr(self._ref, parameter_name,
                     distribution_function(self.distance_to_root(0.5)))
         else:

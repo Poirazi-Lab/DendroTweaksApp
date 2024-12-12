@@ -1,7 +1,7 @@
 from dendrotweaks.file_managers.utils import list_folders, list_files
-from dendrotweaks.file_managers.mod_manager.code_generator import CodeGenerator
-from dendrotweaks.file_managers.mod_manager.parser import MODParser
-from dendrotweaks.file_managers.mod_manager.reader import MODReader
+from dendrotweaks.file_managers.mod.code_generator import CodeGenerator
+from dendrotweaks.file_managers.mod.parser import MODParser
+from dendrotweaks.file_managers.mod.reader import MODReader
 import os
 from pprint import pprint
 # PATH_TO_TEMPLATE = "static/data/templates/template.py"
@@ -11,11 +11,11 @@ print(base_path)
 
 TEMPLATES = {
     'NEURON': {
-        'template': os.path.join(base_path, 'dendrotweaks', 'file_managers', 'mod_manager', 'templates', 'template_dd.py'),
+        'template': os.path.join(base_path, 'dendrotweaks', 'file_managers', 'mod', 'templates', 'template_dd.py'),
         'lib': 'np'
     },
     'Jaxley': {
-        'template': f'{base_path}dendrotweaks/file_managers/mod_manager/templates/template_jaxley.py',
+        'template': f'{base_path}dendrotweaks/file_managers/mod/templates/template_jaxley.py',
         'lib': 'jnp'
     }
 }

@@ -1,4 +1,5 @@
-from ...trees import SWCNode, SWCTree, Section, SectionTree
+from dendrotweaks.morphology.swc_trees import SWCNode, SWCTree
+from dendrotweaks.morphology.sec_trees import Section, SectionTree
 from dendrotweaks.file_managers.utils import list_folders, list_files
 import pandas as pd
 from io import StringIO
@@ -19,7 +20,7 @@ class SWCManager():
         self._df = None
         self.swc_tree = None
         self.sec_tree = None
-        self._path_to_data = path_to_data
+        self.path_to_data = path_to_data
         self._file_name = None
 
         
@@ -32,29 +33,29 @@ class SWCManager():
     # FILE MANAGEMENT
 
     def list_files(self):
-        path_to_swc = os.path.join(self._path_to_data, 'swc')
+        path_to_swc = os.path.join(self.path_to_data, 'swc')
         return list_files(path_to_swc, extension='.swc')
 
     # READ
 
-    def read(self, file_name=None, file_content=None):
+    def read(self, file_name=None):
 
         if file_name:
             self._file_name = file_name
-            path_to_file = f'{self._path_to_data}/swc/{file_name}'.replace('//', '/')
+            path_to_file = f'{self.path_to_data}/swc/{file_name}'.replace('//', '/')
             self.df = pd.read_csv(path_to_file,
                                   sep=' ',
                                   header=None,
                                   comment='#',
                                   names=['id', 'type', 'x', 'y', 'z', 'r', 'parent_id'])
 
-        elif file_content:
-            self._original_content = file_content
-            self.df = pd.read_csv(StringIO(file_content),
-                                  sep=' ',
-                                  header=None,
-                                  comment='#',
-                                  names=['id', 'type', 'x', 'y', 'z', 'r', 'parent_id'])
+        # elif file_content:
+        #     self._original_content = file_content
+        #     self.df = pd.read_csv(StringIO(file_content),
+        #                           sep=' ',
+        #                           header=None,
+        #                           comment='#',
+        #                           names=['id', 'type', 'x', 'y', 'z', 'r', 'parent_id'])
 
     # BUILD TREES
 

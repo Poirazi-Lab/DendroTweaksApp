@@ -1,8 +1,10 @@
 from typing import List, Callable, Dict
 
-from dendrotweaks.trees import Node, Section, Segment
-from dendrotweaks.mechanisms import Mechanism
-from dendrotweaks.groups.distribution_functions import ParametrizedFunction
+from dendrotweaks.morphology.trees import Node
+from dendrotweaks.morphology.sec_trees import Section
+from dendrotweaks.morphology.seg_trees import Segment
+from dendrotweaks.membrane.mechanisms import Mechanism
+from dendrotweaks.membrane.distribution_functions import DistributionFunction
 from dendrotweaks.utils import timeit
 
 # TODO: Sec or seg? Layering or partitioning? Make the user choose.
@@ -17,8 +19,8 @@ from dendrotweaks.utils import timeit
 # - Need to modify the UI.
 # - No layering, each node belongs to one and only one group (not necessarily!).
 
-
-class Group():
+# ex. Group or SectionGroup or Domain
+class SectionGroup():
     """
     A group of nodes often representing a domain.
 
@@ -34,41 +36,29 @@ class Group():
     Example
     -------
     >>> nodes = sec_tree.sections[1:]
-    >>> somatic = Group('somatic', nodes)
+    >>> somatic = SectionGroup('somatic', nodes)
     >>> somatic.add_parameter('cm')
     >>> somatic.update_distribution_function_parameters('cm', value=2)
     """
 
     def __init__(self, name: str,
-                 nodes: List[Node],
+                 sections: List[Section],
                  mechanisms: List[str] = [],
-                 parameters: Dict[str, ParametrizedFunction] = {}):
+                 parameters: Dict[str, DistributionFunction] = {}):
         self.name = name
-        self._nodes = nodes
+        self.sections = sections
         self.parameters = {}
         # self._add_default_parameters()
         self.mechanisms = {}
         for mechanism in mechanisms:
             self.add_mechanism(mechanism)
         for parameter, function_dict in parameters.items():
-            func = ParametrizedFunction.from_dict(function_dict)
+            func = DistributionFunction.from_dict(function_dict)
             self.add_parameter(parameter, func)
 
-    @property
-    def nodes(self):
-        """
-        Returns the list of nodes in the group.
-
-        Returns
-        -------
-        List[Node]
-            The list of nodes in the group.
-        """
-        return self._nodes
-
     # def _add_default_parameters(self):
-    #     self.add_parameter('cm', ParametrizedFunction('uniform', value=1))
-    #     self.add_parameter('Ra', ParametrizedFunction('uniform', value=100))
+    #     self.add_parameter('cm', DistributionFunction('uniform', value=1))
+    #     self.add_parameter('Ra', DistributionFunction('uniform', value=100))
 
     def __repr__(self):
         """
@@ -125,7 +115,7 @@ class Group():
     #     for node in self._nodes:
     #         node.insert_mechanism(mechanism.name)
     #     for parameter, value in mechanism.parameters.items():
-    #         self.add_parameter(parameter, ParametrizedFunction('uniform', value=value))
+    #         self.add_parameter(parameter, DistributionFunction('uniform', value=value))
 
     # def add_parameter(self, parameter_name, default_value=None):
     #     """
@@ -135,14 +125,17 @@ class Group():
     #     ----------
     #     parameter_name : str
     #         The name of the parameter to add.
-    #     distribution_function : ParametrizedFunction
+    #     distribution_function : DistributionFunction
     #         The distribution function to use for the parameter. Defaults to None.
     #     """
     #     value = default_value or 0
-    #     distribution_function = ParametrizedFunction('uniform', value=value)
+    #     distribution_function = DistributionFunction('uniform', value=value)
     #     self._add_parameter(parameter_name, distribution_function)
 
-    def add_parameter(self, parameter_name, distribution_function=None):
+    def add_parameter(self, parameter_name, 
+                      distribution_function=None,
+                      mechanism_name=None,
+                      distribute=False):
         """
         Adds a parameter to the group with an optional distribution function.
 
@@ -150,10 +143,14 @@ class Group():
         ----------
         parameter_name : str
             The name of the parameter to add.
-        distribution_function : ParametrizedFunction
+        distribution_function : DistributionFunction
             The distribution function to use for the parameter.
         """
-        function = distribution_function or ParametrizedFunction('uniform', value=0)
+        value = 0
+        if mechanism_name is not None:
+            mechanism = self.mechanisms[mechanism_name]
+            value = mechanism.parameters[parameter_name]
+        function = distribution_function or DistributionFunction('uniform', value=value)
         self.parameters[parameter_name] = function
 
     def remove_parameter(self, parameter_name):
@@ -165,26 +162,45 @@ class Group():
         parameter_name : str
             The name of the parameter to remove.
         """
-        # self.parameters[parameter_name] = ParametrizedFunction('uniform', value=0)
+        # self.parameters[parameter_name] = DistributionFunction('uniform', value=0)
         del self.parameters[parameter_name]
 
-    def set_distribution(self, parameter_name, distribution_name):
+    def revert_parameter(self, parameter_name):
         """
-        For a given parameter, assignes the distribution with
-        default parameters.
+        Reverts the parameter to its default value.
 
         Parameters
         ----------
         parameter_name : str
-            The name of the parameter to replace the distribution function for.
-        distribution_name : str
-            The new distribution to use for the parameter. Avaliable distributions
-            are: 'uniform', 'linear', 
-
+            The name of the parameter to revert.
         """
-        self.parameters[parameter_name] = ParametrizedFunction(
-            distribution_name)
-        self.distribute(parameter_name)
+        # if parameter belongs to any mechanism, revert to that value
+        # in mechanism['parameter_name']. Otherwise, revert to 0.
+        for mechanism in self.mechanisms.values():
+            if parameter_name in mechanism.parameters:
+                value = mechanism.parameters[parameter_name]
+                break
+
+        
+
+    # TODO: No need for this, just update the dict.
+    # def set_distribution(self, parameter_name, distribution_name):
+    #     """
+    #     For a given parameter, assignes the distribution with
+    #     default parameters.
+
+    #     Parameters
+    #     ----------
+    #     parameter_name : str
+    #         The name of the parameter to replace the distribution function for.
+    #     distribution_name : str
+    #         The new distribution to use for the parameter. Avaliable distributions
+    #         are: 'uniform', 'linear', 
+
+    #     """
+    #     self.parameters[parameter_name] = DistributionFunction(
+    #         distribution_name)
+    #     self.distribute(parameter_name)
 
     def update_distribution_parameters(self, parameter_name, **new_parameters):
         """

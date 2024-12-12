@@ -2,6 +2,21 @@ from typing import Dict
 import numpy as np
 import matplotlib.pyplot as plt
 
+from dendrotweaks.membrane.distribution_functions import DistributionFunction
+from dataclasses import dataclass
+
+# class Parameter:
+#     """
+#     Needed to reset the value of a parameter.
+#     """
+#     def __init__(self, name: str):
+#         self.name = name
+#         self.distribution = Distribution('uniform', value=0)
+#         return self
+
+#     def set_distribution(self, distribution_name: str, **parameters: Dict[str, float]) -> None:
+#         self.distribution = Distribution(distribution_name, **parameters)
+
 class Mechanism:
     """
     A mechanism object that can be placed on a section of a neuron.

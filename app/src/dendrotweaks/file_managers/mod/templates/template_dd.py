@@ -1,7 +1,7 @@
 # This Python channel class was automatically generated from a MOD file
 # using DendroTweaks toolbox, dendrotweaks.dendrites.gr
 
-from dendrotweaks.mechanisms.mechanisms import CustomIonChannel
+from dendrotweaks.membrane.mechanisms import CustomIonChannel
 import numpy as np
 
 class {{ class_name }}(CustomIonChannel):

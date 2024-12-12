@@ -1,5 +1,5 @@
 from typing import List
-from dendrotweaks.trees.sec_trees import Section
+from dendrotweaks.morphology.sec_trees import Section
 from neuron import h
 import numpy as np
 
