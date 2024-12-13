@@ -5,10 +5,7 @@ import numpy as np
 import pandas as pd
 
 from dendrotweaks.utils import timeit
-
-# If you are using this approach leverage the use of the node class
-# to attach relations to it. E.g. self._section
-
+from typing import Union
 
 class Node():
     """
@@ -24,28 +21,31 @@ class Node():
         The index of the parent node.
     """
 
-    def __init__(self, idx: str, parent_idx: str) -> None:
+    def __init__(self, idx: Union[int, str], parent_idx: Union[int, str]) -> None:
         self.idx = int(idx)
         self.parent_idx = int(parent_idx)
         self.parent = None
         self.children = []
 
     @property
-    def topological_type(self):
+    def topological_type(self) -> str:
         """
-        Returns the topological type of the node.
+        The topological type of the node 
+        based on the number of children.
+
+        Returns:
+        --------
+        str
+            The topological type of the node: 
+            'continuation', 'bifurcation', or 'termination'.
         """
-        if len(self.children) == 1:
-            return 'continuation'
-        elif len(self.children) > 1:
-            return 'bifurcation'
-        elif len(self.children) == 0:
-            return 'termination'
+        types = {0: 'termination', 1: 'continuation'}
+        return types.get(len(self.children), 'bifurcation')
 
     @property
-    def _subtree(self) -> list:
+    def subtree(self) -> list:
         """
-        Returns the subtree rooted at the node.
+        The subtree of the node (including the node itself).
 
         Returns:
         --------
@@ -54,13 +54,25 @@ class Node():
         """
         subtree = [self]
         for child in self.children:
-            subtree += child._subtree
+            subtree += child.subtree
         return subtree
 
     @property
-    def _depth(self):
+    def subtree_size(self):
         """
-        Returns the depth of the node in the tree.
+        The size of the subtree of the node.
+
+        Returns:
+        --------
+        int
+            The size of the subtree of the node.
+        """
+        return len(self.subtree)
+
+    @property
+    def depth(self):
+        """
+        The depth of the node in the tree.
 
         Returns:
         --------
@@ -70,7 +82,7 @@ class Node():
         if self.parent is None:
             return 0
         else:
-            return self.parent._depth + 1
+            return self.parent.depth + 1
 
     # @property
     # def subtree(self):
@@ -80,9 +92,6 @@ class Node():
 
     def __repr__(self):
         return f'•{self.idx}'
-
-    # def __eq__(self, other):
-    #     return self.idx == other.idx
 
 
 class Tree:
@@ -95,18 +104,17 @@ class Tree:
         A list of nodes in the tree.
     """
 
-    ROOT_PARENT = {None, -1, '-1'}
-
     def __init__(self, nodes: list) -> None:
         self._nodes = nodes
         self._count = 0
 
-        # Validate and set the root node
-        self.root = self._validate_nodes_and_find_root()
+        self.root = self._find_root()
 
         # Ensure all nodes are connected
         if not self.is_connected:
             self._connect_nodes()
+
+    # MAGIC METHODS
 
     def __repr__(self):
         return f'Tree {self._nodes}'
@@ -124,47 +132,7 @@ class Tree:
     def __contains__(self, node):
         return node in self._nodes
 
-    def _validate_nodes_and_find_root(self):
-        """
-        Validates nodes, checks for duplicate IDs, and finds the root node.
-
-        Returns:
-        --------
-        Node
-            The root node of the tree.
-        """
-        unique_ids = set()
-        root_nodes = []
-
-        for node in self._nodes:
-            # Check for IDs type (int or str)
-            if not isinstance(node.idx, (int, str)):
-                raise ValueError('Node ids must be integers or strings.')
-
-            # Check for unique node IDs
-            if node.idx in unique_ids:
-                raise ValueError('Duplicate node ids found.')
-            unique_ids.add(node.idx)
-
-            # Check for node self-parenting
-            if node.idx == node.parent_idx:
-                raise ValueError(f'Node {node.idx} is its own parent.')
-
-            # Identify root nodes
-            if node.parent_idx in self.ROOT_PARENT:
-                root_nodes.append(node)
-
-        # Root node validation
-        if len(root_nodes) > 1:
-            raise ValueError('More than one root node found.')
-        elif len(root_nodes) == 0:
-            raise ValueError('No root node found.')
-
-        return root_nodes[0]
-
-    # @property
-    # def nodes(self):
-    #     return self._nodes
+    # PROPERTIES
 
     @property
     def bifurcations(self):
@@ -173,10 +141,6 @@ class Tree:
     @property
     def terminations(self):
         return [node for node in self._nodes if len(node.children) == 0]
-
-    @property
-    def is_sorted(self):
-        return all([node.idx == i for i, node in enumerate(self._nodes)])
 
     @property
     def is_connected(self):
@@ -199,6 +163,10 @@ class Tree:
 
         visit(self.root)
         return len(visited) == len(self._nodes)
+
+    @property
+    def is_sorted(self):
+        return all([node.idx == i for i, node in enumerate(self._nodes)])
 
     @property
     @timeit
@@ -230,6 +198,25 @@ class Tree:
                 edges.append((node.parent, node))
         return edges
 
+    # TREE CONSTRUCTION METHODS
+
+    def _find_root(self):
+        """
+        Finds the root node.
+
+        Returns:
+        --------
+        Node
+            The root node of the tree.
+        """
+        ROOT_PARENT = {None, -1, '-1'}
+        root_nodes = [node for node in self._nodes if node.parent_idx in ROOT_PARENT]
+
+        if len(root_nodes) != 1:
+            raise ValueError('Tree must have exactly one root node.')
+
+        return root_nodes[0]
+
     def _connect_nodes(self):
         """
         Builds the hierarchical tree structure for the nodes.
@@ -250,81 +237,25 @@ class Tree:
                         node.parent = parent_node
                         parent_node.children.append(node)
                         break
+        
+        if not self.is_connected:
+            raise ValueError('Tree is not connected.')
+    # SORTIONG METHODS
 
-    # TRAVERSAL METHODS
-
-    def _traverse(self, node, pre_visit=None, post_visit=None):
+    def _sort_root_children(self):
         """
-        Traverse the tree recursively in a depth-first manner.
-
-        Parameters:
-        ----------
-        node : Node
-            The node to start the traversal from.
-        pre_visit : function
-            A function to be executed before visiting the children of the node.
-        post_visit : function
-            A function to be executed after visiting the children of the node.
+        Sort the children of the root node.
         """
-        # TODO: Consider replacing with visitor pattern from is_connected
-
-        if pre_visit:
-            pre_visit(node)
-
-        # On start
-        ...
-
-        children = node.children
-
-        # On continuation
-        if len(children) == 1:
-            for child in children:
-                self._traverse(child, pre_visit, post_visit)
-
-        # On bifurcation
-        if len(children) > 1:
-            # for child in children:
-            for i, child in enumerate(children):
-                self._traverse(child, pre_visit, post_visit)
-
-        # On termination
-        if len(children) == 0:
-            ...
-
-        if post_visit:
-            post_visit(node)
-
-    # SORTING METHODS
+        self.root.children = sorted(self.root.children, key=lambda x: x.idx)
 
     @timeit
-    def sort(self, verbose=False):
-        """
-        Traverse the tree recursively in a depth-first manner.
-
-        Parameters:
-        ----------
-        verbose : bool
-            If True, print the traversal path.
-        """
-        self._count = 0
-
-        def pre_visit(node, verbose=verbose):
-            if verbose:
-                print('  ' * node._depth + str(node) + '→' + str(self._count))
-            node.idx = self._count
-            node.parent_idx = node.parent.idx if node.parent else -1
-            self._count += 1
-
-        self._traverse(self.root, pre_visit=pre_visit)
-
-    @timeit
-    def sort2(self):
+    def sort(self):
         """
         Sort the nodes in the tree using a stack-based depth-first traversal.
         """
+        self._sort_root_children()
 
-        root = self.root
-        stack = [root]
+        stack = [self.root]
         visited = set()
         count = 0
 
@@ -338,36 +269,15 @@ class Tree:
             count += 1
 
             visited.add(node)
-            for child in sorted(node.children, key=lambda x: x.idx, reverse=True):
+            # for child in sorted(node.children, key=lambda x: x.idx, reverse=True):
+            for child in node.children:
                 stack.append(child)
+
+        self._nodes = sorted(self._nodes, key=lambda x: x.idx)
 
     # INSERTION AND REMOVAL METHODS
 
-    def remove_node(self, idx):
-        """
-        Remove a node from the tree.
-
-        Parameters:
-        ----------
-        idx : int
-            The index of the node to remove.
-        """
-        if not self.is_sorted:
-            raise ValueError('Tree must be sorted to remove a node.')
-        node = self._nodes[idx]
-        subtree = node._subtree
-        subtree_size = len(subtree)
-        if node.parent:
-            node.parent.children.remove(node)
-        for node in subtree:
-            self._nodes.remove(node)
-            print(self._nodes)
-        # Update the indices for the following nodes
-        for i, node in enumerate(self._nodes[idx:], start=idx):
-            node.idx = i
-            node.parent_idx = node.parent.idx if node.parent else -1
-
-    def detach_node(self, idx):
+    def detach_node_from_parent(self, idx):
         """
         Detach a node from the tree.
 
@@ -378,13 +288,14 @@ class Tree:
         """
         if not self.is_sorted:
             raise ValueError('Tree must be sorted to detach a node.')
+
         node = self._nodes[idx]
         if node.parent:
             node.parent.children.remove(node)
             node.parent = None
             node.parent_idx = -1
 
-    def attach_node(self, node, parent_idx):
+    def attach_node_to_parent(self, node, parent_idx):
         """
         Attach a node to a parent in the tree.
 
@@ -396,10 +307,13 @@ class Tree:
             The index of the node to attach the new node to.
         """
         parent = self._nodes[parent_idx]
-        if node in parent._subtree:
+
+        if node in parent.subtree:
             raise ValueError('Cannot attach a node to its own subtree.')
+
         if node.parent:
             node.parent.children.remove(node)
+
         node.parent = parent
         node.parent_idx = parent.idx
         parent.children = sorted(parent.children + [node], key=lambda x: x.idx)
@@ -423,14 +337,42 @@ class Tree:
         new_node.idx = idx
         current_node = self._nodes[idx]
         parent = current_node.parent
-        # Update the indices for the following nodes
-        self.detach_node(idx)
+        # Detach the current node from its parent
+        self.detach_node_from_parent(idx)
+        # Shift the indices of the following nodes by 1
         for i, node in enumerate(self._nodes[idx:], start=idx+1):
             node.idx = i
             node.parent_idx = node.parent.idx if node.parent else -1
-        self.attach_node(new_node, parent.idx)
+        # Attach the new node to the parent of the current node
+        self.attach_node_to_parent(new_node, parent.idx)
+        # Insert the new node at the given index in the list of nodes
         self._nodes.insert(idx, new_node)
-        self.attach_node(current_node, new_node.idx)
+        # Attach the current node to the new node
+        self.attach_node_to_parent(current_node, new_node.idx)
+
+    def remove_subtree(self, idx):
+        """
+        Remove a node and its subtree from the tree.
+
+        Parameters:
+        ----------
+        idx : int
+            The index of the node to remove.
+        """
+        if not self.is_sorted:
+            raise ValueError('Tree must be sorted to remove a subtree.')
+
+        subtree_root = self._nodes[idx]
+        # Remove the node from its parent's children list
+        if subtree_root.parent:
+            subtree_root.parent.children.remove(subtree_root)
+        # Remove the node and its subtree from the tree
+        for node in subtree_root.subtree:
+            self._nodes.remove(node)
+        # Update the indices for the following nodes
+        for i, node in enumerate(self._nodes[idx:], start=idx):
+            node.idx = i
+            node.parent_idx = node.parent.idx if node.parent else -1
         
     # VISUALIZATION METHODS
 

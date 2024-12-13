@@ -17,8 +17,27 @@ class Section(Node):
         self.segments = []
         self._ref = None
 
+    # MAGIC METHODS
+
     def __repr__(self):
         return f'••{self.idx}'
+
+    def __call__(self, x: float):
+        """
+        Return the segment at a given position.
+        """
+        if self._ref is None:
+            raise ValueError('Section is not referenced in NEURON.')
+        return self._ref(x)
+
+    def __iter__(self):
+        """
+        Iterate over the segments in the section.
+        """
+        for seg in self.segments:
+            yield seg
+
+    # PROPERTIES
 
     @property
     def df_pts3d(self):
@@ -36,89 +55,6 @@ class Section(Node):
     @property
     def domain(self):
         return self.pts3d[0].domain
-
-    def create_and_reference(self, simulator_name='NEURON'):
-        """
-        Add a reference to the section in the simulator.
-        """
-        if simulator_name == 'NEURON':
-            self.create_NEURON_section()
-        elif simulator_name == 'JAXLEY':
-            self.create_JAXLEY_section()
-
-    def create_NEURON_section(self):
-        """
-        Create a NEURON section.
-        """
-        self._ref = h.Section(name=f'Sec_{self.idx}')
-        if self.parent is not None:
-            # TODO: Attaching basal to soma 0
-            if self.parent.parent is None: # if parent is soma
-                self._ref.connect(self.parent._ref(0.5))
-            else:
-                self._ref.connect(self.parent._ref(1))
-        # Add 3D points to the section
-        for pt in self.pts3d:
-            diam = round(2*pt.r, 2)
-            self._ref.pt3dadd(pt.x, pt.y, pt.z, diam)
-
-    def create_JAXLEY_section(self):
-        """
-        Create a JAXLEY section.
-        """
-        raise NotImplementedError
-
-    def insert_mechanism(self, name: str):
-        """
-        Insert a mechanism in the section.
-        """
-        # if already inserted, return
-        if self._ref.has_membrane(name):
-            return
-        self._ref.insert(name)
-
-    def uninsert_mechanism(self, name: str):
-        """
-        Uninsert a mechanism in the section.
-        """
-        # if already inserted, return
-        if not self._ref.has_membrane(name):
-            return
-        self._ref.uninsert(name)
-
-    def set_param_value(self, parameter_name, distribution_function):
-        """
-        Update the parameter of the section.
-        """
-        if self.segments and all([hasattr(seg._ref, parameter_name) for seg in self.segments]):
-            # print(f'Setting {parameter_name} in segments')
-            for seg in self.segments:
-                seg.set_param_value(parameter_name, distribution_function)
-        elif hasattr(self._ref, parameter_name):
-            # print(f'Setting {parameter_name} in section')
-            setattr(self._ref, parameter_name,
-                    distribution_function(self.distance_to_root(0.5)))
-        else:
-            raise ValueError(f'Parameter {parameter_name} not found in section.')
-
-    def __call__(self, x: float):
-        """
-        Return the segment at a given position.
-        """
-        if self._ref is None:
-            raise ValueError('Section is not referenced in NEURON.')
-        return self._ref(x)
-
-    def __iter__(self):
-        """
-        Iterate over the segments in the section.
-        """
-        for seg in self.segments:
-            yield seg
-
-    @property
-    def subtree_size(self):
-        return len(self._subtree)
 
     @property
     def nseg(self):
@@ -168,21 +104,96 @@ class Section(Node):
     def length(self):
         return self.distances[-1]
 
+    # REFERENCING METHODS
+
+    def create_and_reference(self, simulator_name='NEURON'):
+        """
+        Add a reference to the section in the simulator.
+        """
+        if simulator_name == 'NEURON':
+            self.create_NEURON_section()
+        elif simulator_name == 'JAXLEY':
+            self.create_JAXLEY_section()
+
+    def create_NEURON_section(self):
+        """
+        Create a NEURON section.
+        """
+        self._ref = h.Section(name=f'Sec_{self.idx}')
+        if self.parent is not None:
+            # TODO: Attaching basal to soma 0
+            if self.parent.parent is None: # if parent is soma
+                self._ref.connect(self.parent._ref(0.5))
+            else:
+                self._ref.connect(self.parent._ref(1))
+        # Add 3D points to the section
+        for pt in self.pts3d:
+            diam = round(2*pt.r, 2)
+            self._ref.pt3dadd(pt.x, pt.y, pt.z, diam)
+
+    def create_JAXLEY_section(self):
+        """
+        Create a JAXLEY section.
+        """
+        raise NotImplementedError
+
+    # MECHANISM METHODS
+
+    def insert_mechanism(self, name: str):
+        """
+        Insert a mechanism in the section.
+        """
+        # if already inserted, return
+        if self._ref.has_membrane(name):
+            return
+        self._ref.insert(name)
+
+    def uninsert_mechanism(self, name: str):
+        """
+        Uninsert a mechanism in the section.
+        """
+        # if already inserted, return
+        if not self._ref.has_membrane(name):
+            return
+        self._ref.uninsert(name)
+
+    # PARAMETER METHODS
+
+    def set_param_value(self, parameter_name, distribution_function):
+        """
+        Update the parameter of the section.
+        """
+        if self.segments and all([hasattr(seg._ref, parameter_name) for seg in self.segments]):
+            # print(f'Setting {parameter_name} in segments')
+            for seg in self.segments:
+                seg.set_param_value(parameter_name, distribution_function)
+        elif hasattr(self._ref, parameter_name):
+            # print(f'Setting {parameter_name} in section')
+            setattr(self._ref, parameter_name,
+                    distribution_function(self.distance_to_root(0.5)))
+        else:
+            raise ValueError(f'Parameter {parameter_name} not found in section.')
+
+    # GEOMETRIC METHODS
+
     def distance_to_root(self, relative_position: float = 0):
         if relative_position < 0 or relative_position > 1:
             raise ValueError('Relative position must be between 0 and 1.')
         return self.pts3d[0].distance_to_root + relative_position * self.length
 
-    def plot_pts3d(self, ax=None, plot_radii=True):
+    # PLOTTING METHODS
+
+    def plot_pts3d(self, ax=None, plot_radii=True, plot_parent=True, color='C0'):
         """
         Plot the nodes in the section.
         """
         if ax is None:
             fig, ax = plt.subplots(2, 2)
 
-        ax[0][0].plot(self.xs, self.zs, '.-', color='black')
-        ax[0][1].plot(self.ys, self.zs, '.-', color='black')
-        ax[1][0].plot(self.xs, self.ys, '.-', color='black')
+        marker_style = 'o-' if plot_parent else 'o-'
+        ax[0][0].plot(self.xs, self.zs, marker_style, color=color, fillstyle='full' if plot_parent else 'none')
+        ax[0][1].plot(self.ys, self.zs, marker_style, color=color, fillstyle='full' if plot_parent else 'none')
+        ax[1][0].plot(self.xs, self.ys, marker_style, color=color, fillstyle='full' if plot_parent else 'none')
         ax[0][0].set_title('XZ')
         ax[0][1].set_title('YZ')
         ax[1][0].set_title('XY')
@@ -194,6 +205,9 @@ class Section(Node):
         else:
             ax[1][1].axis('off')
         plt.suptitle(f'{self.idx} - {self.domain}')
+
+        if plot_parent and self.parent:
+            self.parent.plot_pts3d(ax=ax, plot_radii=plot_radii, plot_parent=False, color='C1')
 
         return ax
 
@@ -252,7 +266,8 @@ class SectionTree(Tree):
         ax.set_xlabel('Section ID')
         ax.set_ylabel('Parent ID')
 
-    def plot_sections(self, ax=None, show_points=False, show_lines=True, annotate=False):
+    def plot_sections(self, ax=None, show_points=False, show_lines=True, 
+                      annotate=False):
 
         if ax is None:
             fig, ax = plt.subplots(figsize=(10, 10))
