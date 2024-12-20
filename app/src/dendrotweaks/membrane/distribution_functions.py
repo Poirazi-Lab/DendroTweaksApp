@@ -81,7 +81,7 @@ class DistributionFunction:
     @staticmethod
     def from_dict(data: Dict[str, any]) -> 'Distribution':
         """
-        Create a new Distribution from a dictionary.
+        Creates a new Distribution from a dictionary.
 
         Parameters
         ----------
@@ -97,7 +97,7 @@ class DistributionFunction:
 
     def __init__(self, function_name: str, **parameters: Dict[str, float]) -> None:
         """
-        Create a new parameterized function.
+        Creates a new parameterized function.
 
         Parameters
         ----------
@@ -115,7 +115,7 @@ class DistributionFunction:
 
     def __repr__(self):
         """
-        Return a string representation of the function.
+        Returns a string representation of the function.
 
         Returns
         -------
@@ -126,7 +126,7 @@ class DistributionFunction:
 
     def __call__(self, position):
         """
-        Call the function with a given position.
+        Calls the function with a given position.
 
         Parameters
         ----------
@@ -143,7 +143,7 @@ class DistributionFunction:
     @property
     def function_name(self):
         """
-        Return the name of the function.
+        Returns the name of the function.
 
         Returns
         -------
@@ -154,7 +154,7 @@ class DistributionFunction:
 
     def update_parameters(self, **new_params):
         """
-        Update the parameters of the function.
+        Updates the parameters of the function.
 
         Parameters
         ----------
@@ -167,7 +167,7 @@ class DistributionFunction:
 
     def to_dict(self):
         """
-        Export the function to a dictionary format.
+        Exports the function to a dictionary format.
 
         Returns
         -------

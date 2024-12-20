@@ -8,11 +8,17 @@ from dendrotweaks.utils import timeit
 
 from dendrotweaks.morphology.trees import Node, Tree
 
+from dendrotweaks.utils import timeit
+
 SWC_TYPES = {
+    0: 'undefined',
     1: 'soma',
     2: 'axon',
     3: 'dend',
-    4: 'apic'
+    4: 'apic',
+    5: 'custom',
+    6: 'neurite',
+    7: 'glia',
 }
 
 
@@ -28,17 +34,6 @@ class SWCNode(Node):
         self.z = z
         self.r = r
         self._section = None
-
-    def info(self):
-        info = (
-            f"Node {self.idx}:\n"
-            f"  Type: {SWC_TYPES.get(self.type_idx, 'unknown')}\n"
-            f"  Coordinates: ({self.x}, {self.y}, {self.z})\n"
-            f"  Radius: {self.r}\n"
-            f"  Parent: {self.parent_idx}\n"
-            f"  Section: {self._section.idx if self._section else 'None'}"
-        )
-        print(info)
     
     @property
     def domain(self):
@@ -67,6 +62,17 @@ class SWCNode(Node):
                              'r': [self.r],
                              'parent_idx': [self.parent_idx]})
 
+    def info(self):
+        info = (
+            f"Node {self.idx}:\n"
+            f"  Type: {SWC_TYPES.get(self.type_idx, 'unknown')}\n"
+            f"  Coordinates: ({self.x}, {self.y}, {self.z})\n"
+            f"  Radius: {self.r}\n"
+            f"  Parent: {self.parent_idx}\n"
+            f"  Section: {self._section.idx if self._section else 'None'}"
+        )
+        print(info)
+
     def copy(self):
         new_node = SWCNode(self.idx, self.type_idx, self.x,
                             self.y, self.z, self.r, self.parent_idx)
@@ -79,6 +85,33 @@ class SWCTree(Tree):
         super().__init__(nodes)
         self._sections = []
         self._is_extended = False
+
+    # CLASS METHODS
+
+    @classmethod
+    def from_swc(cls, path: str):
+        """
+        Create a SWC tree from a file.
+
+        Parameters:
+        -----------
+        path : str
+            The path to the SWC file.
+
+        Returns:
+        --------
+        SWCTree
+            A SWC tree object.
+        """
+        nodes = []
+        with open(path, 'r') as f:
+            for line in f:
+                if line.startswith('#'):
+                    continue
+                idx, type_idx, x, y, z, r, parent_idx = map(float, line.split())
+                node = SWCNode(idx, type_idx, x, y, z, r, parent_idx)
+                nodes.append(node)
+        return cls(nodes)
 
     # PROPERTIES
 
@@ -119,13 +152,38 @@ class SWCTree(Tree):
         else:
             return 'contour'
 
+    @property
+    def df(self):
+        """
+        Return the nodes in the tree as a pandas DataFrame.
+
+        Returns:
+        --------
+        pd.DataFrame
+            A DataFrame of the nodes in the tree.
+        """
+        # concatenate the dataframes of the nodes
+        return pd.concat([node.df for node in self._nodes]).reset_index(drop=True)
+
+
     # SORTING METHODS
 
-    def _sort_root_children(self):
+    def _sort_children(self):
         """
-        Sort the children of the root node based on the distance to the root.
+        Iterate through all nodes in the tree and sort their children based on
+        the number of bifurcations (nodes with more than one child) in each child's
+        subtree. Nodes with fewer bifurcations in their subtrees are placed earlier in the list
+        of the node's children, ensuring that the shortest paths are traversed first.
+
+        Returns:
+            None
         """
-        self.root.children = sorted(self.root.children, key=lambda x: (x.type_idx, x.idx), reverse=True)
+        for node in self._nodes:
+            node.children = sorted(
+                node.children, 
+                key=lambda x: (x.type_idx, sum(1 for n in x.subtree if len(n.children) > 1)),
+                reverse=False
+            )
 
     # SECTIONING METHODS
 
@@ -141,8 +199,11 @@ class SWCTree(Tree):
         bifurcation_children = [
             child for b in self.bifurcations for child in b.children]
         bifurcation_children = [self.root] + bifurcation_children
-        bifurcation_children = sorted(bifurcation_children,
-                                      key=lambda x: x.idx)
+        # bifurcation_children = sorted(bifurcation_children,
+        #                               key=lambda x: x.idx)
+        # Filter out the bifurcation children to enforce the original order
+        bifurcation_children = [node for node in self._nodes 
+                                if node in bifurcation_children]
 
         # Assign a section to each bifurcation child
         for i, child in enumerate(bifurcation_children):
@@ -163,17 +224,19 @@ class SWCTree(Tree):
             section.parent_idx = section.parent.idx if section.parent else -1
             # section.parent_idx = section.pts3d[0].parent._section.idx if section.pts3d[0].parent else -1
 
+        # if self.soma_notation == '3PS':
+        #     self._merge_soma()
+
     # SOMA METHODS
 
     def merge_soma(self):
         """
         If soma has 3PS notation, merge it into one section.
         """
-        
+
         soma_pts3d = self.soma_pts3d
         soma_pts3d.remove(self.root)
         soma_pts3d.insert(1, self.root)
-
 
         # Create a new section for the soma
         true_soma = self.root._section
@@ -181,17 +244,74 @@ class SWCTree(Tree):
         for node in soma_pts3d:
             node._section = true_soma
 
-        # Replace the soma sections with the new one
-        soma_sections = [sec for sec in self._sections
-                        if any([pt.type_idx == 1 for pt in sec.pts3d])]
+        # Identify soma sections and their indices
+        soma_sections = [sec for sec in self._sections if any(pt.type_idx == 1 for pt in sec.pts3d)]
+        soma_sections_ids = sorted(sec.idx for sec in soma_sections if sec != true_soma)
+
+        # Remove the soma sections from the list
         for sec in soma_sections:
-            self._sections.remove(sec)
+                self._sections.remove(sec)
+
+        # Add the merged soma section at the beginning
         self._sections = [true_soma] + self._sections
 
         # Update the indices
         for sec in self._sections:
-            sec.idx = sec.idx - 2 if sec.idx > 1 else sec.idx
-            sec.parent_idx = sec.parent_idx - 2 if sec.parent_idx > 1 else sec.parent_idx
+            # Shift index based on the number of soma sections removed before it
+            shift = sum(1 for sid in soma_sections_ids if sid < sec.idx)
+            sec.idx -= shift
+
+            # Similarly adjust parent_idx
+            if sec.parent_idx in soma_sections_ids:
+                sec.parent_idx = 0  # Assign merged soma section as the parent
+            else:
+                shift = sum(1 for sid in soma_sections_ids if sid < sec.parent_idx)
+                sec.parent_idx -= shift
+
+
+    def soma_to_3PS_notation(self):
+        """
+        Convert the soma to 3PS notation.
+        """
+        if self.soma_notation == '3PS':
+            print('Soma is already in 3PS notation.')
+            return
+
+        if self.soma_notation == '1PS':
+            # if soma has 1PS notation, create two new nodes
+            # using the first node of the soma, its radius
+            pt = self.soma_pts3d[0]
+            self._nodes.remove(pt)
+
+            r = pt.r
+            x = [pt.x] * 3
+            y = [pt.y, pt.y - r, pt.y + r]
+            z = [pt.z] * 3
+            r = [r] * 3
+            parent_idx = [-1, 1, 1]
+
+            new_nodes = [SWCNode(idx=i, 
+                                 type_idx=1, 
+                                 x=x[i], y=y[i], z=z[i], r=r[i], 
+                                 parent_idx=parent_idx[i]) for i in range(3)]
+
+            self._nodes = new_nodes + self._nodes
+
+            for node in new_nodes:
+                node._section = self.root._section
+
+            # Update the parent index of the root node
+            soma = Section(idx=0, parent_idx=-1, pts3d=new_nodes)
+            
+        elif self.soma_notation =='contour':
+            # if soma has contour notation, take the average
+            # distance of the nodes from the center of the soma
+            # and use it as radius, create 3 new nodes
+            ...
+
+        
+        
+
 
     # EXTENSION METHODS
 
@@ -218,11 +338,13 @@ class SWCTree(Tree):
         if self._is_extended:
             print('Sections are already extended.')
             return
+        nodes_before = len(self.pts3d)
+        soma = self.soma_pts3d[0]._section
         for sec in self._sections:
             if not sec.parent:
                 continue
             first_node = sec.pts3d[0]
-            if sec.parent is self.soma:
+            if sec.parent is soma:
                 if len(sec.pts3d) > 1:
                     continue # do not extend the soma children in general
                 if self.soma_notation == '3PS':
@@ -230,6 +352,11 @@ class SWCTree(Tree):
                 else:
                     node_to_copy = sec.parent.pts3d[-1]
             node_to_copy = sec.parent.pts3d[-1]
+            # Compare coordinates to avoid duplication
+            if np.allclose([first_node.x, first_node.y, first_node.z], 
+                           [node_to_copy.x, node_to_copy.y, node_to_copy.z], 
+                           atol=1e-8):
+                continue
             new_node = node_to_copy.copy()
             # Copy SWC-specific attributes
             new_node.type_idx = first_node.type_idx
@@ -238,6 +365,8 @@ class SWCTree(Tree):
             self.insert_node(first_node.idx, new_node)
             sec.pts3d.insert(0, new_node)
         self._is_extended = True
+        nodes_after = len(self.pts3d)
+        print(f'Extended {nodes_after - nodes_before} nodes.')
 
     # COORDINATE TRANSFORMATION METHODS
 
@@ -251,28 +380,49 @@ class SWCTree(Tree):
             pt.y = round(pt.y - soma_y, 8)
             pt.z = round(pt.z - soma_z, 8)
 
+    @timeit
     def rotate(self, angle_deg, axis='Y'):
-        """Rotate the point cloud around the specified axis at the soma center using scipy."""
-        # Convert angle to radians and create a rotation object
-        
-        angle_rad = np.radians(angle_deg)
+        """Rotate the point cloud around the specified axis at the soma center using numpy."""
 
-        rotation_vector = {
-            'X': np.array([1, 0, 0]),
-            'Y': np.array([0, 1, 0]),
-            'Z': np.array([0, 0, 1])
-        }.get(axis.upper(), None)
+        # Get the rotation center point
+        rotation_point = self.soma_center
 
-        if rotation_vector is None:
+        # Define rotation matrix based on the specified axis
+        angle = np.radians(angle_deg)
+        if axis == 'X':
+            rotation_matrix = np.array([
+                [1, 0, 0],
+                [0, np.cos(angle), -np.sin(angle)],
+                [0, np.sin(angle), np.cos(angle)]
+            ])
+        elif axis == 'Y':
+            rotation_matrix = np.array([
+                [np.cos(angle), 0, np.sin(angle)],
+                [0, 1, 0],
+                [-np.sin(angle), 0, np.cos(angle)]
+            ])
+        elif axis == 'Z':
+            rotation_matrix = np.array([
+                [np.cos(angle), -np.sin(angle), 0],
+                [np.sin(angle), np.cos(angle), 0],
+                [0, 0, 1]
+            ])
+        else:
             raise ValueError("Axis must be 'X', 'Y', or 'Z'")
 
-        rotation = Rotation.from_rotvec(angle_rad * rotation_vector)
+        # Subtract rotation point to translate the cloud to the origin
+        coords = np.array([[pt.x, pt.y, pt.z] for pt in self.pts3d])
+        coords -= rotation_point
 
-        # Translate points to origin, rotate, and translate back
-        for pt in self.pts3d:
-            coords = np.array([pt.x, pt.y, pt.z]) - self.soma_center
-            rotated_coords = rotation.apply(coords) + self.soma_center
-            pt.x, pt.y, pt.z = rotated_coords
+        # Apply rotation
+        rotated_coords = np.dot(coords, rotation_matrix.T)
+
+        # Translate back to the original position
+        rotated_coords += rotation_point
+
+        # Update the coordinates of the points
+        for pt, (x, y, z) in zip(self._nodes, rotated_coords):
+            pt.x, pt.y, pt.z = x, y, z
 
     def align_apical_dendrite(self, axis='Y', facing='up'):
         
@@ -281,7 +431,7 @@ class SWCTree(Tree):
         apical_center = self.apical_center
 
         if apical_center is None:
-            raise ValueError("No apical dendrite found.")
+            return
 
         # Define the target vector based on the axis and facing
         target_vector = {
@@ -315,7 +465,8 @@ class SWCTree(Tree):
     # PLOTTING METHODS
 
     def plot_points(self, ax=None, edges=True, 
-                    annotate=False, projection='XY'):
+                    annotate=False, projection='XY', 
+                    hightlight=None):
 
         if ax is None:
             fig, ax = plt.subplots(figsize=(10, 10))
@@ -330,14 +481,19 @@ class SWCTree(Tree):
                 edge_coords = {'X': [edge[0].x, edge[1].x],
                                'Y': [edge[0].y, edge[1].y],
                                'Z': [edge[0].z, edge[1].z]}
-                ax.plot(edge_coords[projection[0]], edge_coords[projection[1]], color='red')
+                ax.plot(edge_coords[projection[0]], edge_coords[projection[1]], color='C1')
 
-        ax.plot(coords[projection[0]], coords[projection[1]], '.', color='k', markersize=5)
+        ax.plot(coords[projection[0]], coords[projection[1]], '.', color='C0', markersize=5)
 
         # Annotate the node index
         if annotate and len(self.pts3d) < 50:
             for pt in self.pts3d:
                 ax.annotate(f'{pt.idx}', (coords[projection[0]][pt.idx], coords[projection[1]][pt.idx]), fontsize=8)
+
+        # Highlight the specified node
+        if hightlight:
+            for pt in hightlight:
+                ax.plot(coords[projection[0]][pt.idx], coords[projection[1]][pt.idx], 'o', color='C3', markersize=5)
 
         ax.set_xlabel(projection[0])
         ax.set_ylabel(projection[1])

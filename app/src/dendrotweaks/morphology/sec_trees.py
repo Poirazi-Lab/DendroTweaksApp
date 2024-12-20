@@ -248,6 +248,30 @@ class SectionTree(Tree):
     def soma(self):
         return self.root
 
+    def sort(self):
+        """
+        
+        """
+        print('Sorting sections...')
+        count_sections = 0
+        count_pts3d = 0
+        count_segments = 0
+
+        for sec in self.traverse():
+            sec.idx = count_sections
+            sec.parent_idx = sec.parent.idx if sec.parent else -1
+            count_sections += 1
+
+            for pt in sec.pts3d:
+                pt.idx = count_pts3d
+                pt.parent_idx = pt.parent.idx if pt.parent else -1
+                count_pts3d += 1
+
+            for seg in sec:
+                seg.idx = count_segments
+                seg.parent_idx = seg.parent.idx if seg.parent else -1
+                count_segments += 1
+
     def plot_sections_as_matrix(self, ax=None):
         """
         Plot the sections as a connectivity matrix.

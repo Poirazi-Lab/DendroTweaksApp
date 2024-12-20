@@ -27,6 +27,9 @@ class Node():
         self.parent = None
         self.children = []
 
+    def __repr__(self):
+        return f'•{self.idx}'
+
     @property
     def topological_type(self) -> str:
         """
@@ -84,15 +87,6 @@ class Node():
         else:
             return self.parent.depth + 1
 
-    # @property
-    # def subtree(self):
-    #     nodes = self._subtree
-    #     nodes[0].parent = None
-    #     return Tree(nodes)
-
-    def __repr__(self):
-        return f'•{self.idx}'
-
 
 class Tree:
     """
@@ -105,12 +99,10 @@ class Tree:
     """
 
     def __init__(self, nodes: list) -> None:
-        self._nodes = nodes
-        self._count = 0
 
+        self._nodes = nodes
         self.root = self._find_root()
 
-        # Ensure all nodes are connected
         if not self.is_connected:
             self._connect_nodes()
 
@@ -135,14 +127,6 @@ class Tree:
     # PROPERTIES
 
     @property
-    def bifurcations(self):
-        return [node for node in self._nodes if len(node.children) > 1]
-
-    @property
-    def terminations(self):
-        return [node for node in self._nodes if len(node.children) == 0]
-
-    @property
     def is_connected(self):
         """
         Check if all nodes are connected to the root.
@@ -150,37 +134,21 @@ class Tree:
         Returns:
         --------
         bool
-            True if a path exists from the root to all nodes, False otherwise. 
+            True if all nodes are reachable from the root, False otherwise.
         """
-        visited = set()
-
-        def visit(node):
-            if node.idx in visited:
-                return
-            visited.add(node.idx)
-            for child in node.children:
-                visit(child)
-
-        visit(self.root)
-        return len(visited) == len(self._nodes)
+        return len(self._nodes) == len(self.root.subtree)
 
     @property
     def is_sorted(self):
         return all([node.idx == i for i, node in enumerate(self._nodes)])
 
     @property
-    @timeit
-    def df(self):
-        """
-        Return the nodes in the tree as a pandas DataFrame.
+    def bifurcations(self):
+        return [node for node in self._nodes if len(node.children) > 1]
 
-        Returns:
-        --------
-        pd.DataFrame
-            A DataFrame of the nodes in the tree.
-        """
-        # concatenate the dataframes of the nodes
-        return pd.concat([node.df for node in self._nodes]).reset_index(drop=True)
+    @property
+    def terminations(self):
+        return [node for node in self._nodes if len(node.children) == 0]
 
     @property
     def edges(self) -> list:
@@ -213,6 +181,7 @@ class Tree:
         root_nodes = [node for node in self._nodes if node.parent_idx in ROOT_PARENT]
 
         if len(root_nodes) != 1:
+            print('Root nodes:', root_nodes)
             raise ValueError('Tree must have exactly one root node.')
 
         return root_nodes[0]
@@ -240,44 +209,72 @@ class Tree:
         
         if not self.is_connected:
             raise ValueError('Tree is not connected.')
-    # SORTIONG METHODS
 
-    def _sort_root_children(self):
-        """
-        Sort the children of the root node.
-        """
-        self.root.children = sorted(self.root.children, key=lambda x: x.idx)
+    # TRAVERSAL METHODS
 
-    @timeit
-    def sort(self):
+    def traverse(self):
         """
-        Sort the nodes in the tree using a stack-based depth-first traversal.
+        Iterate over the nodes in the tree using a stack-based 
+        depth-first traversal.
         """
-        self._sort_root_children()
-
         stack = [self.root]
         visited = set()
-        count = 0
 
         while stack:
             node = stack.pop()
             if node in visited:
                 continue
 
+            yield node
+            visited.add(node)
+            for child in reversed(node.children):
+                stack.append(child)
+
+    # SORTIONG METHODS
+
+    def _sort_children(self):
+        """
+        Iterate through all nodes in the tree and sort their children based on
+        the number of bifurcations (nodes with more than one child) in each child's
+        subtree. Nodes with fewer bifurcations in their subtrees are placed earlier in the list
+        of the node's children, ensuring that the shortest paths are traversed first.
+
+        Returns:
+            None
+        """
+        for node in self._nodes:
+            node.children = sorted(
+                node.children, 
+                key=lambda x: sum(1 for n in x.subtree if len(n.children) > 1),
+                reverse=False
+            )
+
+    @timeit
+    def sort(self, sort_children=True):
+        """
+        Sort the nodes in the tree using a stack-based depth-first traversal.
+        """
+        if sort_children:
+            self._sort_children()
+
+        if self.is_sorted:
+            print('Tree already sorted.')
+            return
+
+        count = 0
+        for node in self.traverse():
             node.idx = count
             node.parent_idx = node.parent.idx if node.parent else -1
             count += 1
 
-            visited.add(node)
-            # for child in sorted(node.children, key=lambda x: x.idx, reverse=True):
-            for child in node.children:
-                stack.append(child)
-
         self._nodes = sorted(self._nodes, key=lambda x: x.idx)
+
+        if not self.is_sorted:
+            raise ValueError('Tree is not sorted.')
 
     # INSERTION AND REMOVAL METHODS
 
-    def detach_node_from_parent(self, idx):
+    def _detach_node_from_parent(self, idx):
         """
         Detach a node from the tree.
 
@@ -295,7 +292,7 @@ class Tree:
             node.parent = None
             node.parent_idx = -1
 
-    def attach_node_to_parent(self, node, parent_idx):
+    def _attach_node_to_parent(self, node, parent_idx):
         """
         Attach a node to a parent in the tree.
 
@@ -338,17 +335,17 @@ class Tree:
         current_node = self._nodes[idx]
         parent = current_node.parent
         # Detach the current node from its parent
-        self.detach_node_from_parent(idx)
+        self._detach_node_from_parent(idx)
         # Shift the indices of the following nodes by 1
         for i, node in enumerate(self._nodes[idx:], start=idx+1):
             node.idx = i
             node.parent_idx = node.parent.idx if node.parent else -1
         # Attach the new node to the parent of the current node
-        self.attach_node_to_parent(new_node, parent.idx)
+        self._attach_node_to_parent(new_node, parent.idx)
         # Insert the new node at the given index in the list of nodes
         self._nodes.insert(idx, new_node)
         # Attach the current node to the new node
-        self.attach_node_to_parent(current_node, new_node.idx)
+        self._attach_node_to_parent(current_node, new_node.idx)
 
     def remove_subtree(self, idx):
         """
