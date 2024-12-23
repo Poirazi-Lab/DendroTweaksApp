@@ -2,8 +2,9 @@ import re
 import os
 from jinja2 import Template
 
+from abc import ABC, abstractmethod
 from jinja2 import Environment, FileSystemLoader
-from chanopy.logger import logger
+from dendrotweaks.utils import write_file
 
 # Configure the Jinja2 environment
 # env = Environment(
@@ -18,12 +19,21 @@ EQUILIBRIUM_POTENTIALS = {
     'ca': 140
 }
 
+class CodeGenerator(ABC):
 
-class PythonCodeGenerator():
+    @abstractmethod
+    def generate(self, ast, path_to_template):
+        pass
+
+    def write_file(self, path_to_file):
+        write_file(self.content, path_to_file)
+
+
+class PythonCodeGenerator(CodeGenerator):
     """ A class to generate Python code from an AST using a Jinja2 template. """
 
     def __init__(self):
-        self._content = None
+        self.content = None
 
     # MAIN METHOD
 
@@ -75,8 +85,7 @@ class PythonCodeGenerator():
         if re.search(r'\bjnp\b', template_string):
             content = content.replace('np', 'jnp')
 
-        self._content = content
-        return content
+        self.content = content
             
 
     # HELPER METHODS
@@ -243,11 +252,11 @@ class PythonCodeGenerator():
 
 
 
-class NMODLCodeGenerator():
+class NMODLCodeGenerator(CodeGenerator):
     """ A class to generate NMODL code from a StandardIonChannel"""
 
     def __init__(self):
-        self._content = None
+        self.content = None
 
     def generate(self, channel, 
                 path_to_template: str) -> None:
@@ -287,5 +296,5 @@ class NMODLCodeGenerator():
         # Render the template with the variables
         content = template.render(variables)
 
-        self._content = content
+        self.content = content
         return content

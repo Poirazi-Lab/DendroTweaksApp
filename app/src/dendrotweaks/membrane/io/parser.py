@@ -2,15 +2,15 @@ import re
 import pprint
 from typing import List, Dict, Union, Any
 
-from chanopy.grammar import title, comment_block
-from chanopy.grammar import neuron_block
-from chanopy.grammar import units_block, parameter_block, assigned_block
-from chanopy.grammar import state_block
-from chanopy.grammar import breakpoint_block, derivative_block, initial_block
-from chanopy.grammar import function_block, procedure_block
+from dendrotweaks.membrane.io.grammar import title, comment_block
+from dendrotweaks.membrane.io.grammar import neuron_block
+from dendrotweaks.membrane.io.grammar import units_block, parameter_block, assigned_block
+from dendrotweaks.membrane.io.grammar import state_block
+from dendrotweaks.membrane.io.grammar import breakpoint_block, derivative_block, initial_block
+from dendrotweaks.membrane.io.grammar import function_block, procedure_block
 
-from chanopy.ast import AbstracSyntaxTree
-from chanopy.logger import logger
+from dendrotweaks.membrane.io.ast import AbstracSyntaxTree
+
 
 class Parser():
     """
@@ -58,7 +58,7 @@ class Parser():
 
         parsed_blocks = [grammar.parseString(block) for block in block_content]
         self._result[block_name] = parsed_blocks
-        logger.info(f"Parsed {block_name} block.")
+        print(f"Parsed {block_name} block.")
         return [block.asDict()['block'] for block in parsed_blocks]
 
     def parse(self, blocks: Dict[str, List[str]]) -> None:
@@ -79,6 +79,15 @@ class Parser():
                         for k, v in self._ast.items()}
 
     # POST PROCESSING
+
+    def postprocess(self, restore_expressions=True):
+        """
+        Postprocess the parsed AST.
+        """
+        self.split_comment_block()
+        self.standardize_state_var_names()
+        self.update_state_vars_with_power()
+        self.restore_expressions()
         
     def split_comment_block(self):
 

@@ -1,6 +1,5 @@
 import re
 from typing import List, Dict
-from chanopy.logger import logger
 
 class Reader():
     """
@@ -28,54 +27,40 @@ class Reader():
                   'KINETIC']
 
     def __init__(self):
-        self._path_to_file = ''
+
         self._original_content = None
-        self._content = None
+        self.content = None
         self.blocks = {}
-        self._unmatched = ''
-
-    # PROPERTIES
-
-    @property
-    def file_name(self):
-        """
-        Returns the name of the file without the extension.
-
-        Returns:
-            str: The name of the file without the extension.
-        """
-        return self._path_to_file.split('/')[-1].split('.')[0]
-    
-    @property
-    def content(self):
-        """
-        Returns the original content of the file.
-
-        Returns:
-            str: The original content of the file.
-        """
-        print(self._content)
+        self.unmatched = None
 
     # READ
 
-    def read(self, path_to_file: str) -> None:
+    def read_file(self, path_to_file: str) -> str:
         """
-        The key method to read the content of the file.
-        This is the first method to call when working with a .mod file.
+        Read the content of the file.
 
         Parameters:
-            path_to_file (str): Path to the file to read.
+            path_to_file (str): The path to the file to read.
         """
-        self._path_to_file = path_to_file
-        with open(path_to_file) as f:
-            self._original_content = f.read()
+        with open(path_to_file, 'r') as f:
+            content = f.read()
         
-        self._content = self._original_content
-        logger.info(f"Reading file:\n{path_to_file}")
-        
-        return self
+        self._original_content = content
+        self.content = content
         
     # PREPROCESS
+
+    def preprocess(self, remove_inline_comments=True, 
+                   remove_unitsoff=True, remove_verbatim=True) -> None:
+        """
+        Preprocess the content of the file.
+        """
+        if remove_inline_comments:
+            self.remove_inline_comments()
+        if remove_unitsoff:
+            self.remove_unitsoff()
+        if remove_verbatim:
+            self.remove_verbatim()
 
     def replace_suffix_with_name(self, overwirte=False) -> None:
         """
@@ -103,26 +88,26 @@ class Reader():
             f.write(self._content)
         print(f"Overwritten {self._path_to_file}")
 
+    def remove_inline_comments(self) -> None:
+        """
+        Removes the rest of the line after ":" from the content of the file.
+        """
+        self.content = re.sub(r':.*', '', self.content)
+        
+
     def remove_unitsoff(self) -> None:
         """
         Removes 'UNITSOFF' and 'UNITSON' from the content of the file.
         """
-        self._content = re.sub(r'UNITSOFF|UNITSON', '', self._content)
-        logger.info("Removed 'UNITSOFF' and 'UNITSON'")
+        self.content = re.sub(r'UNITSOFF|UNITSON', '', self.content)
+        
 
     def remove_verbatim(self) -> None:
         """
         Removes 'VERBATIM' and 'ENDVERBATIM' and everything in between from the content of the file.
         """
-        self._content = re.sub(r'VERBATIM.*?ENDVERBATIM', '', self._content, flags=re.DOTALL)
-        logger.info("Removed content between 'VERBATIM' and 'ENDVERBATIM'")
-
-    def remove_inline_comments(self) -> None:
-        """
-        Removes the rest of the line after ":" from the content of the file.
-        """
-        self._content = re.sub(r':.*', '', self._content)
-        logger.info("Removed inline comments")
+        self.content = re.sub(r'VERBATIM.*?ENDVERBATIM', '', self.content, flags=re.DOTALL)
+        
 
     def remove_suffix_from_gbar(self) -> None:
         """
@@ -147,7 +132,8 @@ class Reader():
         message = f"Split content into blocks:\n"
         message += '\n'.join([f"    {len(block_content)} - {block_name}" 
                             for block_name, block_content in self.blocks.items()])
-        logger.info(message)
+        print(message)
+        self.find_unmatched_content()
 
     def _get_block_regex(self, block_name: str) -> List[str]:
         """
@@ -172,7 +158,7 @@ class Reader():
             pattern = r"(" + re.escape(block_name) + r"[\s\S]*?ENDCOMMENT)"
         else:
             pattern = r"(\b" + re.escape(block_name) + r"\b[\s\S]*?\{(?:[^{}]*\{[^{}]*\})*[^{}]*?\})"
-        matches = re.findall(pattern, self._content, re.DOTALL)
+        matches = re.findall(pattern, self.content, re.DOTALL)
         return matches
 
     def find_unmatched_content(self, verbose:bool=True) -> None:
@@ -183,13 +169,12 @@ class Reader():
         ----------
         verbose (bool): Whether to print the unmatched content.
         """
-        unmatched = self._content
+        unmatched = self.content
         for block_name, block in self.blocks.items():
             for block_content in block:
                 unmatched = unmatched.replace(block_content, '')
         unmatched = unmatched.strip()
-        if verbose: 
-            if unmatched: logger.warning(f"Unmatched content:\n{unmatched}")
-            else: logger.info("No unmatched content.")
+        if verbose:
+            if unmatched: print(f"Unmatched content:\n{unmatched}")
+            else: print("No unmatched content.")
         self._unmatched = unmatched
-

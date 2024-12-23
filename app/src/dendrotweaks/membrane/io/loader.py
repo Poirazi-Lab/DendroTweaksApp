@@ -1,8 +1,8 @@
-from chanopy.utils import list_folders, list_files
+from dendrotweaks.utils import list_folders, list_files
 import os
 from pprint import pprint
 
-class Loader():
+class MODFileLoader():
 
     def __init__(self):
         self._loaded_archives = ['test']
@@ -10,6 +10,14 @@ class Loader():
 
 
     def list_archives(self, path_to_data: str = None):
+        """
+        List all available archives in the specified directory.
+
+        Parameters
+        ----------
+        path_to_data : str
+            The path to the directory with the archives.
+        """
         folders = list_folders(path_to_data)
         print(f"Available archives in\n{path_to_data}/\n")
         
@@ -33,9 +41,46 @@ class Loader():
             # Store the archives
             self.archives[folder] = [f.split('.')[0] for f in files]
               
-        
+    def _create_temp_dir(self, path_to_mod_file: str) -> str:
+        """
+        Creates a temporary directory for each channel.
+
+        Parameters
+        ----------
+        path_to_mod : str
+            The path to the directory with the mod files.
+        """
+        import shutil
+        import tempfile
+
+        temp_dir = tempfile.mkdtemp()
+        shutil.copy(path_to_mod_file, temp_dir)
+        return temp_dir
+
+    def load_mechanism(self, path_to_mod_file: str) -> None:
+        """
+        Load a mechanism from the specified mod file.
+
+        Parameters
+        ----------
+        path_to_mod_file : str
+            The path to the mod file.
+        """
+        temp_dir = self._create_temp_dir(path_to_mod_file)
+        self.load_archive(temp_dir)
+
 
     def load_archive(self, path_to_archive, recompile=True):
+        """
+        Load mechanisms from the specified archive.
+
+        Parameters
+        ----------
+        archive : str
+            Name of the archive to load.
+        recompile : bool
+            Whether to recompile the mechanisms if the x86_64 folder is missing.
+        """
 
         archive_name = path_to_archive.split('/')[-1]
 

@@ -3,11 +3,15 @@ from typing import List
 
 ALLOWED_INDEPENDENT_VARS = ['v', 'cai']
 
-# Assumtions:
-# - Kinetic variable names contain either inf or tau 
-# and the name of the state variable.
+# Assumptions:
+# - Kinetic variables include the state variable name and 
+# the substrings inf or tau (e.g., minf, mtau). Order, case, and additional characters
+# do not matter (e.g., mInf, tau_M are also valid).
 # - The channel is either voltage or calcium dependent, and 
 # the independent variable is either v or cai.
+# - Temperature adjustment coefficient is referred to as tadj and calculated as:
+# tadj = q10^((celsius - temp)/10), where q10 is the temperature coefficient, 
+# temp is the reference temperature, and celsius is the current temperature.
 
 
 
@@ -95,15 +99,6 @@ class AbstracSyntaxTree():
         """
         return [assigned['name'] for assigned in self['ASSIGNED']]
 
-    def is_voltage_dependent(self):
-        """
-        Returns True if the mechanism is voltage dependent.
-        """
-        for var in self.assigned_vars:
-            if 'v' in var.lower():
-                return True
-        return False
-
     @property
     def independent_var_name(self):
         """
@@ -114,6 +109,15 @@ class AbstracSyntaxTree():
                    for indep_var in ALLOWED_INDEPENDENT_VARS):
                 return var
         raise Exception('Independent variable not found')
+
+    def is_voltage_dependent(self):
+        """
+        Returns True if the mechanism is voltage dependent.
+        """
+        for var in self.assigned_vars:
+            if 'v' in var.lower():
+                return True
+        return False
 
     def is_ca_dependent(self):
         """
