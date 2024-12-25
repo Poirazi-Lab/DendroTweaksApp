@@ -23,6 +23,7 @@ extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.napoleon',
     'sphinx.ext.viewcode',
+    'sphinx_copybutton',
 ]
 
 templates_path = ['_templates']
@@ -36,3 +37,13 @@ autodoc_member_order = 'bysource'
 html_theme = 'furo'
 
 html_static_path = ['_static']
+
+html_logo = '_static/logo.png'
+
+copybutton_prompt_text = r'>>> '
+copybutton_only_copy_prompt_lines = True
+
+html_theme_options = {
+    'sidebar_hide_name': True,
+}
+html_favicon = '_static/favicon.png'

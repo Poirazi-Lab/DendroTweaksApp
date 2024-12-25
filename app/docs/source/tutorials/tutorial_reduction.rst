@@ -1,5 +1,5 @@
-Distributing parameters
+Reducing neuronal morphology
 ==========================================
 
-Creating groups
+Reading SWC files
 ------------------------------------------

@@ -12,3 +12,6 @@
 /GUIDE/
 structure.md
 **final_figure_extra-000.swc
+app/docs/build/
+app/docs/make.bat
+app/docs/Makefile

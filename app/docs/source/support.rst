@@ -1,7 +1,7 @@
 Support
 =======
 
-Dendrify was created by `Roman Makarov <https://twitter.com/RomanAMakarov>`_
+DendroTweaks was created by `Roman Makarov <https://twitter.com/RomanAMakarov>`_
 and is currently maintained by Roman Makarov and Spyridon Chavlis, both
 members of the `Poirazi Lab <https://dendrites.gr>`_.
 

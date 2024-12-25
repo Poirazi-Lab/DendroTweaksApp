@@ -1,4 +1,4 @@
-Abstract trees
+Tree graph
 ==========================
 
 .. autoclass:: dendrotweaks.morphology.trees.Node
