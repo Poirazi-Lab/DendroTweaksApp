@@ -7,11 +7,16 @@ class Segment(Node):
         """
         Create a wrapper for a NEURON segment.
 
-        Args:
-            idx (int): The index of the segment.
-            parent_idx (int): The index of the parent segment.
-            _seg (h.Segment): The NEURON segment object.
-            sec (h.Section): The Section wrapper object.
+        Parameters
+        ----------
+        idx : int
+            The index of the segment.
+        parent_idx : int
+            The index of the parent segment.
+        neuron_seg : h.Segment
+            The NEURON segment object.
+        section : h.Section
+            The Section wrapper object.
         """
         super().__init__(idx, parent_idx)
         self._section = section

@@ -1,0 +1,30 @@
+import pandas as pd
+
+class SWCReader():
+
+    def __init__(self):
+        pass
+
+    @staticmethod
+    def read_file(path_to_swc_file: str) -> pd.DataFrame:
+        """
+        Read the SWC file and return a DataFrame.
+        """
+        df = pd.read_csv(
+            path_to_swc_file, 
+            sep=' ', header=None, 
+            names=['Index', 'Type', 'X', 'Y', 'Z', 'R', 'Parent']
+        )
+        if df['Index'].duplicated().any():
+            raise ValueError("The SWC file contains duplicate node ids.")
+        return df
+
+    @staticmethod
+    def plot_raw_data(df, ax):
+        types_to_colors = {1: 'C1', 2: 'C3', 3: 'C2', 4: 'C0'}
+        for t in df['Type'].unique():
+            color = types_to_colors.get(t, 'k')
+            mask = df['Type'] == t
+            ax.scatter(df[mask]['X'], df[mask]['Y'], df[mask]['Z'], 
+                       c=color, s=1, label=f'Type {t}')
+        ax.legend()

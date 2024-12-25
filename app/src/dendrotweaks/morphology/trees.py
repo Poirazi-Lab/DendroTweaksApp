@@ -9,19 +9,29 @@ from typing import Union
 
 class Node():
     """
-    A class to represent a node in a tree.
+    Represents a node in a tree.
+
     A node can be a 3D point in a neuron morphology,
-    a segment, a section or even a tree.
+    a segment, a section, or even a tree.
 
     Parameters:
-    ----------
-    idx : str
-        The index of the node.
-    parent_idx : str
-        The index of the parent node.
+        idx (Union[int, str]): The index of the node.
+        parent_idx (Union[int, str]): The index of the parent node.
+
+    Examples:
+        >>> node = Node(0, -1)
+        >>> node
+        •0
     """
 
     def __init__(self, idx: Union[int, str], parent_idx: Union[int, str]) -> None:
+        """
+        Creates a node in a tree.
+
+        Args:
+            idx (Union[int, str]): The index of the node.
+            parent_idx (Union[int, str]): The index of the parent node.
+        """
         self.idx = int(idx)
         self.parent_idx = int(parent_idx)
         self.parent = None
@@ -32,15 +42,10 @@ class Node():
 
     @property
     def topological_type(self) -> str:
-        """
-        The topological type of the node 
-        based on the number of children.
+        """The topological type of the node based on the number of children.
 
         Returns:
-        --------
-        str
-            The topological type of the node: 
-            'continuation', 'bifurcation', or 'termination'.
+            str: The topological type of the node: 'continuation', 'bifurcation', or 'termination'.
         """
         types = {0: 'termination', 1: 'continuation'}
         return types.get(len(self.children), 'bifurcation')
@@ -48,12 +53,10 @@ class Node():
     @property
     def subtree(self) -> list:
         """
-        The subtree of the node (including the node itself).
+        Gets the subtree of the node (including the node itself).
 
         Returns:
-        --------
-        List[Node]
-            A list of nodes in the subtree.
+            list: A list of nodes in the subtree.
         """
         subtree = [self]
         for child in self.children:
@@ -63,12 +66,10 @@ class Node():
     @property
     def subtree_size(self):
         """
-        The size of the subtree of the node.
+        Gets the size of the subtree of the node.
 
         Returns:
-        --------
-        int
-            The size of the subtree of the node.
+            int: The size of the subtree of the node.
         """
         return len(self.subtree)
 
@@ -78,9 +79,7 @@ class Node():
         The depth of the node in the tree.
 
         Returns:
-        --------
-        int
-            The depth of the node in the tree.
+            int: The depth of the node in the tree.
         """
         if self.parent is None:
             return 0
@@ -92,10 +91,8 @@ class Tree:
     """
     A class to represent a tree data structure.
 
-    Parameters:
-    ----------
-    nodes : List[Node]
-        A list of nodes in the tree.
+    Args:
+        nodes (List[Node]): A list of nodes in the tree.
     """
 
     def __init__(self, nodes: list) -> None:
@@ -129,12 +126,10 @@ class Tree:
     @property
     def is_connected(self):
         """
-        Check if all nodes are connected to the root.
+        Checks if all nodes are connected to the root.
 
         Returns:
-        --------
-        bool
-            True if all nodes are reachable from the root, False otherwise.
+            bool: True if all nodes are reachable from the root, False otherwise.
         """
         return len(self._nodes) == len(self.root.subtree)
 
@@ -156,9 +151,7 @@ class Tree:
         Returns a list of edges in the tree.
 
         Returns:
-        --------
-        List[Tuple[Node, Node]]
-            A list of edges in the tree.
+            list[tuple[Node, Node]]: A list of edges in the tree.
         """
         edges = []
         for node in self._nodes:
@@ -173,9 +166,7 @@ class Tree:
         Finds the root node.
 
         Returns:
-        --------
-        Node
-            The root node of the tree.
+            Node: The root node of the tree.
         """
         ROOT_PARENT = {None, -1, '-1'}
         root_nodes = [node for node in self._nodes if node.parent_idx in ROOT_PARENT]
@@ -191,9 +182,8 @@ class Tree:
         Builds the hierarchical tree structure for the nodes.
 
         For each node in `self._nodes`, find its parent node.
-        To the parent node, append the given node as a child. 
-        To the given node, assign the parent node as the parent.
-
+        Append the given node as a child to the parent node.
+        Assign the parent node as the parent to the given node.
         """
         print('Connecting tree.')
         if self.is_connected:
@@ -252,7 +242,11 @@ class Tree:
     @timeit
     def sort(self, sort_children=True):
         """
-        Sort the nodes in the tree using a stack-based depth-first traversal.
+        Sorts the nodes in the tree using a stack-based depth-first traversal.
+
+        Args:
+            sort_children (bool, optional): Whether to sort the children of each node 
+            based on the number of bifurcations in their subtrees. Defaults to True.
         """
         if sort_children:
             self._sort_children()
@@ -279,9 +273,7 @@ class Tree:
         Detach a node from the tree.
 
         Parameters:
-        ----------
-        idx : int
-            The index of the node to detach.
+            idx (int): The index of the node to detach.
         """
         if not self.is_sorted:
             raise ValueError('Tree must be sorted to detach a node.')
@@ -296,12 +288,12 @@ class Tree:
         """
         Attach a node to a parent in the tree.
 
-        Parameters:
-        ----------
-        node : Node
-            The node to attach.
-        parent_idx : int
-            The index of the node to attach the new node to.
+        Args:
+            node (Node): The node to attach.
+            parent_idx (int): The index of the node to attach the new node to.
+
+        Raises:
+            ValueError: If the node is already in the parent's subtree.
         """
         parent = self._nodes[parent_idx]
 
@@ -319,12 +311,13 @@ class Tree:
         """
         Insert a node at a given index in the tree.
 
-        Parameters:
-        ----------
-        idx : int
-            The index to insert the new node.
-        new_node : Node
-            The node to insert.
+        Args:
+            idx (int): The index to insert the new node.
+            new_node (Node): The node to insert.
+
+        Raises:
+            ValueError: If the node already exists in the tree.
+            ValueError: If the tree is not sorted.
         """
         if new_node in self._nodes:
             raise ValueError('Node already exists in the tree.')
@@ -351,10 +344,11 @@ class Tree:
         """
         Remove a node and its subtree from the tree.
 
-        Parameters:
-        ----------
-        idx : int
-            The index of the node to remove.
+        Args:
+            idx (int): The index of the node to remove.
+
+        Raises:
+            ValueError: If the tree is not sorted.
         """
         if not self.is_sorted:
             raise ValueError('Tree must be sorted to remove a subtree.')

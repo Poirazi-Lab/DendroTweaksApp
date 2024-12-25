@@ -86,33 +86,6 @@ class SWCTree(Tree):
         self._sections = []
         self._is_extended = False
 
-    # CLASS METHODS
-
-    @classmethod
-    def from_swc(cls, path: str):
-        """
-        Create a SWC tree from a file.
-
-        Parameters:
-        -----------
-        path : str
-            The path to the SWC file.
-
-        Returns:
-        --------
-        SWCTree
-            A SWC tree object.
-        """
-        nodes = []
-        with open(path, 'r') as f:
-            for line in f:
-                if line.startswith('#'):
-                    continue
-                idx, type_idx, x, y, z, r, parent_idx = map(float, line.split())
-                node = SWCNode(idx, type_idx, x, y, z, r, parent_idx)
-                nodes.append(node)
-        return cls(nodes)
-
     # PROPERTIES
 
     @property
@@ -154,16 +127,17 @@ class SWCTree(Tree):
 
     @property
     def df(self):
-        """
-        Return the nodes in the tree as a pandas DataFrame.
+        data = {
+            'idx': [node.idx for node in self._nodes],
+            'type_idx': [node.type_idx for node in self._nodes],
+            'x': [node.x for node in self._nodes],
+            'y': [node.y for node in self._nodes],
+            'z': [node.z for node in self._nodes],
+            'r': [node.r for node in self._nodes],
+            'parent_idx': [node.parent_idx for node in self._nodes],
+        }
+        return pd.DataFrame(data)
 
-        Returns:
-        --------
-        pd.DataFrame
-            A DataFrame of the nodes in the tree.
-        """
-        # concatenate the dataframes of the nodes
-        return pd.concat([node.df for node in self._nodes]).reset_index(drop=True)
 
 
     # SORTING METHODS
@@ -175,7 +149,8 @@ class SWCTree(Tree):
         subtree. Nodes with fewer bifurcations in their subtrees are placed earlier in the list
         of the node's children, ensuring that the shortest paths are traversed first.
 
-        Returns:
+        Returns
+        -------
             None
         """
         for node in self._nodes:
@@ -185,89 +160,9 @@ class SWCTree(Tree):
                 reverse=False
             )
 
-    # SECTIONING METHODS
 
-    @timeit
-    def split_to_sections(self):
-        """
-        Build the sections using bifurcation points.
-        """
-        from dendrotweaks.morphology.sec_trees import Section
 
-        self._sections = []
-
-        bifurcation_children = [
-            child for b in self.bifurcations for child in b.children]
-        bifurcation_children = [self.root] + bifurcation_children
-        # bifurcation_children = sorted(bifurcation_children,
-        #                               key=lambda x: x.idx)
-        # Filter out the bifurcation children to enforce the original order
-        bifurcation_children = [node for node in self._nodes 
-                                if node in bifurcation_children]
-
-        # Assign a section to each bifurcation child
-        for i, child in enumerate(bifurcation_children):
-            section = Section(idx=i, parent_idx=-1, pts3d=[child])
-            self._sections.append(section)
-            child._section = section
-            # Propagate the section to the children until the next 
-            # bifurcation or termination point is reached
-            while child.children:
-                next_child = child.children[0]
-                if next_child in bifurcation_children:
-                    break
-                next_child._section = section
-                section.pts3d.append(next_child)
-                child = next_child
-
-            section.parent = section.pts3d[0].parent._section if section.pts3d[0].parent else None
-            section.parent_idx = section.parent.idx if section.parent else -1
-            # section.parent_idx = section.pts3d[0].parent._section.idx if section.pts3d[0].parent else -1
-
-        # if self.soma_notation == '3PS':
-        #     self._merge_soma()
-
-    # SOMA METHODS
-
-    def merge_soma(self):
-        """
-        If soma has 3PS notation, merge it into one section.
-        """
-
-        soma_pts3d = self.soma_pts3d
-        soma_pts3d.remove(self.root)
-        soma_pts3d.insert(1, self.root)
-
-        # Create a new section for the soma
-        true_soma = self.root._section
-        true_soma.pts3d = soma_pts3d
-        for node in soma_pts3d:
-            node._section = true_soma
-
-        # Identify soma sections and their indices
-        soma_sections = [sec for sec in self._sections if any(pt.type_idx == 1 for pt in sec.pts3d)]
-        soma_sections_ids = sorted(sec.idx for sec in soma_sections if sec != true_soma)
-
-        # Remove the soma sections from the list
-        for sec in soma_sections:
-                self._sections.remove(sec)
-
-        # Add the merged soma section at the beginning
-        self._sections = [true_soma] + self._sections
-
-        # Update the indices
-        for sec in self._sections:
-            # Shift index based on the number of soma sections removed before it
-            shift = sum(1 for sid in soma_sections_ids if sid < sec.idx)
-            sec.idx -= shift
-
-            # Similarly adjust parent_idx
-            if sec.parent_idx in soma_sections_ids:
-                sec.parent_idx = 0  # Assign merged soma section as the parent
-            else:
-                shift = sum(1 for sid in soma_sections_ids if sid < sec.parent_idx)
-                sec.parent_idx -= shift
-
+    # COORDINATE TRANSFORMATION METHODS
 
     def soma_to_3PS_notation(self):
         """
@@ -308,67 +203,6 @@ class SWCTree(Tree):
             # distance of the nodes from the center of the soma
             # and use it as radius, create 3 new nodes
             ...
-
-        
-        
-
-
-    # EXTENSION METHODS
-
-    def extend_sections(self):
-        """
-        Extends the section by adding a copy of the last node from the parent section
-        to the beginning of the section. This is done to ensure continuity between sections.
-        The method checks if the sections have already been extended to avoid duplication.
-
-        Attributes:
-            _is_extended (bool): A flag indicating whether the sections have 
-                        already been extended.
-            _sections (list): A list of sections in the tree structure.
-            soma (object): The root section.
-            soma_notation (str): The notation used for the soma.
-
-        Notes:
-            - The method is implemented similarly to the NEURON's approach to section extension.
-            - If the section's parent is the soma, it extends the section only if it has
-            a single point. 
-            - Given the above, for '3PS' notation, instead of the last point it copies 
-            the second point of the parent section (the root point).
-        """
-        if self._is_extended:
-            print('Sections are already extended.')
-            return
-        nodes_before = len(self.pts3d)
-        soma = self.soma_pts3d[0]._section
-        for sec in self._sections:
-            if not sec.parent:
-                continue
-            first_node = sec.pts3d[0]
-            if sec.parent is soma:
-                if len(sec.pts3d) > 1:
-                    continue # do not extend the soma children in general
-                if self.soma_notation == '3PS':
-                    node_to_copy = sec.parent.pts3d[1]
-                else:
-                    node_to_copy = sec.parent.pts3d[-1]
-            node_to_copy = sec.parent.pts3d[-1]
-            # Compare coordinates to avoid duplication
-            if np.allclose([first_node.x, first_node.y, first_node.z], 
-                           [node_to_copy.x, node_to_copy.y, node_to_copy.z], 
-                           atol=1e-8):
-                continue
-            new_node = node_to_copy.copy()
-            # Copy SWC-specific attributes
-            new_node.type_idx = first_node.type_idx
-            new_node._section = first_node._section
-            # Insert the new node at the beginning of the section
-            self.insert_node(first_node.idx, new_node)
-            sec.pts3d.insert(0, new_node)
-        self._is_extended = True
-        nodes_after = len(self.pts3d)
-        print(f'Extended {nodes_after - nodes_before} nodes.')
-
-    # COORDINATE TRANSFORMATION METHODS
 
     def shift_coordinates_to_soma_center(self):
         """
