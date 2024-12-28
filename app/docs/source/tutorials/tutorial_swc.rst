@@ -37,17 +37,18 @@ To create an SWC tree from the DataFrame, use the following code:
 
     >>> from dendrotweaks.morphology.io import TreeFactory
     >>> factory = TreeFactory()
-    >>> swc_tree = factory.create_tree(df)
+    >>> swc_tree = factory.create_swc_tree(df)
 
 
 .. tip:: 
     
-    You can directly pass the path to the SWC file to the `create_tree` method if you do not need to perform the preprocessing steps manually.
+    You can directly pass the path to the SWC file to the `create_swc_tree` method if you do not need to perform the preprocessing steps manually.
 
 Postporcessing
 ------------------------------------------
 
-We now want to make sure that the nodes are properly sorted. For this we will perform depth-first traversal of the tree and update a node's index as we visit the node.
+We now want to make sure that the nodes are properly sorted. 
+For this we will perform depth-first traversal of the tree and update each node's index as we visit the node.
 
 .. code-block:: python
 
@@ -65,14 +66,15 @@ We can also shift the tree to the soma center and align the apical dendrite with
 
 .. code-block:: python
 
-    >>> swc_tree.shift_to_soma()
-    >>> swc_tree.align_apical(axis='Y')
+    >>> swc_tree.shift_coordinates_to_soma_center()
+    >>> swc_tree.align_apical_dendrite(axis='Y', facing='up')
 
 We can also utilize the :code:`rotate` method to rotate the tree around the specified axis.
 
 .. code-block:: python
 
     >>> swc_tree.rotate(angle=90, axis='Y')
+
 
 Soma notation
 ------------------------------------------
@@ -106,13 +108,13 @@ To change the soma notation, use the :code:`change_soma_notation` method.
 Creating a section tree
 ------------------------------------------
 
-To build a section tree from the SWC tree, use the following code:
+Now we can create a section tree using the SWC tree.
 
 .. code-block:: python
 
     >>> sec_tree = factory.create_sec_tree(swc_tree, extend=True)
 
-This method partitions the SWC tree into sections. The algorithm for sectioning is as follows:
+This method partitions the SWC tree by assigning each node to a section. The algorithm for sectioning is shown in the figure below.
 
 .. figure:: ../_static/sectioning.png
     :align: center
@@ -133,6 +135,7 @@ If the `extend` flag is set to `True`, the sections will be extended. This is us
 .. warning::
 
     Note that extending sections mutates the :code:`swc_tree` object by inserting new nodes.
+    There is no way to revert the extension, so the :code:`swc_tree` object has to be re-created if the extension is not desired.
 
 .. note::
 

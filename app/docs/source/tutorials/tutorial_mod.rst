@@ -194,9 +194,9 @@ Additionally, we can choose to load the channel immediately into the NEURON simu
 .. code-block:: python
 
     >>> nav = factory.create_channel(
-    ...     channel_name='Nav', 
-    ...     archive_name='Park_2019',
-    ...     python_template_name='default',
+    ...     path_to_mod_file="path/to/mod_file.mod",
+    ...     path_to_python_file='path/to/python_file.py',
+    ...     path_to_python_template='path/to/python_template.py',
     ...     load=True
     ... )
 
@@ -207,6 +207,7 @@ On the :code:`model` level, we can create an ion channel using the :code:`create
     >>> model.add_mechanism(
     ...     channel_name='Nav', 
     ...     archive_name='Park_2019',
+    ...     template_name='default',
     ... )
 
 

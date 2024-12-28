@@ -1,5 +1,14 @@
 Validating models
 ==========================================
 
-Reading SWC files
+Morphometric statistics
+------------------------------------------
+
+Passive properties
+------------------------------------------
+
+Firing patterns
+------------------------------------------
+
+Dendritic non-linearities
 ------------------------------------------

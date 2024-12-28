@@ -45,16 +45,40 @@ For more details, refer to the `SWC specification <https://swc-specification.rea
 Representing morphologies in DendroTweaks
 ---------------------------------------------
 
-In DendroTweaks, morphologies are represented as tree graphs. Each tree consists of nodes that represent the points in the SWC file. The nodes are connected by edges that represent the parent-child relationships between the points. The tree structure allows for easy traversal and manipulation of the morphology.
+In DendroTweaks, neuronal morphologies are represented as tree graphs. 
+A single neuron can be represented in three distinct forms: the SWC tree, the section tree, and the segment tree.
+Each tree is composed of nodes that correspond to points in the SWC file, sections, and segments, respectively.
+The edges in these trees denote the parent-child relationships between the nodes.
+These trees represent three levels of abstraction: geometry (SWC tree), topology (section tree), and spatial discretization (segment tree).
+All three representations are linked to each other, since each section has a reference to its geometry (SWC points) and its segmentation (Segments).
 
-
-.. image:: ../_static/trees.png
-    :width: 80%
+.. table:: Neuronal Morphology Representations
+    :widths: 20 40 40
     :align: center
 
-The :class:`SWCTree` class in DendroTweaks provides methods for creating and working with SWC trees. Below are some examples of how to work with SWC trees in DendroTweaks.
+    +-------------------------+-----------------------------+------------------------------------------------------------+
+    | Abstraction Level       | Representation              | Description                                                |
+    +=========================+=============================+============================================================+
+    | Geometry                | SWC Tree (SWC nodes)        | Represents geometrical properties such as coordinates and  |
+    |                         |                             | radii.                                                     |
+    +-------------------------+-----------------------------+------------------------------------------------------------+
+    | Topology                | Section Tree (sections)     | Represents the parent-child relationships between sections.|
+    +-------------------------+-----------------------------+------------------------------------------------------------+
+    | Spatial discretization  | Segment Tree (segments)     | Represents the discretization of sections into segments.   |
+    +-------------------------+-----------------------------+------------------------------------------------------------+
 
-Shortcut for creating morphology
+The figure below illustrates the relationship between the three representations:
+
+.. figure:: ../_static/trees.png
+    :align: center
+    :width: 80%
+    :alt: Representing morphologies as tree graphs
+
+    *Figure 1: Representing morphologies as tree graphs*
+
+
+
+Creating a morphology from an SWC file
 ------------------------------------------------
 
 DendroTweaks provides a shortcut for creating a morphology from an SWC file that we have already seen in the first :doc:`tutorial</tutorials/tutorial_quickstart>`. You can use the :code:`from_swc` method to create a morphology from an SWC file:
@@ -71,7 +95,84 @@ The trees are then stored in the :code:`model` object for further processing.
         >>> model.swc_tree, model.sec_tree
         <dendrotweaks.morphology.SWCTree at 0x7f8b3b3b3b50>
 
-For more details on working with SWC trees in DendroTweaks, refer to the :doc:`tutorial</tutorials/tutorial_swc>` on refining neuronal morphology.
+We can visualize the tree using the :code:`plot` method.
+
+.. code-block:: python
+
+    fig, ax = plt.subplots(figsize=(8, 8))
+    model.swc_tree.plot(ax, edges=True, projection='XY', 
+                        annotate=False, hightlight=swc_tree.bifurcations)
+
+.. figure:: ../_static/swc_tree.png
+    :align: center
+    :width: 50%
+    :alt: Visualizing the SWC tree
+
+    *Figure 2: Visualizing the SWC tree (SWC nodes — blue, edges - orange, bifurcations - red)*
+
+Nodes and their properties
+--------------------------------
+
+Each node (point) in the SWC tree has the following properties:
+
+.. code-block:: python
+
+    >>> pt = model.swc_tree.pts3d[0]
+    >>> pt.idx, pt.type, pt.x, pt.y, pt.z, pt.r, pt.parent
+    (1, 1, 0.0, 0.0, 0.0, 1.0, -1)
+
+The SWC tree also provides methods to access the parent and children of a node.
+In addition, it provides methods to access the domain of the node and
+calculate the path lenght distance to the root node.
+
+.. code-block:: python
+
+    >>> pt.domain, pt.distance_to_root
+    ('soma', 0.0)
+    
+
+Each section in the section tree has the following properties:
+
+.. code-block:: python
+
+    >>> sec = model.sec_tree.sections[17]
+    >>> sec.idx, sec.type, sec.parent, sec.children
+    (1, 1, None, [2, 3])
+
+The section's geometry can be visualized using the :code:`plot_pts3d` method.
+
+.. code-block:: python
+
+    >>> fig, ax = plt.subplots(2, 2, figsize=(6, 6))
+    >>> sec.plot(ax=ax, plot_parent=True, remove_ticks=True)
+    >>> plt.tight_layout()
+
+.. figure:: ../_static/sec_extended.png
+    :align: center
+    :width: 50%
+    :alt: Visualizing the section tree
+
+    *Figure 3: Visualizing the section tree (section — blue, parent - orange)*
+
+Section tree
+----------------
+
+To visualize the section tree, use the :code:`plot` method.
+
+.. code-block:: python
+
+    >>> fig, ax = plt.subplots(figsize=(8, 8))
+    >>> model.sec_tree.plot(ax=ax, show_points=True, 
+    ...                     show_lines=True, annotate=True)
+
+.. figure:: ../_static/sec_tree.png
+    :align: center
+    :width: 50%
+    :alt: Visualizing the section tree
+
+    *Figure 4: Visualizing the section tree*
+
+For more details on working with neuronal morphologies in DendroTweaks, refer to the :doc:`tutorial</tutorials/tutorial_swc>` on refining neuronal morphology.
 
 Creating the segmentation tree requires us to set the passive properties of the sections. 
 Therefore in the next tutorial we will discuss how we can define properties in our model.
