@@ -1,0 +1,238 @@
+{
+    "TITLE": " Kv_Park_ref",
+    "COMMENT": [
+        "26 Ago 2002 Modification of original channel to allow variable time step and to correct an initialization error.",
+        "    Done by Michael Hines(michael.hines@yale.e) and Ruggero Scorcioni(rscorcio@gmu.edu) at EU Advance Course in Computational Neuroscience. Obidos, Portugal",
+        "kv.mod",
+        "Potassium channel, Hodgkin-Huxley style kinetics",
+        "Kinetic rates based roughly on Sah et al. and Hamill et al. (1991)",
+        "Author"
+    ],
+    "NEURON": {
+        "suffix": "Kv",
+        "useion": [
+            {
+                "ion": "k",
+                "read": [
+                    "ek"
+                ],
+                "write": [
+                    "ik"
+                ]
+            }
+        ],
+        "range": [
+            "gbar",
+            "i",
+            "v12",
+            "q"
+        ]
+    },
+    "UNITS": {
+        "mA": "milliamp",
+        "mV": "millivolt",
+        "S": "siemens",
+        "um": "micron"
+    },
+    "PARAMETER": [
+        {
+            "name": "gbar",
+            "value": 0.0,
+            "unit": "S/cm2"
+        },
+        {
+            "name": "Ra",
+            "value": 0.02,
+            "unit": "/mV/ms"
+        },
+        {
+            "name": "Rb",
+            "value": 0.006,
+            "unit": "/mV/ms"
+        },
+        {
+            "name": "v12",
+            "value": 25,
+            "unit": "mV"
+        },
+        {
+            "name": "q",
+            "value": 9,
+            "unit": "mV"
+        },
+        {
+            "name": "temp",
+            "value": 23,
+            "unit": "degC"
+        },
+        {
+            "name": "q10",
+            "value": 2.3,
+            "unit": "1"
+        }
+    ],
+    "ASSIGNED": [
+        {
+            "name": "v",
+            "unit": "mV"
+        },
+        {
+            "name": "i",
+            "unit": "mA/cm2"
+        },
+        {
+            "name": "ik",
+            "unit": "mA/cm2"
+        },
+        {
+            "name": "gk",
+            "unit": "S/cm2"
+        },
+        {
+            "name": "ek",
+            "unit": "mV"
+        },
+        {
+            "name": "ninf",
+            "unit": "1"
+        },
+        {
+            "name": "ntau",
+            "unit": "ms"
+        },
+        {
+            "name": "tadj",
+            "unit": "1"
+        },
+        {
+            "name": "celsius",
+            "unit": "degC"
+        }
+    ],
+    "STATE": {
+        "n": {
+            "power": 1
+        }
+    },
+    "BREAKPOINT": {
+        "solve_stmt": {
+            "solve": "states",
+            "method": "cnexp"
+        },
+        "statements": [
+            {
+                "assigned_var": "gk",
+                "expression": "(tadj * gbar) * n"
+            },
+            {
+                "assigned_var": "i",
+                "expression": "gk * (v - ek)"
+            },
+            {
+                "assigned_var": "ik",
+                "expression": "i"
+            }
+        ]
+    },
+    "DERIVATIVE": {
+        "name": "states",
+        "func_calls": [
+            {
+                "rates": [
+                    "v"
+                ]
+            }
+        ],
+        "statements": [
+            {
+                "assigned_var": "n",
+                "expression": "(ninf - n) / ntau"
+            }
+        ]
+    },
+    "INITIAL": {
+        "statements": [
+            {
+                "rates": [
+                    "v"
+                ]
+            },
+            {
+                "assigned_var": "n",
+                "expression": "ninf"
+            }
+        ]
+    },
+    "FUNCTION": [
+        {
+            "signature": {
+                "name": "rateconst",
+                "params": [
+                    {
+                        "name": "v",
+                        "unit": "mV"
+                    },
+                    {
+                        "name": "r",
+                        "unit": "/mV/ms"
+                    },
+                    {
+                        "name": "th",
+                        "unit": "mV"
+                    },
+                    {
+                        "name": "q",
+                        "unit": "mV"
+                    }
+                ],
+                "returned_unit": "/ms"
+            },
+            "locals": [],
+            "statements": [
+                {
+                    "assigned_var": "rateconst",
+                    "expression": "(r * (v - th)) / (1 - np.exp((-(v - th) / q)))"
+                }
+            ]
+        }
+    ],
+    "PROCEDURE": [
+        {
+            "signature": {
+                "name": "rates",
+                "params": [
+                    {
+                        "name": "v",
+                        "unit": "mV"
+                    }
+                ]
+            },
+            "locals": [
+                "alpn",
+                "betn"
+            ],
+            "statements": [
+                {
+                    "assigned_var": "tadj",
+                    "expression": "q10 ** ((celsius - temp) / 10)"
+                },
+                {
+                    "assigned_var": "alpn",
+                    "expression": "rateconst(v, Ra, v12, q)"
+                },
+                {
+                    "assigned_var": "betn",
+                    "expression": "rateconst(v, -Rb, v12, -q)"
+                },
+                {
+                    "assigned_var": "nTau",
+                    "expression": "1 / (tadj * (alpn + betn))"
+                },
+                {
+                    "assigned_var": "nInf",
+                    "expression": "alpn / (alpn + betn)"
+                }
+            ]
+        }
+    ]
+}
