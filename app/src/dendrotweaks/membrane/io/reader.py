@@ -1,7 +1,7 @@
 import re
 from typing import List, Dict
 
-class Reader():
+class MODFileReader():
     """
     Reader class for .mod files.
 
@@ -134,6 +134,16 @@ class Reader():
                             for block_name, block_content in self.blocks.items()])
         print(message)
         self.find_unmatched_content()
+
+    def get_blocks(self) -> Dict[str, List[str]]:
+        """
+        Get the blocks of the file.
+
+        Returns:
+            Dict[str, List[str]]: A dictionary with the blocks of the file.
+        """
+        self.split_content_in_blocks()
+        return self.blocks
 
     def _get_block_regex(self, block_name: str) -> List[str]:
         """

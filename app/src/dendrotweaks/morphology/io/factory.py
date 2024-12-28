@@ -37,6 +37,23 @@ class TreeFactory():
 
 
     def create_sec_tree(self, swc_tree: SWCTree, extend: bool = True):
+        """
+        Creates a section tree from an SWC tree.
+
+        Parameters
+        ----------
+        swc_tree : SWCTree
+            The SWC tree to be partitioned into a section tree.
+        extend : bool, optional
+            Whether to extend the sections by adding a copy of the last node from the parent
+            section to the beginning of the section. This ensures continuity between sections.
+            Default is True.
+
+        Returns
+        -------
+        SectionTree
+            The section tree created from the SWC tree.
+        """
 
         sections = self._create_sections(swc_tree, extend)
 
@@ -47,9 +64,10 @@ class TreeFactory():
     def _create_sections(self, swc_tree: SWCTree, extend: bool = True) -> List[Section]:
 
         sections = self._split_to_sections(swc_tree)
+
         if extend and not swc_tree._is_extended:
             nodes_before = len(swc_tree.pts3d)
-            self._extend_sections()
+            self._extend_sections(swc_tree=swc_tree, sections=sections)
             swc_tree._is_extended = True
             nodes_after = len(swc_tree.pts3d)
             print(f'Extended {nodes_after - nodes_before} nodes.')
@@ -64,7 +82,7 @@ class TreeFactory():
 
         bifurcation_children = [
             child for b in swc_tree.bifurcations for child in b.children]
-        bifurcation_children = [swc_tre.root] + bifurcation_children
+        bifurcation_children = [swc_tree.root] + bifurcation_children
         # bifurcation_children = sorted(bifurcation_children,
         #                               key=lambda x: x.idx)
         # Filter out the bifurcation children to enforce the original order
@@ -91,11 +109,11 @@ class TreeFactory():
 
         # Merge the soma into one section if it has 3PS notation
         if swc_tree.soma_notation == '3PS':
-            sections = self.merge_soma(sections, swc_tree.soma_pts3d)
+            sections = self._merge_soma(sections, swc_tree.soma_pts3d)
 
         return sections
 
-    def merge_soma(self, sections: List[Section], soma_pts3d: List[SWCNode]) -> List[Section]:
+    def _merge_soma(self, sections: List[Section], soma_pts3d: List[SWCNode]) -> List[Section]:
         """
         If soma has 3PS notation, merge it into one section.
         """

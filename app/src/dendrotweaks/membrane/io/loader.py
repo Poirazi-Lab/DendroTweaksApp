@@ -1,46 +1,66 @@
-from dendrotweaks.utils import list_folders, list_files
 import os
 from pprint import pprint
 
 class MODFileLoader():
 
     def __init__(self):
-        self._loaded_archives = ['test']
-        self.archives = {}
+        self._loaded_mechnisms = []
+              
+    # LOADING METHODS
 
-
-    def list_archives(self, path_to_data: str = None):
+    def load_mechanism(self, path_to_mod_file: str, recompile=True) -> None:
         """
-        List all available archives in the specified directory.
+        Load a mechanism from the specified mod file.
 
         Parameters
         ----------
-        path_to_data : str
-            The path to the directory with the archives.
+        path_to_mod_file : str
+            The path to the mod file.
         """
-        folders = list_folders(path_to_data)
-        print(f"Available archives in\n{path_to_data}/\n")
+        temp_dir = self._create_temp_dir(path_to_mod_file)
         
-        for idx, folder in enumerate(folders):
-            # Check if the folder is loaded
-            loaded_marker = " [LOADED]" if folder in self._loaded_archives else ""
-            
-            # Determine if this is the last folder
-            folder_prefix = "└──" if idx == len(folders) - 1 else "├──"
-            print(f"{folder_prefix} {folder}/{loaded_marker}")
-            
-            path_to_archive = os.path.join(path_to_data, folder)
-            files = list_files(path_to_archive, extension='.mod')
-            
-            # Print the files in the folder with proper tree structure
-            for i, file in enumerate(files):
-                file_prefix = "└──" if i == len(files) - 1 else "├──"
-                connector = "│" if idx != len(folders) - 1 else " "
-                print(f"{connector}   {file_prefix} {file.split('.')[0]}")
-            
-            # Store the archives
-            self.archives[folder] = [f.split('.')[0] for f in files]
-              
+        if path_to_mod_file in self._loaded_mechnisms:
+            print(f'Mechanism "{path_to_mod_file}" already loaded')
+            return
+        self._loaded_mechnisms.append(path_to_mod_file)
+
+        import neuron
+        from neuron import h
+
+        mechanism_name = path_to_mod_file.split('/')[-1].replace('.mod', '')
+
+        if hasattr(h, mechanism_name):
+            print(f'Mechanism "{mechanism_name}" already loaded')
+            return
+
+        if recompile or not os.path.exists(os.path.join(temp_dir, 'x86_64')):
+            self._compile_files(temp_dir)
+
+        neuron.load_mechanisms(temp_dir)
+        print(f'Loaded mechanism "{mechanism_name}"')
+
+    # HELPER METHODS
+
+    def _compile_files(self, path: str) -> None:
+        """
+        Compile the mod files in the specified directory.
+
+        Parameters
+        ----------
+        path : str
+            The path to the directory with the mod files.
+        """
+
+        if os.path.exists(os.path.join(path, 'x86_64')):
+            import shutil
+            shutil.rmtree(os.path.join(path, 'x86_64'))
+
+        cwd = os.getcwd()
+        os.chdir(path)
+        os.system('nrnivmodl')
+        os.chdir(cwd)
+        print(f'Compiled mod files from "{path}"')
+
     def _create_temp_dir(self, path_to_mod_file: str) -> str:
         """
         Creates a temporary directory for each channel.
@@ -56,68 +76,3 @@ class MODFileLoader():
         temp_dir = tempfile.mkdtemp()
         shutil.copy(path_to_mod_file, temp_dir)
         return temp_dir
-
-    def load_mechanism(self, path_to_mod_file: str) -> None:
-        """
-        Load a mechanism from the specified mod file.
-
-        Parameters
-        ----------
-        path_to_mod_file : str
-            The path to the mod file.
-        """
-        temp_dir = self._create_temp_dir(path_to_mod_file)
-        self.load_archive(temp_dir)
-
-
-    def load_archive(self, path_to_archive, recompile=True):
-        """
-        Load mechanisms from the specified archive.
-
-        Parameters
-        ----------
-        archive : str
-            Name of the archive to load.
-        recompile : bool
-            Whether to recompile the mechanisms if the x86_64 folder is missing.
-        """
-
-        archive_name = path_to_archive.split('/')[-1]
-
-        if archive_name in self._loaded_archives:
-            print(f'Archive "{archive_name}" already loaded')
-            return
-        self._loaded_archives.append(archive_name)
-
-        import neuron
-        from neuron import h
-
-        if all([hasattr(h, name) for name in self.archives[archive_name]]):
-            print(f'Mechanisms already loaded from "{path_to_archive}"')
-            return
-
-        if recompile or not os.path.exists(os.path.join(path_to_archive, 'x86_64')):
-            self._compile_archive(path_to_archive)
-
-        neuron.load_mechanisms(path_to_archive)
-        print(f'Loaded mechanisms from "{path_to_archive}"')
-
-    def _compile_archive(self, path_to_archive):
-        """
-        Compile all mod files in the specified archive using nrnivmodl.
-
-        Parameters
-        ----------
-        archive : str
-            Name of the archive to compile.
-        """
-
-        if os.path.exists(os.path.join(path_to_archive, 'x86_64')):
-            import shutil
-            shutil.rmtree(os.path.join(path_to_archive, 'x86_64'))
-
-        cwd = os.getcwd()
-        os.chdir(path_to_archive)
-        os.system('nrnivmodl')
-        os.chdir(cwd)
-        print(f'Compiled mod files from "{path_to_archive}"')

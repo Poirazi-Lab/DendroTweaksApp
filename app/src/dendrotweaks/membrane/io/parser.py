@@ -12,7 +12,7 @@ from dendrotweaks.membrane.io.grammar import function_block, procedure_block
 from dendrotweaks.membrane.io.ast import AbstracSyntaxTree
 
 
-class Parser():
+class MODFileParser():
     """
     A parser for .mod files that uses a Pyparsing grammar 
     to parse the content of the file.
@@ -44,8 +44,8 @@ class Parser():
 
     # PARSING
 
-    @property
-    def ast(self) -> Dict:
+    
+    def get_ast(self) -> Dict:
         return AbstracSyntaxTree(self._ast)
 
     def parse_block(self, block_name: str, block_content: List[str]) -> List[Dict]:

@@ -6,6 +6,7 @@ Utility functions for dendrotweaks package.
 
 import time
 import numpy as np
+import os
 
 
 def timeit(func):
@@ -78,6 +79,33 @@ def dynamic_import(module_name, class_name):
 
     import sys
     sys.path.append('app/src')
-    print(module_name)
+    print(f"Importing class {class_name} from module {module_name}.py")
     module = import_module(module_name)
     return getattr(module, class_name)
+
+
+def list_folders(path_to_folder):
+    folders = [f for f in os.listdir(path_to_folder)
+            if os.path.isdir(os.path.join(path_to_folder, f))]
+    sorted_folders = sorted(folders, key=lambda x: x.lower())
+    return sorted_folders
+
+    
+def list_files(path_to_folder, extension):
+    files = [f for f in os.listdir(path_to_folder)
+            if f.endswith(extension)]
+    return files
+
+
+def write_file(content, path_to_file):
+    if not os.path.exists(os.path.dirname(path_to_file)):
+        os.makedirs(os.path.dirname(path_to_file))
+    with open(path_to_file, 'w') as f:
+        f.write(content)
+    print(f"Saved content to {path_to_file}")
+
+
+def read_file(path_to_file):
+    with open(path_to_file, 'r') as f:
+        content = f.read()
+    return content

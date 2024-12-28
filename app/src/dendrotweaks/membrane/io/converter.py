@@ -1,5 +1,5 @@
-from dendrotweaks.membrane.io.reader import Reader
-from dendrotweaks.membrane.io.parser import Parser
+from dendrotweaks.membrane.io.reader import MODFileReader
+from dendrotweaks.membrane.io.parser import MODFileParser
 from dendrotweaks.membrane.io.code_generators import PythonCodeGenerator
 
 class MODFileConverter():
@@ -8,8 +8,8 @@ class MODFileConverter():
     """
 
     def __init__(self, config: dict = None):
-        self.reader = Reader()
-        self.parser = Parser()
+        self.reader = MODFileReader()
+        self.parser = MODFileParser()
         self.generator = PythonCodeGenerator()
 
     @property
@@ -47,7 +47,8 @@ class MODFileConverter():
     #     self.generate_python(path_to_template) # generates self.python_content
     #     self.write_file(path_to_python) # writes self.python_content to path_to_python
 
-    def convert(self, path_to_mod, path_to_python, path_to_template, path_to_json=None):
+    def convert(self, path_to_mod_file: str, path_to_python_file: str, 
+                path_to_python_template: str, path_to_json_file:str = None) -> None:
         """ Converts a mod file to a python file.
 
         Parameters
@@ -63,17 +64,18 @@ class MODFileConverter():
         """
 
         print(f"READING")
-        self.reader.read_file(path_to_mod)
+        self.reader.read_file(path_to_mod_file)
         self.reader.preprocess()
-        self.reader.split_content_in_blocks()
+        blocks = self.reader.get_blocks()
         
         print(f"\nPARSING")
-        self.parser.parse(self.reader.blocks)
+        self.parser.parse(blocks)
         self.parser.postprocess()
+        ast = self.parser.get_ast()
         
-        if path_to_json:
-            self.parser.write_file(path_to_json)
+        if path_to_json_file:
+            self.parser.write_file(path_to_json_file)
         
         print(f"\nGENERATING")
-        self.generator.generate(self.parser.ast, path_to_template)
-        self.generator.write_file(path_to_python)
+        self.generator.generate(ast, path_to_python_template)
+        self.generator.write_file(path_to_python_file)

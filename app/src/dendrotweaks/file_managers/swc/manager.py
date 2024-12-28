@@ -19,12 +19,12 @@ from matplotlib.animation import PillowWriter
 
 class SWCManager():
 
-    def __init__(self, path_to_data='data'):
-        self._df = None
-        self.swc_tree = None
-        self.sec_tree = None
+    def __init__(self, path_to_data='data/'):
         self.path_to_data = path_to_data
         self._file_name = None
+        self.df = None
+        self.swc_tree = None
+        self.sec_tree = None
 
     def to_dict(self):
         return {
@@ -33,22 +33,20 @@ class SWCManager():
 
     # FILE MANAGEMENT
 
-    def list_files(self):
-        path_to_swc = os.path.join(self.path_to_data, 'swc')
-        return list_files(path_to_swc, extension='.swc')
+    def list_files(self, path_to_data=None):
+        path_to_data = path_to_data or self.path_to_data
+        return list_files(path_to_data, extension='.swc')
 
     # READ
 
     def read(self, file_name=None):
-
-        if file_name:
-            self._file_name = file_name
-            path_to_file = f'{self.path_to_data}/swc/{file_name}'.replace('//', '/')
-            self.df = pd.read_csv(path_to_file,
-                                  sep=' ',
-                                  header=None,
-                                  comment='#',
-                                  names=['id', 'type', 'x', 'y', 'z', 'r', 'parent_id'])
+        self._file_name = file_name
+        path_to_file = os.path.join(self.path_to_data, file_name)
+        self.df = pd.read_csv(path_to_file,
+                                sep=' ',
+                                header=None,
+                                comment='#',
+                                names=['id', 'type', 'x', 'y', 'z', 'r', 'parent_id'])
 
         if self.df['id'].duplicated().any():
             raise ValueError("The SWC file contains duplicate node ids.")
@@ -90,10 +88,10 @@ class SWCManager():
             else:
                 self.swc_tree.split_to_sections()
 
-            # 3. Merge soma in case of 3PS notation
-            print("Merging soma into a single section...")
-            if len(self.swc_tree._soma_sections) == 3:
-                self.swc_tree.merge_soma()
+            # # 3. Merge soma in case of 3PS notation
+            # print("Merging soma into a single section...")
+            # if len(self.swc_tree._soma_sections) == 3:
+            #     self.swc_tree._merge_soma()
 
         # 4. Shift coordinates to soma center
         if shift:
@@ -119,10 +117,8 @@ class SWCManager():
     # VALIDATE TREES
 
     def validate_swc_tree(self):
-        check_nodes_match_root_subtree(self.swc_tree)
         check_unique_ids(self.swc_tree)
-        check_connections(self.swc_tree)
-        validate_parents(self.swc_tree)
+        validate_connectivity(self.swc_tree)
 
         print("SWC tree validation passed successfully")
         print(f"    is connected:{self.swc_tree.is_connected:2}")
@@ -131,10 +127,8 @@ class SWCManager():
         print(f"    is extended: {self.swc_tree._is_extended:2}")
 
     def validate_sec_tree(self):
-        check_nodes_match_root_subtree(self.sec_tree)
         check_unique_ids(self.sec_tree)
-        check_connections(self.sec_tree)
-        validate_parents(self.sec_tree)
+        validate_connectivity(self.sec_tree)
         validate_node_reference_to_section(self.sec_tree)
 
         print("SEC tree validation passed successfully.")
@@ -155,13 +149,6 @@ class SWCManager():
             ax.scatter(self.df[mask]['x'], self.df[mask]['y'], self.df[mask]['z'], 
                        c=color, s=1, label=f'Type {t}')
         ax.legend()
-
-
-    
-
-
-
-
 
     def plot_3d(self, ax=None, show_points=True, show_lines=True, annotate=False, animate=True, 
                 frames=360, interval=25, save_as_gif=True, gif_filename="animation.gif"):
@@ -243,32 +230,15 @@ class SWCManager():
 
 # Any tree
 
-def check_nodes_match_root_subtree(tree):
-    """
-    Check if the root node is the parent of all other nodes.
-    """
-    tree._nodes == tree.root.subtree
-
 def check_unique_ids(tree):
     node_ids = {node.idx for node in tree._nodes}
     if len(node_ids) != len(tree._nodes):
         raise ValueError("Tree contains duplicate node ids.")
 
-
-def check_connections(tree):
-    if not tree.is_connected:
-        raise ValueError("Tree is not connected.")
-
-
 def validate_parents(tree):
     """
-    Validate the parent-child relationships in the tree.
-
-    1. Check if all children are in the children list of their parent.
-    2. Check if the parent of every child of a node is the node itself.
+    Check if all children are in the children list of their parent.
     """
-
-    # 1. Check if all children are in the children list of their parent.
     for node in tree._nodes:
         parent = node.parent
         if (not parent is None) and (not node in parent.children):
@@ -276,14 +246,24 @@ def validate_parents(tree):
                 f"Node {node} is missing in the children list of its parent {parent}."
             )
 
-    # 2. Check if the parent of every child of a node is the node itself.
+def validate_children(tree):
+    """
+    Check if the parent of every child of a node is the node itself.
+    """
     for node in tree._nodes:
         for child in node.children:
             if child.parent is not node:
                 raise ValueError(
-                    f"Child node {child_node} has an incorrect parent. "
-                    f"The parent is expected to be {node}, but found a different instance {child_node.parent}."
+                    f"Child node {child} has an incorrect parent. "
+                    f"The parent is expected to be {node}, but found a different instance {child.parent}."
                 )
+
+def validate_connectivity(tree):
+    """
+    Validate the parent-child relationships in the tree.
+    """
+    validate_children(tree)
+    validate_parents(tree)
 
 # SEC tree
 

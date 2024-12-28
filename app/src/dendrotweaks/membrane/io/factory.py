@@ -6,23 +6,15 @@ from typing import List, Tuple
 from dendrotweaks.membrane.io.converter import MODFileConverter
 from dendrotweaks.membrane.io.loader import MODFileLoader
 from dendrotweaks.membrane.io.code_generators import NMODLCodeGenerator
-from dendrotweaks.membrane.mechanisms import Mechanism, IonChannel, StandardIonChannel, CaDynamics
-from dendrotweaks.utils import dynamic_import, write_file
+from dendrotweaks.membrane.mechanisms import Mechanism, IonChannel, StandardIonChannel
+from dendrotweaks.membrane.mechanisms import CaDynamics, LeakChannel
+from dendrotweaks.utils import dynamic_import
+from dendrotweaks.utils import list_files, list_folders
 
 
 class MechanismFactory():
     """
     A high-level class that provides a simple interface to work with .mod files.
-
-    Parameters
-    ----------
-    path_to_mod : str
-        The path to the directory with the .mod files.
-    path_to_python : str
-        The path to the directory with the Python files.
-    path_to_template : str
-        The path to the directory with the template files.
-
 
     Examples
     --------
@@ -34,128 +26,138 @@ class MechanismFactory():
     >>> standard_channel = factory.create_standard_channel('Nav')
     """
 
-    def __init__(self, path_to_mod: str, path_to_python: str, path_to_template: str):
-
-        self.path_to_mod = path_to_mod
-        self.path_to_python = path_to_python
-        self.path_to_template = path_to_template
+    def __init__(self):
 
         self.converter = MODFileConverter()
         self.loader = MODFileLoader()
 
         self.class_map = {}
 
-    def _get_path(self, directory: str, filename: str, extension: str = '', archive: str = '') -> str:
-        parts = [directory, archive, f"{filename}.{extension}" if extension else filename]
-        return os.path.join(*filter(None, parts))
+    # LOADING METHODS
 
-    def _get_mod_path(self, mechanism_name: str, archive_name: str = '') -> str:
-        return self._get_path(self.path_to_mod, mechanism_name, 'mod', archive_name)
+    # def load_mechanism(self, mechanism_name: str, archive_name: str = '') -> None:
+    #     """
+    #     Load a mechanism from the specified mod file.
 
-    def _get_python_path(self, mechanism_name: str, archive_name: str = '') -> str:
-        return self._get_path(self.path_to_python, mechanism_name, 'py', archive_name)
+    #     Parameters
+    #     ----------
+    #     mechanism_name : str
+    #         The name of the mechanism.
+    #     archive_name : str
+    #         The name of the archive.
+    #     """
+    #     mod_path = self._get_mod_path(mechanism_name, archive_name)
+    #     self.loader.load_mechanism(mod_path)
 
-    def _get_template_path(self, template_name: str, extension: str = 'jinja') -> str:
-        return self._get_path(self.path_to_template, template_name, extension)
+    # FACTORY METHODS
 
-    def _register_mechanism(self, path_to_python: str):
+    def _register_mechanism(self, path_to_python_file: str):
         """
         Registers a mechanism in the class map for later instantiation.
 
         Parameters
         ----------
-        path_to_python : str
+        path_to_python_file : str
             The path to the Python file.
         """
-        class_name, module_name, package_path = self._get_module_info(path_to_python)
+        class_name, module_name, package_path = self._get_module_info(path_to_python_file)
         print(f"Registering {class_name} from {module_name} in {package_path}")
-        sys.path.append(package_path)
+        if not package_path in sys.path:
+            sys.path.append(package_path)
         MechanismClass = dynamic_import(module_name, class_name)
         self.class_map[class_name] = MechanismClass
 
-    def list_archives(self):
-        self.loader.list_archives(self.path_to_mod)
-
-    def _get_module_info(self, path_to_python: str) -> Tuple[str, str, str]:
-        class_name = path_to_python.split('/')[-1].replace('.py', '')
+    def _get_module_info(self, path_to_python_file: str) -> Tuple[str, str, str]:
+        class_name = os.path.basename(path_to_python_file).replace('.py', '')
         module_name = class_name
-        package_path = '/'.join(path_to_python.split('/')[:-1])
+        package_path = os.path.dirname(path_to_python_file)
         return class_name, module_name, package_path
 
-    def _instantiate_mechanism(self, name) -> Mechanism:
-        return self.class_map[name]()
+    def _instantiate_mechanism(self, class_name) -> Mechanism:
+        return self.class_map[class_name]()
             
-    def create_channel(self, channel_name: str, archive_name: str,
-                       python_template_name: str, load: bool = True) -> IonChannel:
+    def create_channel(self, path_to_mod_file: str,
+                       path_to_python_file: str,
+                       path_to_python_template: str, 
+                       load: bool = True, 
+                       recompile: bool = True) -> IonChannel:
         """
         Creates a channel from a .mod file.
 
         Parameters
         ----------
-        channel_name : str
-            The name of the channel.
-        python_template_name : str
-            The name of the template file to generate the Python code.
+        path_to_mod_file : str
+            The path to the .mod file.
+        path_to_python_file : str
+            The path to the Python file.
+        path_to_python_template : str
+            The path to the Python template file.
         load : bool
             Whether to load the channel in NEURON. The default is True.
         """
-        mod_path = self._get_mod_path(channel_name, archive_name)
-        python_path = self._get_python_path(channel_name, archive_name)
-        template_path = self._get_template_path(python_template_name, extension='py')
 
         # Convert mod to python
-        self.converter.convert(mod_path, python_path, template_path)
+        self.converter.convert(path_to_mod_file, 
+                               path_to_python_file, 
+                               path_to_python_template)
 
         # Register mechanism
-        self._register_mechanism(python_path)
+        self._register_mechanism(path_to_python_file)
 
         # Instantiate mechanism
+        class_name = os.path.basename(path_to_python_file).replace('.py', '')
         channel = self._instantiate_mechanism(channel_name)
 
         # Load mechanism
         if load:
-            self.loader.load_mechanism(mod_path)
+            self.loader.load_mechanism(path_to_mod_file, recompile=recompile)
 
         return channel
     
-    def create_standard_channel(self, channel_name: str, 
-                                archive_name: str,
-                                python_template_name: str, 
-                                mod_template_name: str = 'standard_channel',
-                                load: bool = True) -> StandardIonChannel:
+    def create_standard_channel(self, path_to_mod_file: str,
+                                path_to_python_file: str,
+                                path_to_python_template: str,
+                                path_to_mod_template: str,
+                                path_to_standard_mod_file: str,
+                                load: bool = True, 
+                                recompile: bool = True) -> StandardIonChannel:
         """
         Creates a standardized channel and fits it to the data of the unstandardized channel.
 
         Parameters
         ----------
-        channel_name : str
-            The name of the channel.
-        python_template_name : str
-            The name of the template file to generate the Python code.
-        mod_template_name : str
-            The name of the template file to generate the .mod file. The default is 'standard_channel'.
+        path_to_mod_file : str
+            The path to the .mod file.
+        path_to_python_file : str
+            The path to the Python file.
+        path_to_python_template : str
+            The path to the Python template file.
+        path_to_mod_template : str
+            The path to the .mod template file.
         load : bool
             Whether to load the standardized channel in NEURON. The default is True.
         """
         # Check if the unstandardized mechanism is already loaded
-        if channel_name not in self.class_map:
-            channel = self.create_channel(channel_name, python_template_name, load=False)
+        class_name = os.path.basename(path_to_python_file).replace('.py', '')
+        if class_name not in self.class_map:
+            channel = self.create_channel(path_to_mod_file,
+                                          path_to_python_file,
+                                          path_to_python_template,
+                                          load=False, recompile=False)
         else:
-            channel = self._instantiate_mechanism(channel_name)
+            channel = self._instantiate_mechanism(class_name)
 
         # Instantiate the standard channel
         standard_channel = self._standardize(channel)
 
         # Export the standardized mechanism
         generator = NMODLCodeGenerator()
-        mod_path = self._get_mod_path(f"s{channel_name}")
-        template_path = self._get_template_path(mod_template_name, extension='mod')
-        content = generator.generate(standard_channel, template_path)
-        generator.write_file(mod_path)
+        content = generator.generate(standard_channel, path_to_mod_template)
+        generator.write_file(path_to_standard_mod_file)
 
         # Load the standardized mechanism
         if load: 
-            self.loader.load_mechanism(mod_path)
+            self.loader.load_mechanism(path_to_standard_mod_file, recompile=True)
 
         return standard_channel
 
@@ -185,7 +187,6 @@ class MechanismFactory():
 
         return standard_channel
 
-    
     def create_ca_dynamics(self, name) -> CaDynamics:
         """
         Create a CaDynamics mechanism.
@@ -196,3 +197,16 @@ class MechanismFactory():
             The name of the mechanism.
         """
         return CaDynamics(name=name)
+
+    def create_leak_channel(self, path_to_mod_file, load=True, recompile=False) -> StandardIonChannel:
+        """
+        Create a leak channel.
+
+        Parameters
+        ----------
+        name : str
+            The name of the channel.
+        """
+        if load:
+            self.loader.load_mechanism(path_to_mod_file, recompile=recompile)
+        return LeakChannel()
