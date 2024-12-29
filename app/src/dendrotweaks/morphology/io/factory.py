@@ -208,4 +208,51 @@ class TreeFactory():
         seg_tree = SegmentTree(segments)
 
         return seg_tree
+
+    def _create_segments(self, sec_tree) -> List[Segment]:
+
+        """
+        Build the segment tree using the section tree.
+        """
+        # self.set_geom_nseg(d_lambda, f)
+
+        segments = []  # To store Segment objects
+
+        def add_segments(sec, parent_idx, idx_counter):
+            segs = {seg: idx + idx_counter for idx, seg in enumerate(sec._ref)}
+
+            sec.segments = []
+            # Add each segment of this section as a Segment object
+            for seg, idx in segs.items():
+                # Create a Segment object with the parent index
+                segment = Segment(
+                    idx=idx, parent_idx=parent_idx, neuron_seg=seg, section=sec)
+                segments.append(segment)
+                sec.segments.append(segment)
+
+                # Update the parent index for the next segment in this section
+                parent_idx = idx
+
+            # Update idx_counter for the next section
+            idx_counter += len(segs)
+
+            # Recursively add child sections
+            for child in sec.children:
+                # IMPORTANT: This is needed since 0 and 1 segments are not explicitly
+                # defined in the section segments list
+                if child._ref.parentseg().x == 1:
+                    new_parent_idx = list(segs.values())[-1]
+                elif child._ref.parentseg().x == 0:
+                    new_parent_idx = list(segs.values())[0]
+                else:
+                    new_parent_idx = segs[child._ref.parentseg()]
+                # Recurse for the child section
+                idx_counter = add_segments(child, new_parent_idx, idx_counter)
+
+            return idx_counter
+
+        # Start with the root section of the sec_tree
+        add_segments(sec_tree.root, parent_idx=-1, idx_counter=0)
+
+        return segments
         

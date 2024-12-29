@@ -58,3 +58,7 @@ class SegmentTree(Tree):
 
     def __init__(self, segments: list[Segment]) -> None:
         super().__init__(segments)
+
+    @property
+    def segments(self):
+        return self._nodes

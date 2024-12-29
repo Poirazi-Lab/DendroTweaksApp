@@ -6,6 +6,8 @@ from neuron import h
 
 from dendrotweaks.morphology.trees import Node, Tree
 
+from bisect import bisect_left
+
 class Section(Node):
     """
     A set of nodes with a relation on the set. A path.
@@ -29,6 +31,29 @@ class Section(Node):
         if self._ref is None:
             raise ValueError('Section is not referenced in NEURON.')
         return self._ref(x)
+
+    # def __call__(self, x: float):
+    #     """
+    #     Return the Segment at a given position `x` in [0, 1].
+
+    #     Parameters
+    #     ----------
+    #     x : float
+    #         The position along the section's normalized length [0, 1].
+
+    #     Returns
+    #     -------
+    #     Segment
+    #         The custom Segment object corresponding to the location `x`.
+    #     """
+    #     if self._ref is None:
+    #         raise ValueError('Section is not referenced in NEURON.')
+    #     if not (0.0 <= x <= 1.0):
+    #         raise ValueError('Location x must be in the range [0, 1].')
+        
+    #     idx = bisect_left(self.seg_borders, x) - 1
+    #     return self.segments[max(0, idx)]
+
 
     def __iter__(self):
         """
@@ -84,6 +109,13 @@ class Section(Node):
                 for i in range(1, self._ref.nseg + 1)]) * self._ref.L).tolist()
 
     @property
+    def seg_borders(self):
+        if self._ref is None:
+            raise ValueError('Section is not referenced in NEURON.')
+        nseg = int(self._ref.nseg)
+        return [i / nseg for i in range(nseg + 1)]
+
+    @property
     def distances(self):
         dx = np.diff(self.xs)
         dy = np.diff(self.ys)
@@ -97,7 +129,7 @@ class Section(Node):
         distances = np.cumsum(distances)
 
         distances = np.insert(distances, 0, 0)
-        return distances.tolist()
+        return distances
         # return distances - distances[0]
 
     @property
@@ -128,7 +160,8 @@ class Section(Node):
                 self._ref.connect(self.parent._ref(1))
         # Add 3D points to the section
         for pt in self.pts3d:
-            diam = round(2*pt.r, 2)
+            diam = 2*pt.r
+            diam = round(diam, 16)
             self._ref.pt3dadd(pt.x, pt.y, pt.z, diam)
 
     def create_JAXLEY_section(self):
@@ -183,7 +216,8 @@ class Section(Node):
 
     # PLOTTING METHODS
 
-    def plot_pts3d(self, ax=None, plot_radii=True, plot_parent=True, color='C0'):
+    def plot(self, ax=None, plot_parent=True, color='C0', 
+             set_aspect=True, remove_ticks=False):
         """
         Plot the nodes in the section.
         """
@@ -191,48 +225,65 @@ class Section(Node):
             fig, ax = plt.subplots(2, 2)
 
         marker_style = 'o-' if plot_parent else 'o-'
-        ax[0][0].plot(self.xs, self.zs, marker_style, color=color, fillstyle='full' if plot_parent else 'none')
-        ax[0][1].plot(self.ys, self.zs, marker_style, color=color, fillstyle='full' if plot_parent else 'none')
-        ax[1][0].plot(self.xs, self.ys, marker_style, color=color, fillstyle='full' if plot_parent else 'none')
-        ax[0][0].set_title('XZ')
-        ax[0][1].set_title('YZ')
-        ax[1][0].set_title('XY')
-        for a in ax:
-            for b in a:
-                b.set_aspect('equal')
-        if plot_radii:
-            self.plot_radii(ax[1][1])
-        else:
-            ax[1][1].axis('off')
-        plt.suptitle(f'{self.idx} - {self.domain}')
+        titles = ['XZ', 'YZ', 'XY']
+        coords = [(self.xs, self.zs), (self.ys, self.zs), (self.xs, self.ys)]
+        labels = [('X', 'Z'), ('Y', 'Z'), ('X', 'Y')]
 
-        if plot_parent and self.parent:
-            self.parent.plot_pts3d(ax=ax, plot_radii=plot_radii, plot_parent=False, color='C1')
+        for i, (coord, title, label) in enumerate(zip(coords, titles, labels)):
+            row, col = divmod(i, 2)
+            ax[row][col].plot(*coord, marker_style, color=color, fillstyle='full' if plot_parent else 'none')
+            ax[row][col].set_title(title)
+            ax[row][col].set_xlabel(label[0])
+            ax[row][col].set_ylabel(label[1])
+            if set_aspect:
+                ax[row][col].set_aspect('equal')
+            if remove_ticks:
+                ax[row][col].set_xticks([])
+                ax[row][col].set_yticks([])
 
-        return ax
 
-    def plot_radii(self, ax=None):
+        self.plot_radii(ax[1][1], plot_parent=plot_parent)
+
+
+        if plot_parent:
+            plt.suptitle(f'{self.idx} - {self.domain}')
+            if self.parent:
+                self.parent.plot(ax=ax, plot_parent=False, color='C1')
+
+        plt.tight_layout()
+
+    def plot_radii(self, ax=None, plot_parent=True):
         """
         Plot the radii in the section.
         """
         if ax is None:
             fig, ax = plt.subplots(figsize=(10, 5))
 
-        ax.plot(self.distances, self.radii, 'o-', label='SWC radii')
+        if plot_parent and self.parent:
+            child_to_parent_distance = np.sqrt(
+                (self.pts3d[0].x - self.parent.pts3d[-1].x)**2 +
+                (self.pts3d[0].y - self.parent.pts3d[-1].y)**2 +
+                (self.pts3d[0].z - self.parent.pts3d[-1].z)**2
+            )
+            distances = self.distances + child_to_parent_distance
+        else: 
+            distances = self.distances - self.distances[-1]
 
-        avg_rs = [seg.diam/2 for seg in self._ref]
+        ax.plot(distances, self.radii, 'o-', label='SWC radii', fillstyle='full' if plot_parent else 'none')
 
-        bar_width = [self._ref.L / self._ref.nseg] * self._ref.nseg
+        if self._ref:
+            avg_rs = [seg.diam / 2 for seg in self._ref]
+            bar_width = [self._ref.L / self._ref.nseg] * self._ref.nseg
+            if plot_parent and self.parent:
+                seg_centers = np.array(self.seg_centers) + child_to_parent_distance
+            else: 
+                seg_centers = np.array(self.seg_centers) - self.distances[-1]
 
-        ax.bar(self.seg_centers, avg_rs, width=bar_width,
-               edgecolor='white', color='C1', label='Segment radii')
+            ax.bar(seg_centers, avg_rs, width=bar_width, edgecolor='white', color='C1', label='Segment radii')
 
         ax.set_title('Radius')
-        ax.set_aspect('auto')
-        ax.set_ylim(0, max(self.radii) + 1/10 * max(self.radii))
-        ax.legend()
+        ax.set_ylim(0, max(self.radii) + 0.1 * max(self.radii))
 
-        return ax
 
 
 class SectionTree(Tree):
@@ -290,16 +341,19 @@ class SectionTree(Tree):
         ax.set_xlabel('Section ID')
         ax.set_ylabel('Parent ID')
 
-    def plot_sections(self, ax=None, show_points=False, show_lines=True, 
-                      annotate=False):
-
+    def plot(self, ax=None, show_points=False, show_lines=True, 
+                      annotate=False, projection='XY'):
         if ax is None:
             fig, ax = plt.subplots(figsize=(10, 10))
 
+        x_attr, y_attr = projection[0], projection[1]
+
         for sec in self.sections:
-                
-            xs = [pt.x for pt in sec.pts3d]
-            ys = [pt.y for pt in sec.pts3d]
+            coords = {'X': [pt.x for pt in sec.pts3d],
+                  'Y': [pt.y for pt in sec.pts3d],
+                  'Z': [pt.z for pt in sec.pts3d]}
+            xs = coords[x_attr]
+            ys = coords[y_attr]
             if show_points:
                 ax.plot(xs, ys, '.', color=plt.cm.jet(
                     1-sec.idx/len(self.sections)), markersize=5)
@@ -312,6 +366,8 @@ class SectionTree(Tree):
                 ax.annotate(f'{sec.idx}', (np.mean(
                     xs), np.mean(ys)), fontsize=8)
                 ax.annotate(f'{sec.idx}', (np.mean(xs), np.mean(ys)), fontsize=8,
-                            bbox=dict(facecolor='white', edgecolor='black', boxstyle='round,pad=0.3'))
+                        bbox=dict(facecolor='white', edgecolor='black', boxstyle='round,pad=0.3'))
 
+        ax.set_xlabel(projection[0])
+        ax.set_ylabel(projection[1])
         ax.set_aspect('equal')

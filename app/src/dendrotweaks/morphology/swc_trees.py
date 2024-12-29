@@ -298,9 +298,9 @@ class SWCTree(Tree):
 
     # PLOTTING METHODS
 
-    def plot_points(self, ax=None, edges=True, 
-                    annotate=False, projection='XY', 
-                    hightlight=None):
+    def plot(self, ax=None, edges=True, 
+             annotate=False, projection='XY', 
+             hightlight=None):
 
         if ax is None:
             fig, ax = plt.subplots(figsize=(10, 10))
@@ -333,30 +333,30 @@ class SWCTree(Tree):
         ax.set_ylabel(projection[1])
         ax.set_aspect('equal')
 
-    def plot_sections(self, ax=None, show_points=False, show_lines=True, 
-                      annotate=False):
+    # def plot_sections(self, ax=None, show_points=False, show_lines=True, 
+    #                   annotate=False):
 
-        if not self.is_sectioned:
-            raise ValueError('Tree is not sectioned. Use split_to_sections() method.')
+    #     if not self.is_sectioned:
+    #         raise ValueError('Tree is not sectioned. Use split_to_sections() method.')
 
-        if ax is None:
-            fig, ax = plt.subplots(figsize=(10, 10))
+    #     if ax is None:
+    #         fig, ax = plt.subplots(figsize=(10, 10))
 
-        for sec in self._sections:
-            xs = [pt.x for pt in sec.pts3d]
-            ys = [pt.y for pt in sec.pts3d]
-            if show_points:
-                ax.plot(xs, ys, '.', color=plt.cm.jet(
-                    1-sec.idx/len(self._sections)), markersize=5)
-            if show_lines:
-                ax.plot(xs, ys, color=plt.cm.jet(
-                    1-sec.idx/len(self._sections)))
+    #     for sec in self._sections:
+    #         xs = [pt.x for pt in sec.pts3d]
+    #         ys = [pt.y for pt in sec.pts3d]
+    #         if show_points:
+    #             ax.plot(xs, ys, '.', color=plt.cm.jet(
+    #                 1-sec.idx/len(self._sections)), markersize=5)
+    #         if show_lines:
+    #             ax.plot(xs, ys, color=plt.cm.jet(
+    #                 1-sec.idx/len(self._sections)))
 
-            # annotate the section index
-            if annotate:
-                ax.annotate(f'{sec.idx}', (np.mean(
-                    xs), np.mean(ys)), fontsize=8)
-                ax.annotate(f'{sec.idx}', (np.mean(xs), np.mean(ys)), fontsize=8,
-                            bbox=dict(facecolor='white', edgecolor='black', boxstyle='round,pad=0.3'))
+    #         # annotate the section index
+    #         if annotate:
+    #             ax.annotate(f'{sec.idx}', (np.mean(
+    #                 xs), np.mean(ys)), fontsize=8)
+    #             ax.annotate(f'{sec.idx}', (np.mean(xs), np.mean(ys)), fontsize=8,
+    #                         bbox=dict(facecolor='white', edgecolor='black', boxstyle='round,pad=0.3'))
 
-        ax.set_aspect('equal')
+    #     ax.set_aspect('equal')
