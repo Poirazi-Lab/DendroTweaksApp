@@ -1,7 +1,7 @@
 from typing import List
-from dendrotweaks.morphology.sec_trees import Section
 from neuron import h
 import numpy as np
+from dendrotweaks.morphology.sec_trees import Section
 
 class Synapse():
     """
@@ -9,220 +9,83 @@ class Synapse():
 
     Parameters
     ----------
+    syn_type : str
+        The type of synapse to create e.g. 'AMPA', 'NMDA', 'GABA'.
     sec : Section
         The section of the neuron where the synapse is located.
     loc : float
         The location on the section where the synapse is placed, ranging from 0 to 1.
 
-    Attributes
-    ----------
-    sec : Section
-        The section of the neuron where the synapse is located.
-    sec_idx : int
-        The index of the section.
-    loc : float
-        The location on the section where the synapse is placed.
-    _ref_syn : object, optional
-        Reference to the NEURON synapse object.
-    _ref_stim : object, optional
-        Reference to the NEURON stimulus object.
-    _ref_con : object, optional
-        Reference to the NEURON connection object.
     """
 
-    def __init__(self, sec: Section, loc: float) -> None:
+    def __init__(self, syn_type: str, sec: Section, loc: float) -> None:
         """
-        Create a new synapse object.
-
-        Parameters:
-        ----------
-        sec : Section
-            The section of the neuron where the synapse is located.
-        loc : float
-            The location on the section where the synapse is placed, ranging from
-
-        Returns:
-        None
+        Creates a new synapse object.
         """
-
+        self.Model = getattr(h, syn_type)
         self.sec = sec
         self.sec_idx = sec.idx
         self.loc = loc
 
-        self._ref_syn = None
+        self._ref_syn = self.Model(self.seg)
         self._ref_stim = None
         self._ref_con = None
 
-
-class Population():
-    """
-    A population of "virtual" presynaptic neurons.
-    """
-
-    def __init__(self, name: str, sections: List[Section], N: int, syn_type: str) -> None:
-
-        self.name = name
-        self.sections = sections
-        self.syn_type = syn_type
-        self.Model = getattr(h, syn_type)
-
-        self.N = N
-
-        self.synapses = {}
-        self.n_per_sec = {sec.idx: 0 for sec in sections}
-
-        self._rate = 1
-        self._noise = 1
-        self._start = 100
-        self._end = 200
-        self._weight = 1
-        self.delay = 0
-
-        self._gmax = 0.001
-        self._tau_rise = 0.2
-        self._tau_decay = 1.4
-        self._e = 0
-        self._gamma = 0.062
-        self._mu = 0.28
-
     @property
-    def rate(self):
-        return self._rate
+    def seg(self):
+        return self.sec._ref(self.loc)
 
-    @property
-    def noise(self):
-        return self._noise
+    def __repr__(self):
+        return f"<Synapse(sec[{self.sec_idx}]({self.loc:.2f}))>"
 
-    @property
-    def start(self):
-        return self._start
+    def _clear_stim(self):
+        self._ref_stim[0] = None
+        self._ref_stim[1] = None
+        self._ref_stim.pop(0)
+        self._ref_stim.pop(0)
+        self._ref_stim = None
 
-    @property
-    def end(self):
-        return self._end
+    def create_stim(self, **kwargs):
+        """
+        Creates a stimulus (NetStim) for the synapse.
 
-    @property
-    def weight(self):
-        return self._weight
+        Parameters
+        ----------
+        kwargs : dict
+            Keyword arguments for the create_spike_times function.
+        """
 
-    @weight.setter
-    def weight(self, value):
-        self._weight = value
-        for syns in self.synapses.values():
-            for syn in syns:
-                syn._ref_con.weight[0] = value
+        if self._ref_stim is not None:
+            self._clear_stim()
 
-    @property
-    def gmax(self):
-        return self._gmax
-
-    @gmax.setter
-    def gmax(self, value):
-        self._gmax = value
-        for syns in self.synapses.values():
-            for syn in syns:
-                syn._ref_syn.gmax = value
-
-    @property
-    def tau_rise(self):
-        return self._tau_rise
-
-    @property
-    def tau_decay(self):
-        return self._tau_decay
-
-    @property
-    def e(self):
-        return self._e
-
-    @property
-    def gamma(self):
-        return self._gamma
-
-    @property
-    def mu(self):
-        return self._mu
-
-    def _calculate_n_per_sec(self):
-        """Assigns each section a random number of synapses 
-        so that the sum of all synapses is equal to N synapses.
-        returns a dict {sec:n_syn}"""
-        self.n_per_sec = {sec.idx: 0 for sec in self.sections}
-        for i in range(self.N):
-            sec = np.random.choice(self.sections)
-            self.n_per_sec[sec.idx] += 1
-
-    def assign_sec_and_loc(self):
-        self.synapses = {}
-        self._calculate_n_per_sec()
-        for sec in self.sections:
-            n_per_sec = self.n_per_sec[sec.idx]
-            # assign a random location between 0 and 1
-            locs = np.round(np.random.rand(n_per_sec), decimals=2)
-            self.synapses[sec.idx] = [Synapse(sec, loc) for loc in locs]
-
-    def create_and_reference(self):
-        for syns in self.synapses.values():
-            for syn in syns:
-                seg = syn.sec._ref(syn.loc)
-
-                syn._ref_syn = self.Model(seg)
-                # syn._ref_syn.gmax = self._gmax
-
-                syn._ref_stim = self._create_vecstim()
-
-                syn._ref_con = h.NetCon(syn._ref_stim[0],
-                                        syn._ref_syn,
-                                        0,
-                                        self.delay,
-                                        self.weight)
-
-    def _create_vecstim(self):
-
-        spike_times = create_spike_times(rate=self.rate,
-                                         noise=self.noise,
-                                         duration=self.end - self.start,
-                                         delay=self.start)
+        spike_times = create_spike_times(**kwargs)
         spike_vec = h.Vector(spike_times)
         stim = h.VecStim()
         stim.play(spike_vec)
 
-        return [stim, spike_vec]
+        self._ref_stim = [stim, spike_vec]
 
-    def to_dict(self):
-        return {
-            'population': {
-                'name': self.name,
-                'input_params': {
-                    'rate': self.rate,
-                    'noise': self.noise,
-                    'start': self.start,
-                    'end': self.end,
-                    'weight': self.weight,
-                    'delay': self.delay,
-                },
-                'kinetic_params': {
-                    'gmax': self.gmax,
-                    'tau_rise': self.tau_rise,
-                    'tau_decay': self.tau_decay,
-                    'e': self.e,
-                    'gamma': self.gamma,
-                    'mu': self.mu,
-                },
-                'syn_type': self.syn_type,
-                'synapses': self._synapses_to_dict(),
-            }
-        }
+    def _clear_con(self):
+        self._ref_con = None
 
-    def _synapses_to_dict(self):
-        synapses_list = []
-        for sec in self.sections:
-            if self.synapses[sec.idx]:
-                synapses_list.append({
-                    'sec_idx': sec.idx,
-                    'locs': [syn.loc for syn in self.synapses[sec.idx]]
-                })
-        return synapses_list
+    def create_con(self, delay, weight):
+        """
+        Creates a connection (NetCon) between the stimulus and the synapse.
+
+        Parameters
+        ----------
+        delay : int
+            The delay of the connection, in ms.
+        weight : float
+            The weight of the connection.
+        """
+        if self._ref_con is not None:
+            self._clear_con()
+        self._ref_con = h.NetCon(self._ref_stim[0],
+                                 self._ref_syn,
+                                 0,
+                                 delay,
+                                 weight)
 
 
 def create_spike_times(rate=1, noise=1, duration=300, delay=0):
