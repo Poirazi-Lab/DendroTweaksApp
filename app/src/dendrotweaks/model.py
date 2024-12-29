@@ -1,17 +1,23 @@
-from typing import List
+from typing import List, Union, Callable
+import os
 
 from dendrotweaks.morphology.swc_trees import SWCTree
+from dendrotweaks.morphology.sec_trees import Section, SectionTree
 from dendrotweaks.morphology.seg_trees import Segment, SegmentTree
 from dendrotweaks.simulators import NEURONSimulator
 from dendrotweaks.membrane.groups import SectionGroup
 from dendrotweaks.membrane.mechanisms import Mechanism, LeakChannel
-from dendrotweaks.file_managers import SWCManager, MODManager
+from dendrotweaks.membrane.io import MechanismFactory
+from dendrotweaks.membrane.io import MODFileLoader
+from dendrotweaks.morphology.io import TreeFactory
 from dendrotweaks.stimuli.iclamps import IClamp
 from dendrotweaks.utils import calculate_lambda_f, dynamic_import
 
 from collections import OrderedDict, defaultdict
 
 # from .logger import logger
+
+from dendrotweaks.path_manager import PathManager
 
 class Model():
     """
@@ -27,35 +33,6 @@ class Model():
         The path to the data files where swc and mod files are stored.
     group_by : str
         The grouping method to use (either 'segments' or 'sections').
-
-    Attributes
-    ----------
-    name : str
-        The name of the model.
-    simulator_name : str
-        The name of the simulator to use (either 'NEURON' or 'Jaxley').
-    path_to_data : str
-        The path to the data files where swc and mod files are stored.
-    group_by : str
-        The grouping method to use (either 'segments' or 'sections').
-    swc_tree : SWCTree
-        The SWC tree of the model.
-    sec_tree : SWCTree
-        The section tree of the model.
-    seg_tree : SegmentTree
-        The segment tree of the model.
-    mechanisms : dict
-        The mechanisms of the model.
-    parameters : dict
-        The parameters of the model.
-    groups : dict
-        The groups of the model.
-    iclamps : dict
-        The current clamps of the model.
-    synapses : dict
-        The synapses of the model.
-    simulator : Simulator
-        The simulator to use.
     """
 
     def __init__(self, name: str,
@@ -65,13 +42,13 @@ class Model():
 
         # Metadata
         self.name = name
-        self.path_to_data = path_to_data
+        self.path_manager = PathManager(path_to_data)
         self.simulator_name = simulator_name
-        self._group_by = group_by
 
         # File managers
-        self.swcm = SWCManager(path_to_data)
-        self.modm = MODManager(simulator_name, path_to_data)
+        self.tree_factory = TreeFactory()
+        self.mechanism_factory = MechanismFactory()
+        self.mod_loader = MODFileLoader()
 
         # Morphology
         self.swc_tree = None
@@ -88,7 +65,7 @@ class Model():
         self.seg_tree = None
 
         # Stimuli
-        self.iclamps = {}
+        self._iclamps = defaultdict(dict)
         self.synapses = {}
 
         # Simulator
@@ -101,7 +78,7 @@ class Model():
                 'Simulator name not recognized. Use NEURON or Jaxley.')
 
     # -----------------------------------------------------------------------
-    # PARAMETERS
+    # PROPERTIES
     # -----------------------------------------------------------------------
 
     @property
@@ -120,23 +97,13 @@ class Model():
                 paramters_to_groups[parameter_name].append(group.name)
         return dict(paramters_to_groups)
 
+    @property
+    def iclamps(self):
+        return [iclamp for sec in self._iclamps.values() for iclamp in sec.values()]
+
     # -----------------------------------------------------------------------
     # METADATA
     # -----------------------------------------------------------------------
-
-    @property
-    def group_by(self):
-        return self._group_by
-
-    @group_by.setter
-    def group_by(self, value):
-        if value not in ['segments', 'sections']:
-            raise ValueError(
-                'group_by must be either "segments" or "sections"')
-        if len(self.groups) > 0:
-            raise ValueError(
-                'Cannot change group_by after groups have been added')
-        self._group_by = value
 
     def info(self):
         """
@@ -144,7 +111,7 @@ class Model():
         """
         info_str = (
             f"Model: {self.name}\n"
-            f"Path to data: {self.path_to_data}\n"
+            f"Path to data: {self.path_manager.path_to_data}\n"
             f"Simulator: {self.simulator_name}\n"
             f"Groups: {len(self.groups)}\n"
             f"Mechanisms: {len(self.mechanisms)}\n"
@@ -168,22 +135,17 @@ class Model():
             The name of the SWC file to read.
         """
         self.name = file_name.split('.')[0]
-        self.swcm.read(file_name)
+        path_to_swc_file = self.path_manager.get_file_path('swc', file_name, extension='swc')
+        swc_tree = self.tree_factory.create_swc_tree(path_to_swc_file)
+        swc_tree.sort()
+        swc_tree.shift_coordinates_to_soma_center()
+        swc_tree.align_apical_dendrite()
 
-        self.build_swc_tree()
-        self.build_sec_tree()
+        sec_tree = self.tree_factory.create_sec_tree(swc_tree)
 
-    def build_swc_tree(self):
-        self.swcm.build_swc_tree()
-        self.swcm.postprocess_swc_tree(sort=True, 
-                                       split=True, 
-                                       shift=True, 
-                                       extend=True)
-        self.swc_tree = self.swcm.swc_tree
+        self.swc_tree = swc_tree
+        self.sec_tree = sec_tree
 
-    def build_sec_tree(self):
-        self.swcm.build_sec_tree()
-        self.sec_tree = self.swcm.sec_tree
 
     def create_and_reference_sections_in_simulator(self):
         """
@@ -195,6 +157,12 @@ class Model():
         n_sec = len([sec._ref for sec in self.sec_tree.sections 
                     if sec._ref is not None])
         print(f'{n_sec} sections created.')
+
+        self.seg_tree = self.tree_factory.create_seg_tree(self.sec_tree)
+
+    def get_sections(self, filter_function):
+        """Filter sections using a lambda function."""
+        return [sec for sec in self.sec_tree.sections if filter_function(sec)]
 
     # ========================================================================
     # MECHANISMS
@@ -215,93 +183,142 @@ class Model():
     # ADDING MECHANISMS TO THE MODEL
     # -----------------------------------------------------------------------
 
-    def add_archive(self, archive_name: str, recompile=False):
+    def add_archive(self, archive_name: str, **kwargs) -> None:
         """
-        Add a mechanism archive to the model.
-        - Loads the mechanisms from the archive.
-        - Creates Mechanism objects from the MOD files (or LeakChannel).
-        - Adds the mechanisms to the model.mechnisms dictionary.
-        - Adds the mechanisms to the groups specified in groups_names where
-            - they will be inserted into the sections
-            - they will be used to distribute parameters 
-            specified in mechanism.parameters list.
-        """
-        if self.modm._path_to_data != self.path_to_data:
-            self.modm._path_to_data = self.path_to_data
-
-        # Load the archive of mod files
-        self.modm.load_archive(archive_name, recompile=recompile)
-
-        # Create Mechanism objects and add them to the model
-        for mechanism_name in self.modm.list_archives()[archive_name]:
-            mechanism = self._create_mechanism(mechanism_name, archive_name)
-            self._add_mechanism_to_model(mechanism)
-
-    def _create_mechanism(self, mechanism_name: str, archive_name=''):
-        """
-        Create a Mechanism object from the MOD file (or LeakChannel).
-        """
-        if mechanism_name == 'Leak':
-            mech = LeakChannel()
-        else:
-            mech = self.from_mod(mechanism_name, archive_name)
-        return mech
-
-    def from_mod(self, mechanism_name, archive_name=''):
-        """
-        Read a MOD file, parse it to an AST, and write it to a Python file.
+        Add a set of mechanisms from an archive to the model.
 
         Parameters
         ----------
-        file_name : str
-            The name of the MOD file to read. Also used to name the Python file.
+        archive_name : str
+            The name of the archive to add.
+        **kwargs
+            Additional keyword arguments to pass to the Mechanism constructor.
         """
-        path_to_mod_file = f'{self.path_to_data}/mod/{archive_name}/{mechanism_name}.mod'.replace(
-            '//', '/')
-        self.modm.read(path_to_mod_file)
-        self.modm.parse()
-        self.modm.ast_to_python()
-        path_to_py_file = f'{self.path_to_data}/collection/{archive_name}/{mechanism_name}.py'.replace(
-            '//', '/')
-        self.modm.write(path_to_py_file)
+        # Create Mechanism objects and add them to the model
+        for mechanism_name in self.path_manager.list_archives()[archive_name]:
+            mechanism = self.add_mechanism(mechanism_name, archive_name, **kwargs)
 
-        module_name = path_to_py_file.replace('.py', '').replace('/', '.')
-        module_name = module_name.split('src.')[-1]
-        print(f'Module name: {module_name}')
-        class_name = self.modm.ast.suffix.capitalize()
-        Mechanism = dynamic_import(module_name, class_name)
-        return Mechanism()
+    def add_mechanism(self, mechanism_name: str, 
+                      archive_name: str = '', 
+                      python_template_name: str = 'default',
+                      **kwargs) -> None:
+        """
+        Create a Mechanism object from the MOD file (or LeakChannel).
 
-    def _add_mechanism_to_model(self, mechanism: Mechanism):
-        self.mechanisms[mechanism.name] = mechanism
-        print(f'Mechanism {mechanism.name} added to model.')
+        Parameters
+        ----------
+        mechanism_name : str
+            The name of the mechanism to add.
+        archive_name : str, optional
+            The name of the archive to add.
+        **kwargs
+            Additional keyword arguments to pass to the Mechanism constructor.
+        """
+        if mechanism_name == 'Leak':
+            path_to_mod_file = self.path_manager.get_file_path(
+                'mod', 'Leak', 
+                extension='mod', 
+                archive=archive_name
+            )
+            mech = self.mechanism_factory.create_leak_channel(path_to_mod_file)
+        else:
+            paths = self.path_manager.get_channel_paths(
+                mechanism_name, 
+                archive_name,
+                python_template_name=python_template_name
+            )
+            mech = self.mechanism_factory.create_channel(**paths)
+        # Add the mechanism to the model
+        self.mechanisms[mech.name] = mech
+        print(f'Mechanism {mech.name} added to model.')
+
+    def load_archive(self, archive_name: str = '', recompile=True) -> None:
+        """
+        Load mechanisms from an archive.
+
+        Parameters
+        ----------
+        archive_name : str, optional
+            The name of the archive to load mechanisms from.
+        recompile : bool, optional
+            Whether to recompile the mechanisms.
+        """
+        archive = self.path_manager.list_archives().get(archive_name, [])
+        for mechanism_name in archive:
+            self.load_mechanism(mechanism_name, archive_name, recompile)
+
+    def load_mechanism(self, mechanism_name: str, archive_name: str = '', recompile=True) -> None:
+        """
+        Load a mechanism from the specified archive.
+
+        Parameters
+        ----------
+        mechanism_name : str
+            The name of the mechanism to load.
+        archive_name : str, optional
+            The name of the archive to load the mechanism from.
+        recompile : bool, optional
+            Whether to recompile the mechanism.
+        """
+        path_to_mod_file = self.path_manager.get_file_path(
+            'mod', mechanism_name, extension='mod', archive=archive_name
+        )
+        self.mod_loader.load_mechanism(
+            path_to_mod_file=path_to_mod_file, recompile=recompile
+        )
+        print(f'Mechanism {mechanism_name} loaded to NEURON.\n')
+
+
+
+    # ========================================================================
+    # GROUPS
+    # ========================================================================
+
+    def add_group(self, group_name, sections: Union[Callable, List[Section]] = None):
+        """
+        Add a group to the model.
+
+        Parameters
+        ----------
+        group_name : str
+            The name of the group.
+        sections : list[Section]
+            The sections to include in the group.
+        """
+        if group_name in self.groups:
+            raise ValueError(f'Group {group_name} already exists')
+        if sections is None:
+            sections = self.sec_tree.sections
+        if isinstance(sections, Callable):
+            sections = self.get_sections(sections)
+        group = SectionGroup(group_name, sections)
+        self.groups[group.name] = group
+
+    def remove_group(self, group_name):
+        self.groups.pop(group_name)
 
     # -----------------------------------------------------------------------
     # ADDING MECHANISMS TO GROUPS / REMOVING MECHANISMS FROM GROUPS
     # -----------------------------------------------------------------------
 
-    def insert_mechs(self, mech_names: List[str] = None, 
-                          group_names: List[str] = None):
+    def insert_mechanism(self, mechanism_name: str, 
+                         group_names: List[str] = None):
         """
         Add a mechanism to the groups specified in groups_names where
         - they will be inserted into the sections
         - they will be used to distribute parameters 
         specified in mechanism.parameters list.
         """
-        group_names = group_names or list(self.groups.keys())
-        mech_names = mech_names or list(self.mechanisms.keys())
-
-        group_names = [group_names] if isinstance(group_names, str) else group_names
-        mech_names = [mech_names] if isinstance(mech_names, str) else mech_names
-
+        if not group_names:
+            group_names = list(self.groups.keys())
         groups = [self.groups[name] for name in group_names]
-        mechs = [self.mechanisms[name] for name in mech_names]
+        
+        mechanism = self.mechanisms[mechanism_name]
 
         for group in groups:
-            for mech in mechs:
-                group.insert_mechanism(mech)
+                group.insert_mechanism(mechanism)
 
-    def _find_nonoverlapping_nodes(self, target_group, mechanism_name):
+    def _find_nonoverlapping_nodes(self, mechanism_name, target_group):
         """
         Find the IDs of nodes in the target group where only the target group
         applies the given mechanism. Nodes shared with other groups that
@@ -320,131 +337,69 @@ class Model():
     
         return [node.idx for node in nonoverlapping_nodes]
 
-    def uninsert_mechs(self, mech_names: List[str] = None, 
+    def uninsert_mechanism(self, mechanism_name: str, 
                             group_names: List[str] = None):
         """
         """
-        group_names = group_names or list(self.groups.keys())
-        mech_names = mech_names or list(self.mechanisms.keys())
-
-        group_names = [group_names] if isinstance(group_names, str) else group_names
-        mech_names = [mech_names] if isinstance(mech_names, str) else mech_names
-
+        if not group_names:
+            group_names = list(self.groups.keys())
         groups = [self.groups[name] for name in group_names]
 
         for group in groups:
-            for mech_name in mech_names:
-                node_ids = self._find_nonoverlapping_nodes(group, mech_name)
-                group.uninsert_mechanism(mech_name, node_ids)
-
-    # def insert_mechanisms(self, mechanism_names: List[str] = None, groups_names: List[str] = None):
-    #     """
-    #     Insert mechanisms to the sections in the specified groups.
-
-    #     Parameters
-    #     ----------
-    #     mechanism_names : List[str], optional
-    #         The names of the mechanisms to insert. If None, all mechanisms in the group will be inserted.
-    #     groups_names : List[str], optional
-    #         The names of the groups to insert mechanisms to. If None, mechanisms will be inserted to all groups.
-    #     """
-    #     mechanism_names = mechanism_names or []
-    #     groups_names = groups_names or list(self.groups.keys())
-        
-    #     print(f'Inserting within groups: {groups_names}')
-        
-    #     for group_name in groups_names:
-    #         group = self.groups[group_name]
-    #         mechanisms_to_insert = mechanism_names or group.mechanisms
-            
-    #         for mechanism_name in mechanisms_to_insert:
-    #             if mechanism_name in group.mechanisms:
-    #                 group.insert(mechanism_name)
+            node_ids = self._find_nonoverlapping_nodes(group, mechanism_name)
+            group.uninsert_mechanism(mechanism_name, node_ids)
 
     # -----------------------------------------------------------------------
     # ADDING PARAMETERS TO GROUPS / REMOVING PARAMETERS FROM GROUPS
     # -----------------------------------------------------------------------
 
-    def add_parameters(self, parameter_names: List[str] = None, groups_names: List[str] = None):
+    def add_range_param(self, param_name: str, group_names: List[str] = None) -> None:
         """
         Add parameters to the sections in the specified groups.
 
         Parameters
         ----------
-        parameter_names : List[str], optional
-            The names of the parameters to add. If None, all parameters in the group will be added.
-        groups_names : List[str], optional
-            The names of the groups to add parameters to. If None, parameters will be added to all groups.
+        param_name : str
+            The name of the parameter to add.
+        groups : List[str], optional
+            The names of the groups to add the parameter to. If None, parameters will be added to all groups.
         """
-        parameter_names = parameter_names or []
-        groups_names = groups_names or list(self.groups.keys())
+        groups = [self.groups[name] for name in group_names]
+        if not groups:
+            groups = list(self.groups.values())
         
-        print(f'Adding within groups: {groups_names}')
-        
-        for group_name in groups_names:
-            group = self.groups[group_name]
-            parameters_to_add = parameter_names or group.parameters
-            
-            for parameter_name in parameters_to_add:
-                if parameter_name in group.parameters:
-                    group.add_parameter(parameter_name)
-    
-    def distribute_params(self, param_names: List[str] = None, groups_names: List[str] = None):
+        for group in groups:
+            group.add_parameter(param_name)
+
+    def set_global_param(self, param_name: str, value: float) -> None:
         """
-        Distribute parameters to the sections in the specified groups.
+        Set a global parameter to a value.
 
         Parameters
         ----------
-        parameter_names : List[str], optional
-            The names of the parameters to distribute. If None, all parameters in the group will be distributed.
-        groups_names : List[str], optional
-            The names of the groups to distribute parameters to. If None, parameters will be distributed to all groups.
+        param_name : str
+            The name of the parameter to set.
+        value : float
+            The value to set the parameter to.
         """
-        param_names = param_names or []
-        groups_names = groups_names or list(self.groups.keys())
-        
-        for group_name in groups_names:
-            # logger.debug(f'Distributing within group: {group_name}')
-            group = self.groups[group_name]
-            params_to_distribute = param_names or group.parameters
-            # logger.debug(f'Parameters to distribute: {params_to_distribute}')
-            for param_name in params_to_distribute:
-                if param_name in group.parameters:
-                    # logger.debug(f'Distributing parameter {param_name} in group {group_name}')
-                    print(f'Distributing parameter {param_name} in group {group_name}')
-                    group.distribute(param_name)
+        if param_name in self.parameters_to_groups:
+            raise ValueError(f'Parameter {param_name} is a distributed parameter.')
 
+        if param_name in ['celsius', 'v_init']:
+            setattr(self.simulator, param_name, value)
+            return
 
-
-    # ========================================================================
-    # GROUPS
-    # ========================================================================
-
-    def add_group(self, group_name, nodes):
-        """
-        Add a group to the model.
-
-        Parameters
-        ----------
-        group_name : str
-            The name of the group.
-        nodes : list[Node]
-            The nodes to include in the group.
-        """
-        if group_name in self.groups:
-            raise ValueError(f'Group {group_name} already exists')
-        group = SectionGroup(group_name, nodes)
-        self.groups[group.name] = group
-
-    def remove_group(self, group_name):
-        self.groups.pop(group_name)
+        for seg in self.seg_tree.segments:
+            if not hasattr(seg._ref, param_name):
+                raise AttributeError(f'{param_name} not found in segment.')
+            setattr(seg._ref, param_name, value)
 
 
     # ========================================================================
     # SEGMENTATION
     # ========================================================================
 
-    def set_geom_nseg(self, d_lambda=0.1, f=100, use_neuron=False):
+    def set_segmentation(self, d_lambda=0.1, f=100, use_neuron=False):
         """
         Set the number of segments in each section based on the geometry.
 
@@ -467,79 +422,38 @@ class Model():
             nseg = int((sec._ref.L / (d_lambda * lambda_f) + 0.9) / 2) * 2 + 1
             sec._ref.nseg = nseg
 
-    def build_seg_tree(self):
-        """
-        Build the segment tree using the section tree.
-        """
-        # self.set_geom_nseg(d_lambda, f)
-
-        nodes = []  # To store Segment objects
-
-        def add_segments(sec, parent_idx, idx_counter):
-            segs = {seg: idx + idx_counter for idx, seg in enumerate(sec._ref)}
-
-            # Add each segment of this section as a Segment object
-            for seg, idx in segs.items():
-                # Create a Segment object with the parent index
-                segment = Segment(
-                    idx=idx, parent_idx=parent_idx, neuron_seg=seg, section=sec)
-                nodes.append(segment)
-                sec.segments.append(segment)
-
-                # Update the parent index for the next segment in this section
-                parent_idx = idx
-
-            # Update idx_counter for the next section
-            idx_counter += len(segs)
-
-            # Recursively add child sections
-            for child in sec.children:
-                # IMPORTANT: This is needed since 0 and 1 segments are not explicitly
-                # defined in the section segments list
-                if child._ref.parentseg().x == 1:
-                    new_parent_idx = list(segs.values())[-1]
-                elif child._ref.parentseg().x == 0:
-                    new_parent_idx = list(segs.values())[0]
-                else:
-                    new_parent_idx = segs[child._ref.parentseg()]
-                # Recurse for the child section
-                idx_counter = add_segments(child, new_parent_idx, idx_counter)
-
-            return idx_counter
-
-        # Start with the root section of the sec_tree
-        add_segments(self.sec_tree.root, parent_idx=-1, idx_counter=0)
-
-        # Assign the built list of Segment nodes to seg_tree as a Tree instance
-        print(f'Building SEG tree...')
-        self.seg_tree = SegmentTree(nodes)
+        self.seg_tree = self.tree_factory.create_seg_tree(self.sec_tree)
  
     # ========================================================================
     # STIMULI
     # ========================================================================
 
-    def load_synaptic_mechanisms(self):
-        self.modm.load_mod_file('app/model/mechanisms/mod/Synapses/', 
-                                recompile=not os.path.exists('app/model/mechanisms/mod/Synapses/x86_64/'))
+    # def load_synaptic_mechanisms(self):
+    #     self.modm.load_mod_file('app/model/mechanisms/mod/Synapses/', 
+    #                             recompile=not os.path.exists('app/model/mechanisms/mod/Synapses/x86_64/'))
 
     def _add_iclamp(self, iclamp):
-        self.iclamps[iclamp.seg] = iclamp
+        self._iclamps[iclamp.sec][iclamp.loc] = iclamp
 
-    def add_iclamp(self, seg, amp=0, delay=100, dur=100):
-        if self.iclamps.get(seg):
-            self.remove_iclamp(seg)
-        iclamp = IClamp(seg, amp, delay, dur)
-        print(f'IClamp added to segment {seg}')
+    def add_iclamp(self, sec, loc, amp=0, delay=100, dur=100):
+        if self._iclamps.get(sec):
+            if self._iclamps[sec].get(loc):
+                self.remove_iclamp(sec, loc)
+        iclamp = IClamp(sec, loc, amp, delay, dur)
+        print(f'IClamp added to sec {sec} at loc {loc}.')
         self._add_iclamp(iclamp)
 
-    def remove_iclamp(self, seg):
-        if self.iclamps.get(seg):
-            self.iclamps[seg] = None
-            self.iclamps.pop(seg)
+    def remove_iclamp(self, sec, loc):
+        if self._iclamps.get(sec):
+            if self._iclamps[sec].get(loc):
+                self._iclamps[sec].pop(loc)
+            if not self._iclamps[sec]:
+                self._iclamps.pop(sec)
 
     def remove_all_iclamps(self):
-        for seg in list(self.iclamps.keys()):
-            self.remove_iclamp(seg)
+        for sec in list(self._iclamps.keys()):
+            for loc in list(self._iclamps[sec].keys()):
+                self.remove_iclamp(sec, loc)
 
     def _add_population(self, population):
         self.populations[population.name] = population
@@ -548,10 +462,12 @@ class Model():
         population = Population(name, synapse_type, size, sections)
         self._add_population(population)
 
+    # ========================================================================
     # SIMULATION
+    # ========================================================================
 
-    def add_recording(self, seg):
-        self.simulator.add_recording(seg)
+    def add_recording(self, sec, loc=0.5):
+        self.simulator.add_recording(sec, loc)
 
     def run(self, duration=300):
         self.simulator.run(duration)
@@ -564,7 +480,9 @@ class Model():
     def standardize_channel():
         ...
 
+    # ========================================================================
     # FILE EXPORT
+    # ========================================================================
 
     def to_dict(self):
         """

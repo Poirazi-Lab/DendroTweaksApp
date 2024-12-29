@@ -4,7 +4,7 @@ from dendrotweaks.morphology.trees import Node
 from dendrotweaks.morphology.sec_trees import Section
 from dendrotweaks.morphology.seg_trees import Segment
 from dendrotweaks.membrane.mechanisms import Mechanism
-from dendrotweaks.membrane.distribution_functions import DistributionFunction
+from dendrotweaks.membrane.distributions import Distribution
 from dendrotweaks.utils import timeit
 
 # TODO: Sec or seg? Layering or partitioning? Make the user choose.
@@ -44,7 +44,7 @@ class SectionGroup():
     def __init__(self, name: str,
                  sections: List[Section],
                  mechanisms: List[str] = [],
-                 parameters: Dict[str, DistributionFunction] = {}):
+                 parameters: Dict[str, Distribution] = {}):
         self.name = name
         self.sections = sections
         self.parameters = {}
@@ -53,12 +53,12 @@ class SectionGroup():
         for mechanism in mechanisms:
             self.add_mechanism(mechanism)
         for parameter, function_dict in parameters.items():
-            func = DistributionFunction.from_dict(function_dict)
+            func = Distribution.from_dict(function_dict)
             self.add_parameter(parameter, func)
 
     # def _add_default_parameters(self):
-    #     self.add_parameter('cm', DistributionFunction('uniform', value=1))
-    #     self.add_parameter('Ra', DistributionFunction('uniform', value=100))
+    #     self.add_parameter('cm', Distribution('uniform', value=1))
+    #     self.add_parameter('Ra', Distribution('uniform', value=100))
 
     def __repr__(self):
         """
@@ -69,7 +69,7 @@ class SectionGroup():
         str
             A string representation of the group.
         """
-        return f'Group({self.name}) with {len(self._nodes)} nodes\nParameters: {list(self.parameters.keys())}'
+        return f'Group({self.name}) with {len(self.sections)} nodes\nParameters: {list(self.parameters.keys())}'
 
     # ------------------------------------------------------------
     # MECHANISMS
@@ -84,7 +84,7 @@ class SectionGroup():
         mechanism : Mechanism
             The mechanism to add to the group.
         """
-        for node in self._nodes:
+        for node in self.sections:
             node.insert_mechanism(mechanism.name)
         self.mechanisms[mechanism.name] = mechanism
 
@@ -94,9 +94,9 @@ class SectionGroup():
         the mechanism is removed only from the specified nodes.
         """
         if node_ids is not None:
-            nodes = [node for node in self._nodes if node.idx in node_ids]
+            nodes = [node for node in self.sections if node.idx in node_ids]
         else:
-            nodes = self._nodes
+            nodes = self.sections
 
         for node in nodes:
             node.uninsert_mechanism(mechanism_name)
@@ -112,10 +112,10 @@ class SectionGroup():
     #     mechanism : Mechanism
     #         The mechanism to add to the group.
     #     """
-    #     for node in self._nodes:
+    #     for node in self.sections:
     #         node.insert_mechanism(mechanism.name)
     #     for parameter, value in mechanism.parameters.items():
-    #         self.add_parameter(parameter, DistributionFunction('uniform', value=value))
+    #         self.add_parameter(parameter, Distribution('uniform', value=value))
 
     # def add_parameter(self, parameter_name, default_value=None):
     #     """
@@ -125,11 +125,11 @@ class SectionGroup():
     #     ----------
     #     parameter_name : str
     #         The name of the parameter to add.
-    #     distribution_function : DistributionFunction
+    #     distribution_function : Distribution
     #         The distribution function to use for the parameter. Defaults to None.
     #     """
     #     value = default_value or 0
-    #     distribution_function = DistributionFunction('uniform', value=value)
+    #     distribution_function = Distribution('uniform', value=value)
     #     self._add_parameter(parameter_name, distribution_function)
 
     def add_parameter(self, parameter_name, 
@@ -143,14 +143,14 @@ class SectionGroup():
         ----------
         parameter_name : str
             The name of the parameter to add.
-        distribution_function : DistributionFunction
+        distribution_function : Distribution
             The distribution function to use for the parameter.
         """
         value = 0
         if mechanism_name is not None:
             mechanism = self.mechanisms[mechanism_name]
             value = mechanism.parameters[parameter_name]
-        function = distribution_function or DistributionFunction('uniform', value=value)
+        function = distribution_function or Distribution('uniform', value=value)
         self.parameters[parameter_name] = function
 
     def remove_parameter(self, parameter_name):
@@ -162,7 +162,7 @@ class SectionGroup():
         parameter_name : str
             The name of the parameter to remove.
         """
-        # self.parameters[parameter_name] = DistributionFunction('uniform', value=0)
+        # self.parameters[parameter_name] = Distribution('uniform', value=0)
         del self.parameters[parameter_name]
 
     def revert_parameter(self, parameter_name):
@@ -184,38 +184,36 @@ class SectionGroup():
         
 
     # TODO: No need for this, just update the dict.
-    # def set_distribution(self, parameter_name, distribution_name):
-    #     """
-    #     For a given parameter, assignes the distribution with
-    #     default parameters.
-
-    #     Parameters
-    #     ----------
-    #     parameter_name : str
-    #         The name of the parameter to replace the distribution function for.
-    #     distribution_name : str
-    #         The new distribution to use for the parameter. Avaliable distributions
-    #         are: 'uniform', 'linear', 
-
-    #     """
-    #     self.parameters[parameter_name] = DistributionFunction(
-    #         distribution_name)
-    #     self.distribute(parameter_name)
-
-    def update_distribution_parameters(self, parameter_name, **new_parameters):
+    def set_distribution(self, parameter_name, distribution_type, **distribution_parameters):
         """
-        Updates the parameters of a distribution function for a given parameter.
+        For a given parameter, assignes the distribution with
+        default parameters.
 
         Parameters
         ----------
         parameter_name : str
-            The name of the parameter to update the distribution function for.
-        \**new_parameters
-            The new parameters to update the distribution function with.
+            The name of the parameter to replace the distribution function for.
+        distribution_name : str
+            The new distribution to use for the parameter. Avaliable distributions
+            are: 'uniform', 'linear', 
+
         """
-        distribution_function = self.parameters[parameter_name]
-        distribution_function.update_parameters(**new_parameters)
-        self.distribute(parameter_name)
+        self.parameters[parameter_name] = Distribution(distribution_type, **distribution_parameters)
+
+    # def update_distribution_parameters(self, parameter_name, **new_parameters):
+    #     """
+    #     Updates the parameters of a distribution function for a given parameter.
+
+    #     Parameters
+    #     ----------
+    #     parameter_name : str
+    #         The name of the parameter to update the distribution function for.
+    #     \**new_parameters
+    #         The new parameters to update the distribution function with.
+    #     """
+    #     distribution_function = self.parameters[parameter_name]
+    #     distribution_function.update_parameters(**new_parameters)
+    #     self.distribute(parameter_name)
 
     # APPLY
     # @timeit
@@ -238,7 +236,7 @@ class SectionGroup():
             The name of the parameter to distribute.
         """
         distribution_function = self.parameters[parameter_name]
-        for node in self._nodes:
+        for node in self.sections:
             node.set_param_value(parameter_name, distribution_function)
 
     # EXPORT
@@ -253,7 +251,7 @@ class SectionGroup():
             The group in dictionary format.
         """
         return {
-            'nodes': [node.idx for node in self._nodes],
+            'nodes': [node.idx for node in self.sections],
             'mechanisms': [mechanism_name for mechanism_name in self.mechanisms],
             'parameters': {
                 parameter_name: distribution_function.to_dict()

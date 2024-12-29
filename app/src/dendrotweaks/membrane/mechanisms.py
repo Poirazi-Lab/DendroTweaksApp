@@ -56,7 +56,7 @@ class IonChannel(Mechanism):
                f'in range {x[0]} to {x[-1]} at {temperature}°C')
         return data
 
-    def plot_kinetic_variables(self, ax=None, linestyle='solid', **kwargs) -> None:
+    def plot_kinetics(self, ax=None, linestyle='solid', **kwargs) -> None:
 
         if ax is None:
             fig, ax = plt.subplots(1, 2, figsize=(10, 5))
@@ -81,6 +81,12 @@ class IonChannel(Mechanism):
 
 
 class StandardIonChannel(IonChannel):
+    """
+    A class representing a voltage-gated ion channel with a standard 
+    set of kinetic parameters and equations grounded in the transition-state
+    theory. The model is based on the Hodgkin-Huxley formalism.
+    """
+
 
     STANDARD_PARAMS = [
         'vhalf', 'sigma', 'k', 'delta', 'tau0'
@@ -90,9 +96,8 @@ class StandardIonChannel(IonChannel):
     def steady_state(v, vhalf, sigma):
         return 1 / (1 + np.exp(-(v - vhalf) / sigma))
 
-    @staticmethod
-    def time_constant(v, vhalf, sigma, k, delta, tau0):
-        return 1 / (alpha_prime(v, vhalf, sigma, k, delta) + beta_prime(v, vhalf, sigma, k, delta)) + tau0
+    def time_constant(self, v, vhalf, sigma, k, delta, tau0):
+        return 1 / (self.alpha_prime(v, vhalf, sigma, k, delta) + self.beta_prime(v, vhalf, sigma, k, delta)) + tau0
 
     @staticmethod
     def alpha_prime(v, vhalf, sigma, k, delta):
@@ -106,10 +111,9 @@ class StandardIonChannel(IonChannel):
     def t_adj(temperature, q10=2.3, reference_temp=23):
         return q10 ** ((temperature - reference_temp) / 10)
 
-    @staticmethod
-    def compute_state(v, vhalf, sigma, k, delta, tau0, tadj=1):
-        inf = steady_state(v, vhalf, sigma)
-        tau = time_constant(v, vhalf, sigma, k, delta, tau0) / tadj
+    def compute_state(self, v, vhalf, sigma, k, delta, tau0, tadj=1):
+        inf = self.steady_state(v, vhalf, sigma)
+        tau = self.time_constant(v, vhalf, sigma, k, delta, tau0) / tadj
         return inf, tau
 
     def __init__(self, name, state_powers, ion=None):
@@ -150,15 +154,15 @@ class StandardIonChannel(IonChannel):
             delta = self.params[f'delta_{state}']
             tau0 = self.params[f'tau0_{state}']
 
-            inf = steady_state(v, vhalf, sigma)
-            tau = time_constant(v, vhalf, sigma, k, delta, tau0) / self.tadj
+            inf = self.steady_state(v, vhalf, sigma)
+            tau = self.time_constant(v, vhalf, sigma, k, delta, tau0) / self.tadj
 
             results.extend([inf, tau])
             
         return results
 
 
-    def fit_to_data(self, data, prioritized_inf=True, round_params=3):
+    def fit(self, data, prioritized_inf=True, round_params=3):
         """
         Fits the standardized set of parameters of the model to the data 
         of the channel kinetics. 
