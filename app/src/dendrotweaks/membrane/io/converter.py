@@ -47,8 +47,11 @@ class MODFileConverter():
     #     self.generate_python(path_to_template) # generates self.python_content
     #     self.write_file(path_to_python) # writes self.python_content to path_to_python
 
-    def convert(self, path_to_mod_file: str, path_to_python_file: str, 
-                path_to_python_template: str, path_to_json_file:str = None) -> None:
+    def convert(self, path_to_mod_file: str, 
+                path_to_python_file: str, 
+                path_to_python_template: str, 
+                path_to_json_file:str = None,
+                verbose: bool = False) -> None:
         """ Converts a mod file to a python file.
 
         Parameters
@@ -63,19 +66,19 @@ class MODFileConverter():
             The path to the json file.
         """
 
-        print(f"READING")
+        if verbose: print(f"READING")
         self.reader.read_file(path_to_mod_file)
         self.reader.preprocess()
-        blocks = self.reader.get_blocks()
+        blocks = self.reader.get_blocks(verbose)
         
-        print(f"\nPARSING")
-        self.parser.parse(blocks)
+        if verbose: print(f"\nPARSING")
+        self.parser.parse(blocks, verbose)
         self.parser.postprocess()
         ast = self.parser.get_ast()
         
         if path_to_json_file:
             self.parser.write_file(path_to_json_file)
         
-        print(f"\nGENERATING")
+        if verbose: print(f"\nGENERATING")
         self.generator.generate(ast, path_to_python_template)
         self.generator.write_file(path_to_python_file)

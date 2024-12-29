@@ -29,25 +29,8 @@ class MechanismFactory():
     def __init__(self):
 
         self.converter = MODFileConverter()
-        self.loader = MODFileLoader()
 
         self.class_map = {}
-
-    # LOADING METHODS
-
-    # def load_mechanism(self, mechanism_name: str, archive_name: str = '') -> None:
-    #     """
-    #     Load a mechanism from the specified mod file.
-
-    #     Parameters
-    #     ----------
-    #     mechanism_name : str
-    #         The name of the mechanism.
-    #     archive_name : str
-    #         The name of the archive.
-    #     """
-    #     mod_path = self._get_mod_path(mechanism_name, archive_name)
-    #     self.loader.load_mechanism(mod_path)
 
     # FACTORY METHODS
 
@@ -78,9 +61,7 @@ class MechanismFactory():
             
     def create_channel(self, path_to_mod_file: str,
                        path_to_python_file: str,
-                       path_to_python_template: str, 
-                       load: bool = True, 
-                       recompile: bool = True) -> IonChannel:
+                       path_to_python_template: str) -> IonChannel:
         """
         Creates a channel from a .mod file.
 
@@ -92,25 +73,20 @@ class MechanismFactory():
             The path to the Python file.
         path_to_python_template : str
             The path to the Python template file.
-        load : bool
-            Whether to load the channel in NEURON. The default is True.
         """
 
         # Convert mod to python
         self.converter.convert(path_to_mod_file, 
                                path_to_python_file, 
-                               path_to_python_template)
+                               path_to_python_template,
+                               verbose=False)
 
         # Register mechanism
         self._register_mechanism(path_to_python_file)
 
         # Instantiate mechanism
         class_name = os.path.basename(path_to_python_file).replace('.py', '')
-        channel = self._instantiate_mechanism(channel_name)
-
-        # Load mechanism
-        if load:
-            self.loader.load_mechanism(path_to_mod_file, recompile=recompile)
+        channel = self._instantiate_mechanism(class_name)
 
         return channel
     
@@ -118,9 +94,7 @@ class MechanismFactory():
                                 path_to_python_file: str,
                                 path_to_python_template: str,
                                 path_to_mod_template: str,
-                                path_to_standard_mod_file: str,
-                                load: bool = True, 
-                                recompile: bool = True) -> StandardIonChannel:
+                                path_to_standard_mod_file: str) -> StandardIonChannel:
         """
         Creates a standardized channel and fits it to the data of the unstandardized channel.
 
@@ -134,8 +108,6 @@ class MechanismFactory():
             The path to the Python template file.
         path_to_mod_template : str
             The path to the .mod template file.
-        load : bool
-            Whether to load the standardized channel in NEURON. The default is True.
         """
         # Check if the unstandardized mechanism is already loaded
         class_name = os.path.basename(path_to_python_file).replace('.py', '')
@@ -143,7 +115,7 @@ class MechanismFactory():
             channel = self.create_channel(path_to_mod_file,
                                           path_to_python_file,
                                           path_to_python_template,
-                                          load=False, recompile=False)
+                                          )
         else:
             channel = self._instantiate_mechanism(class_name)
 
@@ -154,10 +126,6 @@ class MechanismFactory():
         generator = NMODLCodeGenerator()
         content = generator.generate(standard_channel, path_to_mod_template)
         generator.write_file(path_to_standard_mod_file)
-
-        # Load the standardized mechanism
-        if load: 
-            self.loader.load_mechanism(path_to_standard_mod_file, recompile=True)
 
         return standard_channel
 
@@ -198,7 +166,7 @@ class MechanismFactory():
         """
         return CaDynamics(name=name)
 
-    def create_leak_channel(self, path_to_mod_file, load=True, recompile=False) -> StandardIonChannel:
+    def create_leak_channel(self, path_to_mod_file) -> StandardIonChannel:
         """
         Create a leak channel.
 
@@ -207,6 +175,4 @@ class MechanismFactory():
         name : str
             The name of the channel.
         """
-        if load:
-            self.loader.load_mechanism(path_to_mod_file, recompile=recompile)
         return LeakChannel()

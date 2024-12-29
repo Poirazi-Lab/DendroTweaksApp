@@ -111,7 +111,9 @@ class PathManager:
 
         print_tree(base_path)
 
-    def get_channel_paths(self, mechanism_name: str, archive_name: str = "", python_template_name: str = "default") -> Dict[str, str]:
+    def get_channel_paths(self, mechanism_name: str, 
+                          archive_name: str = "", 
+                          python_template_name: str = "default") -> Dict[str, str]:
         """
         Get all necessary paths for creating a channel.
         """

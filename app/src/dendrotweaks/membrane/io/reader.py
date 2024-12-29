@@ -122,27 +122,25 @@ class MODFileReader():
 
     # SPLIT TO BLOCKS
 
-    def split_content_in_blocks(self) -> None:
+    def get_blocks(self, verbose=True) -> Dict[str, List[str]]:
         """
-        Split the content of the file into blocks for further processing.
-        """
-        for block_type in self.BLOCK_TYPES:
-            matches = self._get_block_regex(block_type)
-            self.blocks[block_type] = matches
-        message = f"Split content into blocks:\n"
-        message += '\n'.join([f"    {len(block_content)} - {block_name}" 
-                            for block_name, block_content in self.blocks.items()])
-        print(message)
-        self.find_unmatched_content()
+        Split the content of the file into blocks and return them.
 
-    def get_blocks(self) -> Dict[str, List[str]]:
-        """
-        Get the blocks of the file.
+        Parameters:
+            verbose (bool): Whether to print the blocks information.
 
         Returns:
             Dict[str, List[str]]: A dictionary with the blocks of the file.
         """
-        self.split_content_in_blocks()
+        for block_type in self.BLOCK_TYPES:
+            matches = self._get_block_regex(block_type)
+            self.blocks[block_type] = matches
+        if verbose:
+            message = f"Split content into blocks:\n"
+            message += '\n'.join([f"    {len(block_content)} - {block_name}" 
+                            for block_name, block_content in self.blocks.items()])
+            print(message)
+        self.find_unmatched_content()
         return self.blocks
 
     def _get_block_regex(self, block_name: str) -> List[str]:
@@ -171,7 +169,7 @@ class MODFileReader():
         matches = re.findall(pattern, self.content, re.DOTALL)
         return matches
 
-    def find_unmatched_content(self, verbose:bool=True) -> None:
+    def find_unmatched_content(self, verbose:bool=False) -> None:
         """
         Find unmatched content in the content of the file.
 

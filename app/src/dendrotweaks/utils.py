@@ -97,7 +97,19 @@ def list_files(path_to_folder, extension):
     return files
 
 
-def write_file(content, path_to_file):
+def write_file(content: str, path_to_file: str, verbose: bool = True) -> None:
+    """
+    Write content to a file.
+
+    Parameters
+    ----------
+    content : str
+        The content to write to the file.
+    path_to_file : str
+        The path to the file.
+    verbose : bool, optional
+        Whether to print a message after writing the file. The default is True.
+    """
     if not os.path.exists(os.path.dirname(path_to_file)):
         os.makedirs(os.path.dirname(path_to_file))
     with open(path_to_file, 'w') as f:

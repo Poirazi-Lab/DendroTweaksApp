@@ -58,10 +58,9 @@ class MODFileParser():
 
         parsed_blocks = [grammar.parseString(block) for block in block_content]
         self._result[block_name] = parsed_blocks
-        print(f"Parsed {block_name} block.")
         return [block.asDict()['block'] for block in parsed_blocks]
 
-    def parse(self, blocks: Dict[str, List[str]]) -> None:
+    def parse(self, blocks: Dict[str, List[str]], verbose: bool = True) -> None:
         """
         Parse the entire content of the file.
 
@@ -71,8 +70,8 @@ class MODFileParser():
             A dictionary with the blocks of the .mod file.
         """
         for block_name, block_content in blocks.items():
-            # print(f"Parsing block {block_name}")
             self.parse_block(block_name, block_content)
+            if verbose: print(f"Parsed {block_name} block")
         self._ast = {block_name: [r.asDict()['block'] for r in result]
                     for block_name, result in self._result.items()}
         self._ast = {k: v[0] if len(v) == 1 and k not in ['FUNCTION', 'PROCEDURE'] else v
@@ -100,7 +99,6 @@ class MODFileParser():
         """
         for block_name, block_asts in self._ast.items():
             if block_name in ['FUNCTION', 'PROCEDURE']:
-                print(f"Restoring expressions in {block_name}")
                 for i, block_ast in enumerate(block_asts):
                     for j, statement in enumerate(block_ast['statements']):
                         if 'condition' in statement:
@@ -119,7 +117,6 @@ class MODFileParser():
                             expression = restore_expression(statement['expression'])
                             self._ast[block_name][i]['statements'][j]['expression'] = expression
             elif block_name in ['BREAKPOINT', 'DERIVATIVE', ]:
-                print(f"Restoring expressions in {block_name}")
                 for j, statement in enumerate(block_asts['statements']):
                     expression = restore_expression(statement['expression'])
                     self._ast[block_name]['statements'][j]['expression'] = expression
