@@ -1,4 +1,5 @@
 from collections import defaultdict
+import warnings
 
 class Simulator:
     def __init__(self):
@@ -26,33 +27,29 @@ class NEURONSimulator(Simulator):
         self.dt = dt
         self._cvode = cvode
 
-        self._recordings = defaultdict(dict)
+        self.recordings = {}
         # self.t = []
 
-    @property
-    def recordings(self):
-        return [rec for sec in self._recordings.values() for rec in sec.values()]
-
     def add_recording(self, sec, loc, var='v'):
-        if self._recordings.get(sec):
-            if self._recordings[sec].get(loc):
-                self.remove_recording(sec, loc)
         seg = sec(loc)
-        self._recordings[sec][loc] = self.h.Vector().record(getattr(seg, f'_ref_{var}'))
+        if self.recordings.get(seg):
+            self.remove_recording(sec, loc)
+        self.recordings[seg] = self.h.Vector().record(getattr(seg._ref, f'_ref_{var}'))
 
-    def remove_recording(self, sec, loc, var='v'):
-        if self._recordings.get(sec):
-            if self._recordings[sec].get(loc):
-                self._recordings[sec][loc] = None
-                self._recordings[sec].pop(seg)
-            if not self._recordings[sec]:
-                self._recordings.pop(sec)
+    def remove_recording(self, sec, loc):
+        seg = sec(loc)
+        if self.recordings.get(seg):
+            self.recordings[seg] = None
+            self.recordings.pop(seg)
 
     def remove_all_recordings(self):
-        for sec in self._recordings.keys():
-            for loc in self._recordings[sec].keys():
-                self.remove_recording(sec, loc)
-        # self.recordings = {}
+        for seg in self.recordings.keys():
+            sec, loc = seg._section, seg.x
+            self.remove_recording(sec, loc)
+        if self.recordings:
+            warnings.warn(f'Not all recordings were removed: {self.recordings}')
+        self.recordings = {}
+
 
     def _init_simulation(self):
         self.h.CVode().active(self._cvode)
@@ -71,7 +68,7 @@ class NEURONSimulator(Simulator):
 
         from neuron.units import ms, mV
 
-        vs = self.recordings
+        vs = list(self.recordings.values())
         Is = []
 
         # for v in self.recordings.values():

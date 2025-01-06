@@ -1,14 +1,19 @@
 from typing import Dict
 import numpy as np
 import matplotlib.pyplot as plt
-from abc import ABC, abstractmethod
 
 
-class Mechanism(ABC):
+
+class Mechanism():
 
     def __init__(self, name):
         self.name = name
         self.params = {}
+
+    @property
+    def params_with_suffix(self):
+        return {f"{param}_{self.name}":value for param, value in self.params.items()}
+
 
 class CaDynamics(Mechanism):
 
@@ -244,4 +249,4 @@ class LeakChannel(Mechanism):
 
     def __init__(self):
         self.name = 'Leak'
-        self.params = {'gbar': 0.0001}
+        self.params = {'gbar': 0.0, 'e': -70}

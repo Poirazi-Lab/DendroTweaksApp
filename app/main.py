@@ -55,8 +55,10 @@ from collections import defaultdict
 
 
 
+
 from view import CellView
 view = CellView()
+
 
 import sys
 sys.path.append('app/src')
@@ -155,7 +157,7 @@ view.widgets.selectors['section'].on_change('value', p.select_section_callback)
 
 view.widgets.selectors['seg_x'] = Select(options=[], title='Segment')
 
-view.widgets.selectors['seg_x'].on_change('value', p.select_seg_x_callback)
+
 
 
 view.figures['cell'].renderers[0].data_source.selected.on_change('indices', p.cell_tap_callback)
@@ -253,7 +255,9 @@ view.figures['graph'].add_tools(hover)
 # Add select widget
 view.widgets.selectors['mechanism'] = Select(title='Mechanism:')
 
-view.widgets.selectors['graph_param'] = Select(title="Parameter:")
+view.widgets.selectors['graph_param'] = Select(title="Parameter:", 
+                                              width=150,
+                                              )
 
 view.widgets.sliders['graph_param_high'] = Slider(start=0, end=1, value=1, 
                                                  step=0.01, title="High", width=200, visible=True)
@@ -262,7 +266,7 @@ view.widgets.sliders['time_slice'] = Spinner(title="Time slice", low=0, high=100
 view.widgets.sliders['time_slice'].on_change('value_throttled', p.update_time_slice_callback)
 
 # Attach the callback to the dropdown selector
-view.widgets.selectors['graph_param'].on_change('value', p.update_graph_colors_callback)
+# view.widgets.selectors['graph_param'].on_change('value', p.update_graph_colors_callback)
 
 
 def update_high(attr, old, new):
@@ -635,7 +639,7 @@ def create_equilibrium_panel():
 
     return equilibrium_panel
 
-def create_add_remove_panel():
+def create_add_group_panel():
 
     view.widgets.selectors['sec_type'] = Select(options=['all', 'soma', 'axon', 'dend', 'apic'],
                                                 value='all',
@@ -681,10 +685,33 @@ def create_add_remove_panel():
                                                
     view.widgets.buttons['add_group'].on_event(ButtonClick, p.add_group_callback)
 
-    view.widgets.selectors['group'] = Select(options=[''], 
-                                         value='',
+
+    select_panel = row([
+                        view.widgets.selectors['sec_type'],
+                        view.widgets.selectors['select_by'],
+                        view.widgets.text['condition'],
+    ])
+
+    add_panel = row([view.widgets.text['group_name'],
+                        view.widgets.buttons['add_group'],
+                        ])
+
+
+
+    add_group_panel = column([select_panel, 
+                               add_panel])
+
+    return add_group_panel
+
+
+
+def create_insert_panel():
+
+    view.widgets.selectors['group'] = Select(title='Groups',
+                                         options=[], 
+                                         value=None,
                                          width=150,
-                                         title='Groups')
+                                         )
 
     view.widgets.selectors['group'].on_change('value', p.select_group_callback)                                         
 
@@ -697,55 +724,48 @@ def create_add_remove_panel():
 
     view.widgets.buttons['remove_group'].on_event(ButtonClick, p.remove_group_callback)
 
-    select_panel = row([
-                        view.widgets.selectors['sec_type'],
-                        view.widgets.selectors['select_by'],
-                        view.widgets.text['condition'],
-    ])
-
-    add_panel = row([view.widgets.text['group_name'],
-                        view.widgets.buttons['add_group'],
-                        ])
-
     remove_panel = row([view.widgets.selectors['group'],
                         view.widgets.buttons['remove_group'],
                         ])
 
-    add_remove_panel = column([select_panel, 
-                               add_panel,
-                               Div(text='<hr style="width:30em; margin-top:3em">'), 
-                               remove_panel])
-
-    return add_remove_panel
-
-
-
-def create_group_panel():
-
-    view.widgets.multichoice['mechanisms'] = MultiChoice(title='Mechanism', 
+    view.widgets.multichoice['mechanisms'] = MultiChoice(title='Inserted mechanisms', 
                                                         options=[], 
                                                         width=300)
 
     view.widgets.multichoice['mechanisms'].on_change('value', p.update_group_mechanisms_callback)
 
-    view.widgets.multichoice['params'] = MultiChoice(title='Range parameters',
-                                            options=[],
-                                            width=300)
-
-    view.widgets.multichoice['params'].on_change('value', p.update_group_parameters_callback)
-
     
-    group_panel = column([view.widgets.multichoice['mechanisms'],
-                          view.widgets.multichoice['params'],
+    insert_panel = column([
+        remove_panel,                      
+        view.widgets.multichoice['mechanisms'],
                          ])
                          
-    return group_panel
+    return insert_panel
+
+# def create_make_distributed_panel():
+
+#     view.widgets.multichoice['params'] = MultiChoice(title='Range parameters',
+#                                             options=[],
+#                                             width=300)
+
+#     view.widgets.multichoice['params'].on_change('value', p.update_group_parameters_callback)
+
+    
+#     make_distributed_panel = column([
+#                           view.widgets.multichoice['params'],
+#                          ])
+
+#     return make_distributed_panel
 
 
 def create_groups_tab():
 
-    panels = column([create_add_remove_panel(),
-                     create_group_panel()])
+    panels = column([create_add_group_panel(),
+                     Div(text='<hr style="width:30em; margin-top:3em">'), 
+                     create_insert_panel(),
+                    #  Div(text='<hr style="width:30em; margin-top:3em">'), 
+                    #  create_make_distributed_panel(),
+                     ])
 
     groups_tab = TabPanel(title='Groups', 
                         child=panels)
@@ -753,10 +773,13 @@ def create_groups_tab():
     return groups_tab
 
 
-def create_distribution_panel():
+
+
+def create_select_distribution_panel():
 
     view.widgets.selectors['distribution_type'] = Select(value='uniform',
                                options=['uniform', 'linear', 'exponential', 'sigmoid', 'gaussian', 'step'],
+                               width=150,
                                title='Distribution type')
 
     view.widgets.selectors['distribution_type'].on_change('value', p.update_distribution_type_callback)
@@ -782,27 +805,66 @@ def create_distribution_panel():
     vspan = Span(location=0, dimension='height', line_color='white', line_width=1)
     view.figures['distribution'].add_layout(vspan)
 
-    view.DOM_elements['distribution_panel'] = column(width=300)
-
-    distribution_panel = column([view.widgets.selectors['distribution_type'],
-                                 view.figures['distribution'], 
-                                 view.DOM_elements['distribution_panel'],
-                            ])
-
-    return distribution_panel
+    
+    
+    
+    view.DOM_elements['select_distribution_panel'] = column([
+        # Div(text='<hr style="width:30em; margin-top:3em">'), 
+        row([
+            view.widgets.selectors['group'],
+            view.widgets.selectors['distribution_type']
+        ])
+        # view.figures['distribution'],
+    ])
 
 def create_distribution_tab():
 
-    view.widgets.selectors['graph_param'].on_change('value', p.select_range_param_callback)
+    view.widgets.selectors['mechanism'] = Select(title='Mechanism',
+                                                options=['Independent'],
+                                                value = 'Independent'
+                                                )
 
-    selection_panel = row([
-        view.widgets.selectors['graph_param'],
-        view.widgets.selectors['group'],
+    view.widgets.selectors['mechanism'].on_change('value', p.select_mechanism_callback)
+
+    view.widgets.selectors['graph_param'].on_change('value', p.select_param_callback)
+
+    view.widgets.buttons['make_distributed'] = Button(label='Make distributed',
+                                                    button_type='primary',
+                                                    disabled=False,
+                                                    visible=False,
+                                                    width=100,
+                                                    styles={"padding-top":"20px"}
+                                                    )
+
+    view.widgets.buttons['make_distributed'].on_event(ButtonClick, p.make_distributed_callback)
+    # view.widgets.buttons['make_distributed'].on_event(ButtonClick, p.voltage_callback_on_event)
+
+    view.widgets.buttons['make_global'] = Button(label='Make global',
+                                                button_type='primary',
+                                                disabled=False,
+                                                visible=False,
+                                                width=100,
+                                                styles={"padding-top":"20px"}
+                                                )
+
+    view.widgets.buttons['make_global'].on_event(ButtonClick, p.make_global_callback)                                                
+    
+
+    selection_panel = column([
+        view.widgets.selectors['mechanism'],
+        row([view.widgets.selectors['graph_param'],
+        view.widgets.buttons['make_distributed'],
+        view.widgets.buttons['make_global']])
     ])
+
+    create_select_distribution_panel()
+    view.DOM_elements['distribution_widgets_panel'] = column(width=300)
 
     distibution_panel = column([
         selection_panel,
-        create_distribution_panel(),
+        Div(text='<hr style="width:30em; margin-top:3em">'),
+        view.DOM_elements['select_distribution_panel'],
+        view.DOM_elements['distribution_widgets_panel']
     ])
 
     distribution_tab = TabPanel(title='Distributions', 
@@ -913,19 +975,26 @@ view.widgets.tabs['section'] = Tabs(tabs=[tab_section_vars,
                                           tab_point_processes])
 
 def tab_section_callback(attr, old, new):
-    DEFAULT_TAB_PARAM = {0: 'domain', 1: 'domain', 2: 'cm', 3: 'recordings'}
+    
     if p.model.sec_tree is None:
         return
     if new in [0, 3]:
         view.widgets.selectors['graph_param'].options = list(view.params)
         view.widgets.selectors['section'].value = '0'
     elif new == 1:
-        logger.debug('Switching to Groups tab')
-        view.widgets.selectors['group'].options = list(p.model.groups.keys())
-        p._select_group()
+        logger.debug(f'Switching to Groups tab') 
+        logger.debug(f'Avaliable groups: {p.model.groups.keys()}')
+        options = list(p.model.groups.keys())
+        view.widgets.selectors['group'].options = options
+        view.widgets.selectors['group'].value = options[0] if options else None
     elif new == 2:
         logger.debug('Switching to Distributions tab')
-        view.widgets.selectors['graph_param'].options = list(p.model.parameters_to_groups.keys())
+        view.widgets.selectors['mechanism'].options = list(p.model.mechs_to_params.keys())
+        view.widgets.selectors['mechanism'].value = 'Independent'
+        view.widgets.selectors['graph_param'].options = list(p.model.mechs_to_params['Independent'])
+        view.widgets.selectors['graph_param'].value = p.model.mechs_to_params['Independent'][0]
+
+    DEFAULT_TAB_PARAM = {0: 'domain', 1: 'domain', 2: 'cm', 3: 'recordings'}
     view.widgets.selectors['graph_param'].value = DEFAULT_TAB_PARAM[new]
         
     
@@ -1016,7 +1085,7 @@ view.widgets.selectors['from_json'].description = 'Select a cell to load. To sel
 
 # Loading morphology from SWC
 view.widgets.selectors['from_swc'] = Select(value='Load morphology from SWC',
-                       options=['Load morphology from SWC'] + model.swcm.list_files(), 
+                       options=['Load morphology from SWC'] + model.path_manager.list_swc(), 
                        title='Cell:', 
                        width=242)
 
@@ -1025,6 +1094,9 @@ view.widgets.selectors['from_swc'].on_change('value', p.from_swc_callback)
 # Segmentation
 view.widgets.sliders['d_lambda'] = Slider(start=0, end=0.2, value=0.1, step=0.01, title="d_lambda", width=200)
 view.widgets.sliders['d_lambda'].on_change('value_throttled', p.build_seg_tree_callback)                                            
+
+# view.widgets.buttons['build_seg_tree'] = Button(label='Build segments', button_type='primary', disabled=False)
+# view.widgets.buttons['build_seg_tree'].on_event(ButtonClick, p.build_seg_tree_callback)
 
 # Export to JSON
 view.widgets.buttons['to_json'] = Button(label='Export as JSON', button_type='primary', disabled=False)
@@ -1037,7 +1109,7 @@ view.widgets.file_input['all'].on_change('value', p.import_file_callback)
 
 # Load mechanism from mod files archives
 view.widgets.selectors['mod_archives'] = Select(title='Mechanism archives',
-                                    options = ['Select archive'] + [k for k in p.model.modm.list_archives().keys() if k != 'Base'],
+                                    options = ['Select archive'] + [k for k in p.model.path_manager.list_archives().keys() if k != 'Base'],
                                     value = 'Select archive',
                                     width=242)
 
@@ -1242,7 +1314,7 @@ def update_voltage_plot_y_range(attr, old, new):
 view.widgets.sliders['voltage_plot_x_range'].on_change('value_throttled', update_voltage_plot_x_range)
 view.widgets.sliders['voltage_plot_y_range'].on_change('value_throttled', update_voltage_plot_y_range)
 
-
+view.widgets.selectors['graph_layout'] = Select(title='Graph layout', options=['kamada-kawai', 'dot', 'neato'], value='kamada-kawai')
 
 settings_panel = column(view.widgets.selectors['theme'],
                         # view.widgets.selectors['output_format'],
@@ -1251,6 +1323,7 @@ settings_panel = column(view.widgets.selectors['theme'],
                         view.widgets.sliders['voltage_plot_y_range'],
                         row(view.widgets.switches['recompile'], Div(text='Recompile mod files')),
                         row(view.widgets.switches['enable_record_from_all'], Div(text='Enable record from all')),
+                        view.widgets.selectors['graph_layout'],
                         view.DOM_elements['controller'],
                         name='settings_panel')
 

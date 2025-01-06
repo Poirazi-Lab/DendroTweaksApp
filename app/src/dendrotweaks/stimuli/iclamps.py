@@ -20,7 +20,7 @@ class IClamp():
     def __init__(self, sec, loc, amp=0, delay=100, dur=100):
         self.sec = sec
         self.loc = loc
-        self._iclamp = h.IClamp(sec(loc))
+        self._iclamp = h.IClamp(sec(loc)._ref)
         self._iclamp.amp = amp
         self._iclamp.delay = delay
         self._iclamp.dur = dur

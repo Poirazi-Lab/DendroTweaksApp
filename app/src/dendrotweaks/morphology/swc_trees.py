@@ -259,8 +259,6 @@ class SWCTree(Tree):
             pt.x, pt.y, pt.z = x, y, z
 
     def align_apical_dendrite(self, axis='Y', facing='up'):
-        
-
         soma_center = self.soma_center
         apical_center = self.apical_center
 
@@ -280,8 +278,15 @@ class SWCTree(Tree):
         if facing == 'down':
             target_vector = -target_vector
 
-        # Calculate the rotation vector and angle
+        # Calculate the current vector
         current_vector = apical_center - soma_center
+
+        # Check if the apical dendrite is already aligned
+        if np.allclose(current_vector / np.linalg.norm(current_vector), target_vector):
+            print('Apical dendrite is already aligned.')
+            return
+
+        # Calculate the rotation vector and angle
         rotation_vector = np.cross(current_vector, target_vector)
         rotation_angle = np.arccos(np.dot(current_vector, target_vector) / np.linalg.norm(current_vector))
 

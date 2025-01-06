@@ -102,7 +102,7 @@ class SectionMixin():
     def update_section_widgets(self):
 
         self.update_sec_selector()
-        self.update_seg_x_selector()
+        # self.update_seg_x_selector()
 
         if len(self.selected_secs) == 1:
             self.view.widgets.sliders['n_seg'].value = self.selected_sec.nseg

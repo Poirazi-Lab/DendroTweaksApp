@@ -29,7 +29,7 @@ class NavigationMixin():
     def graph_lasso_callback(self, attr, old, new):
 
         # update selected segments
-        self.update_selected_segments(old, new)
+        self.update_selected_sections(old, new)
 
         # update cell selection
         self.update_cell_renderer_selection()
@@ -45,13 +45,12 @@ class NavigationMixin():
         #         self.update_distribution_plot()
 
     @log
-    def update_selected_segments(self, old, new):
+    def update_selected_sections(self, old, new):
         old_set = set(old)
         new_set = set(new)
         add_set = new_set - old_set
         remove_set = old_set - new_set
 
-        logger.debug(f"{self.view.figures['graph'].renderers[0].node_renderer.data_source.data.keys()}")
 
         data = self.view.figures['graph'].renderers[0].node_renderer.data_source.data['index']
         seg_ids_to_add = [data[i] for i in add_set]
@@ -85,7 +84,7 @@ class NavigationMixin():
         else: 
             seg_ids = []
 
-        self.select_seg_x(seg_ids)
+        # self.select_seg_x(seg_ids)
 
         with remove_callbacks(self.view.widgets.selectors['section']):
             self.view.widgets.selectors['section'].value = str(secs[0].idx) if new else ''
@@ -158,8 +157,8 @@ class NavigationMixin():
         if len(self.selected_segs) == 1:
             with remove_callbacks(self.view.widgets.switches['record']):
                 self.view.widgets.switches['record'].disabled = False
-                seg = self.selected_segs[0]               
-                self.view.widgets.switches['record'].active = seg in self.recorded_segments# self.model.simulator.recordings.get(seg) is not None
+                seg = self.selected_segs[0]
+                self.view.widgets.switches['record'].active = seg in self.recorded_segments
         else:
             with remove_callbacks(self.view.widgets.switches['record']):
                 self.view.widgets.switches['record'].active = False
@@ -198,8 +197,8 @@ class NavigationMixin():
         self.model.remove_all_synapses()
         self.view.DOM_elements['syn_group_panel'].children = []
         self.view.widgets.selectors['syn_group'].options = []
-        self.update_graph_param('iclamps')
-        self.update_graph_param('recordings')
+        self._update_graph_param('iclamps')
+        self._update_graph_param('recordings')
         for name in self.model.synapses:
-            self.update_graph_param(name)
+            self._update_graph_param(name)
         self.view.sources['sim'].data = {'xs': [], 'ys': [], 'label': []}

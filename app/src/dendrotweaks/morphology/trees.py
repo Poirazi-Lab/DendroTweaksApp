@@ -86,6 +86,18 @@ class Node():
         else:
             return self.parent.depth + 1
 
+    @property
+    def siblings(self):
+        """
+        Gets the siblings of the node.
+
+        Returns:
+            list: A list of nodes that share the same parent as the node.
+        """
+        if self.parent is None:
+            return []
+        return [child for child in self.parent.children if child is not self]
+
 
 class Tree:
     """

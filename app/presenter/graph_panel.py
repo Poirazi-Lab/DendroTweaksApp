@@ -15,10 +15,13 @@ from utils import timeit
 from utils import get_seg_name, get_sec_type, get_sec_name, get_sec_id
 
 import networkx as nx
+from networkx.drawing.nx_agraph import graphviz_layout 
 import numpy as np
 from neuron import h
 
 from logger import logger
+
+DOMAIN_TO_COLOR = {'soma': '#E69F00', 'axon': '#F0E442', 'dend': '#019E73', 'apic': '#0072B2'}
 
 
 class GraphMixin():
@@ -34,12 +37,13 @@ class GraphMixin():
 
     # CREATE NX
 
-    def _create_graph_nx(self):
+    @log
+    @timeit
+    def _create_seg_graph_nx(self):
 
         # self.G = neuron_to_seg_graph(self.model.cell)
         self.G = nx.Graph()
         total_nseg = len(self.model.seg_tree)
-        color_map = {'soma': '#E69F00', 'axon': '#F0E442', 'dend': '#019E73', 'apic': '#0072B2'}
         for seg in self.model.seg_tree:
             radius = int(200/np.sqrt(total_nseg)) if seg._section.domain == 'soma' else int(150/np.sqrt(total_nseg))
             self.G.add_node(seg.idx, 
@@ -53,30 +57,80 @@ class GraphMixin():
                             recordings='None',
                             iclamps=0,
                             radius=radius*0.002,
-                            color=color_map[seg._section.domain],
+                            color=DOMAIN_TO_COLOR[seg._section.domain],
                             )
             if seg.parent is not None:
                 self.G.add_edge(seg.parent.idx, seg.idx)
 
-        pos = nx.kamada_kawai_layout(self.G, scale=1, center=(0, 0), dim=2)
+        # pos = nx.kamada_kawai_layout(self.G, scale=1, center=(0, 0), dim=2)
+        pos = self._calculate_positions()
         nx.set_node_attributes(self.G, pos, 'pos')
-        self._rotate_graph()
+        # self._rotate_graph()
+
+    @log
+    @timeit
+    def _calculate_positions(self):        
+        # pos = {seg.idx: (seg._section.xs[0] + seg.x * (seg._section.xs[-1] - seg._section.xs[0]),
+        #          seg._section.ys[0] + seg.x * (seg._section.ys[-1] - seg._section.ys[0]))
+        #        for seg in self.model.seg_tree}
+        graph_layout = self.view.widgets.selectors['graph_layout'].value
+        logger.info('Using layout: ' + graph_layout)
+        if graph_layout == 'kamada-kawai':
+            pos = nx.kamada_kawai_layout(self.G, scale=1, center=(0, 0), dim=2)
+        elif graph_layout in ['dot', 'neato']:
+            pos = graphviz_layout(self.G, 
+                prog=graph_layout,
+                root=0)
+        
+        return pos
+
+    def _create_sec_graph_nx(self):
+
+        # self.G = neuron_to_seg_graph(self.model.cell)
+        self.G = nx.Graph()
+        total_nsec = len(self.model.sec_tree)
+        color_map = {'soma': '#E69F00', 'axon': '#F0E442', 'dend': '#019E73', 'apic': '#0072B2'}
+        for sec in self.model.sec_tree:
+            radius = int(200 / np.sqrt(total_nsec)) if sec.domain == 'soma' else int(150 / np.sqrt(total_nsec))
+            self.G.add_node(sec.idx, 
+                            domain=sec.domain,
+                            cm = sec._ref.cm,
+                            Ra = sec._ref.Ra,
+                            diam = sec._ref.diam,
+                            # area = sec.area,
+                            subtree_size = sec.subtree_size,
+                            dist = sec.distance_to_root(),
+                            recordings='None',
+                            iclamps=0,
+                            radius=radius*0.002,
+                            color=color_map[sec.domain],
+                            )
+            if sec.parent is not None:
+                self.G.add_edge(sec.parent.idx, sec.idx)
+
+        # pos = nx.kamada_kawai_layout(self.G, scale=1, center=(0, 0), dim=2)
+        pos = self._calculate_positions()
+        nx.set_node_attributes(self.G, pos, 'pos')
+        # self._rotate_graph()
 
     # CREATE GRAPH RENDERER
 
-    @log
+
     def _create_graph_renderer(self):
         
         # REMOVE OLD GRAPH RENDERER
         self.view.figures['graph'].renderers = []
         
         # CREATE NEW GRAPH RENDERER
-        self._create_graph_nx()
-        graph_renderer = from_networkx(graph=self.G,
-                                       layout_function=nx.layout.spring_layout,
-                                       pos=nx.get_node_attributes(self.G,
-                                                                  'pos'),
-                                       iterations=0)
+        # self._create_sec_graph_nx()
+        self._create_seg_graph_nx()
+
+        graph_renderer = from_networkx(
+            graph=self.G,
+            layout_function=nx.layout.spring_layout,
+            pos=nx.get_node_attributes(self.G, 'pos'),
+            iterations=0
+        )
 
         # UPDATE GLYPH
         self._update_glyph(graph_renderer)
@@ -180,7 +234,7 @@ class GraphMixin():
 
         # RECORDINGS
         if param_name == 'recordings':
-            return str(seg.idx) if self.model.simulator.recordings.get(seg) is not None else 'None'
+            return str(seg.idx) if self.model.recordings.get(seg) is not None else 'None'
 
         elif param_name == 'voltage':
             self.model.simulator.recordings[seg].to_python() if param_name == 'voltage' else 0,
@@ -208,18 +262,18 @@ class GraphMixin():
     # --------------------------------------------------------------------------------------------
 
 
-    def update_graph_colors_callback(self, attr, old, new):
-        """
-        Updates graph colors without updating the parameters.
-        Needed to visualize the distribution on selecting a parameter.
-        """
-        param_name = new
-        if new == 'voltage':
-            self.update_graph_param('voltage')
-        else:
-            # self.update_graph_param(param_name)
-            self._update_graph_colors(param_name)
-            # self.update_section_param_data(param_name)
+    # def update_graph_colors_callback(self, attr, old, new):
+    #     """
+    #     Updates graph colors without updating the parameters.
+    #     Needed to visualize the distribution on selecting a parameter.
+    #     """
+    #     param_name = new
+    #     if new == 'voltage':
+    #         self._update_graph_param('voltage')
+    #     else:
+    #         self._update_graph_param(param_name)
+    #         # self._update_graph_colors(param_name)
+    #         # self.update_section_param_data(param_name)
 
 
     @log
@@ -281,6 +335,7 @@ class GraphMixin():
         self.view.figures['graph'].title.text = f'Seg graph: {param}'
 
         if all(value == 0 for value in graph_renderer.node_renderer.data_source.data[param]):
+            logger.warning(f'All values of {param} are 0')
             graph_renderer.node_renderer.glyph.fill_color = self.view.theme.graph_fill #'#0d0887'  #'#440154'
             graph_renderer.node_renderer.selection_glyph.fill_color = self.view.theme.graph_fill #'#0d0887'  #'#440154'
             graph_renderer.node_renderer.nonselection_glyph.fill_color = self.view.theme.graph_fill #'#0d0887'  #'#440154'

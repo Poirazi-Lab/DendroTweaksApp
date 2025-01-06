@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
+from typing import Callable
 from neuron import h
 
 from dendrotweaks.morphology.trees import Node, Tree
@@ -30,7 +31,20 @@ class Section(Node):
         """
         if self._ref is None:
             raise ValueError('Section is not referenced in NEURON.')
-        return self._ref(x)
+        if x < 0 or x > 1:
+            raise ValueError('Location x must be in the range [0, 1].')
+        elif x == 0: 
+            # TODO: Decide how to handle sec(0) and sec(1)
+            # as they are not shown in the seg_graph
+            return self.segments[0]
+        elif x == 1:
+            return self.segments[-1]
+        matching_segs = [self._ref(x) == seg._ref for seg in self.segments]
+        if any(matching_segs):
+            return self.segments[matching_segs.index(True)]
+        raise ValueError('No segment found at location x.')
+        
+        
 
     # def __call__(self, x: float):
     #     """
@@ -82,6 +96,18 @@ class Section(Node):
         return self.pts3d[0].domain
 
     @property
+    def diam(self):
+        return self._ref.diam
+
+    @property
+    def L(self):
+        return self._ref.L
+
+    @property
+    def Ra(self):
+        return self._ref.Ra
+
+    @property
     def nseg(self):
         return self._ref.nseg
 
@@ -131,6 +157,10 @@ class Section(Node):
         distances = np.insert(distances, 0, 0)
         return distances
         # return distances - distances[0]
+
+    @property
+    def center(self):
+        return np.mean(self.xs), np.mean(self.ys), np.mean(self.zs)
 
     @property
     def length(self):
@@ -192,10 +222,24 @@ class Section(Node):
 
     # PARAMETER METHODS
 
+    def get_param_value(self, param_name):
+        """
+        Get the average parameter of the section's segments.
+        """
+        # if param_name in ['Ra', 'diam', 'L', 'nseg', 'domain', 'subtree_size']:
+        #     return getattr(self, param_name)
+        # if param_name in ['dist']:
+        #     return self.distance_to_root(0.5)
+        seg_values = [seg.get_param_value(param_name) for seg in self.segments]
+        return round(np.mean(seg_values), 16)
+
+
     def set_param_value(self, parameter_name, distribution_function):
         """
         Update the parameter of the section.
         """
+        if not isinstance(distribution_function, Callable):
+            raise ValueError('Distribution function must be callable.')
         if self.segments and all([hasattr(seg._ref, parameter_name) for seg in self.segments]):
             # print(f'Setting {parameter_name} in segments')
             for seg in self.segments:

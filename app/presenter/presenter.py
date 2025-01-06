@@ -81,17 +81,17 @@ class Presenter(IOMixin, NavigationMixin,
             logger.error('Invalid condition')
             return
 
-        segs = self.model.seg_tree if sec_type == 'all'\
-            else [seg for seg in self.model.seg_tree if seg._section.domain == sec_type]
+        if sec_type == 'all':
+            secs = self.model.sec_tree.sections
+        else:
+            secs = self.model.get_sections(lambda sec : sec.domain == sec_type)
+
+        segs = [seg for sec in secs for seg in sec.segments]
 
         if condition:
             attr_map = {'dist': 'distance_to_root', 'diam': 'diam'}
-            if select_by in attr_map:
-                segs = [seg for seg in segs if eval(condition.replace('x', f'seg.{attr_map[select_by]}'))]
-            else:
-                raise NotImplementedError(f"Selection by {select_by} is not implemented")
+            segs = [seg for seg in segs if eval(condition.replace('x', f'seg.{attr_map[select_by]}'))]
 
-        logger.debug(f'Selected {len(segs)} segments')
         seg_ids = [seg.idx for seg in segs]
         self.view.figures['graph'].renderers[0].node_renderer.data_source.selected.indices = seg_ids
 
@@ -100,7 +100,7 @@ class Presenter(IOMixin, NavigationMixin,
     def add_group_callback(self, event):
 
         group_name = self.view.widgets.text['group_name'].value
-        nodes = self.selected_secs
+        nodes = list(self.selected_secs)[:]
         self.add_group(group_name, nodes)
 
         # Clear the group name input
@@ -112,6 +112,7 @@ class Presenter(IOMixin, NavigationMixin,
         """
         Adds a group of nodes (sections) to the model.
         """
+        logger.debug(f'Adding group "{group_name}" with {len(nodes)} nodes')
         self.model.add_group(group_name, nodes)
         self._update_group_selector_widget(group_name)
         self._toggle_group_panel(group_name)
@@ -146,8 +147,10 @@ class Presenter(IOMixin, NavigationMixin,
     # GROUP PANEL
     # -----------------------------------------------------------------
 
-    # SELECT GROUP MECHANISMS
+    
+    # MECHANISMS ------------------------------------------------------
     # multiselect['mechanisms']
+    
     @log
     def update_group_mechanisms_callback(self, attr, old, new):
         """
@@ -168,85 +171,121 @@ class Presenter(IOMixin, NavigationMixin,
             logger.debug(f'Mech to add: {mechs_to_add}')
             mech_name = mechs_to_add[0]
             self.insert_mech(mech_name, group_name)
-
+    
     def insert_mech(self, mech_name, group_name):
         """
         Inserts the mechanisms to the groups.
         """
-        self.model.insert_mechs(mech_name, group_name)
-        self._update_available_params_widget(group_name)
+        self.model.insert_mechanism(mech_name, group_name)
+        self._update_mechanism_selector_widget(group_name)
 
     def uninsert_mech(self, mech_name, group_name):
         """
         Uninserts the mechanisms from the groups.
         """
-        self.model.uninsert_mechs(mech_name, group_name)
-        self._update_available_params_widget(group_name)
+        self.model.uninsert_mechanism(mech_name, group_name)
+        self._update_mechanism_selector_widget(group_name)
 
-    def _update_available_params_widget(self, group_name):
+    def _update_mechanism_selector_widget(self, group_name):
         """
-        Updates the multiselect['params'] widget with the parameters that 
+        Updates the multiselect['mechanisms'] widget with the mechanisms that 
         are available for the selected group.
-        The list depends on what mechanisms were inserted into the group sections
-        with the multiselect['mechanisms'] widget.
         """
         group = self.model.groups[group_name]
-        group_mechanisms = group.mechanisms
+        with remove_callbacks(self.view.widgets.selectors['mechanism']):
+            self.view.widgets.selectors['mechanism'].options = group.mechanisms
+            mech_name = group.mechanisms[0] if group.mechanisms else None
+            self.view.widgets.selectors['mechanism'].value = mech_name
+        # self._update_available_params_widget(mech_name, group_name)
 
-        available_parameters = ['cm', 'Ra'] + [
-            param for mech in group_mechanisms.values()
-            for param in mech.parameters.keys()
-        ]
 
-        group_parameters = list(group.parameters.keys())
+    # def _update_available_params_widget(self, mech_name, group_name):
+    #     """
+    #     Updates the multiselect['params'] widget with the parameters that 
+    #     are available for the selected group.
+    #     The list depends on what mechanisms were inserted into the group sections
+    #     with the multiselect['mechanisms'] widget.
+    #     """
+    #     group = self.model.groups[group_name]
 
-        with remove_callbacks(self.view.widgets.multichoice['params']):
-            self.view.widgets.multichoice['params'].options = available_parameters
-            self.view.widgets.multichoice['params'].value = group_parameters
-
-    ### multiselect['params']
-    @log
-    def update_group_parameters_callback(self, attr, old, new):
-        """
-        Updates the multiselect['params'] widget.
-        Makes selected parameters available to be distributed within the group.
-        """
-
-        group_name = self.view.widgets.selectors['group'].value
-
-        params_to_add = list(set(new).difference(set(old)))
-        params_to_remove = list(set(old).difference(set(new)))
-
-        if params_to_remove:
-            param_name = params_to_remove[0]
-            self.model.groups[group_name].remove_parameter(param_name)
-            # param → ALL groups
-            self.distribute_params(param_names=[param_name]) 
-            self._update_graph_param(param_name, update_colors=False)
-
-        if params_to_add:
-            param_name = params_to_add[0]
-            self.model.groups[group_name].add_parameter(param_name)
-            logger.debug(f'Added {param_name} to {group_name}')
-            # param → group
-            self.distribute_params(param_names=[param_name], 
-                                   group_names=[group_name])
-            self._update_graph_param(param_name, update_colors=False)
+    #     # available_parameters = ['cm', 'Ra'] + [
+    #     #     param for mech in group_mechanisms.values()
+    #     #     for param in mech.parameters.keys()
+    #     # ]
         
-    @log
-    def distribute_params(self, param_names:List[str] = None, 
-                          group_names:List[str] = None):
-        """
-        Distributes the parameters to the groups.
-        """
+    #     available_parameters = self.model.groups_to_parameters[group_name][mech_name]
 
-        self.model.distribute_params(param_names, group_names)
+    #     group_parameters = [param_name for param_name in available_parameters
+    #                        if isinstance(self.model.parameters[mech_name][param_name], dict)]
+
+    #     # group_parameters = list(group.parameters.keys())
+
+    #     with remove_callbacks(self.view.widgets.multichoice['params']):
+    #         self.view.widgets.multichoice['params'].options = available_parameters
+    #         self.view.widgets.multichoice['params'].value = group_parameters
+
+    # PARAMETERS ------------------------------------------------------
+    # multiselect['params']
+    
+    # @log
+    # def update_group_parameters_callback(self, attr, old, new):
+    #     """
+    #     Updates the multiselect['params'] widget.
+    #     Makes selected parameters available to be distributed within the group.
+    #     """
+
+    #     group_name = self.view.widgets.selectors['group'].value
+
+    #     params_to_add = list(set(new).difference(set(old)))
+    #     params_to_remove = list(set(old).difference(set(new)))
+
+    #     if params_to_remove:
+    #         param_name = params_to_remove[0]
+    #         self.model.groups[group_name].remove_parameter(param_name)
+    #         # param → ALL groups
+    #         self.distribute_params(param_names=[param_name]) 
+    #         self._update_graph_param(param_name, update_colors=False)
+
+    #     if params_to_add:
+    #         param_name = params_to_add[0]
+    #         self.model.groups[group_name].add_parameter(param_name)
+    #         logger.debug(f'Added {param_name} to {group_name}')
+    #         # param → group
+    #         self.distribute_params(param_names=[param_name], 
+    #                                group_names=[group_name])
+    #         self._update_graph_param(param_name, update_colors=False)
+        
+    # @log
+    # def distribute_params(self, param_names:List[str] = None, 
+    #                       group_names:List[str] = None):
+    #     """
+    #     Distributes the parameters to the groups.
+    #     """
+
+    #     self.model.distribute_params(param_names, group_names)
 
 
     
     # ===============================
     # DISTRIBUTION TAB
     # ===============================
+
+    @log
+    def select_mechanism_callback(self, attr, old, new):
+        """
+        Callback for the multiselect['mechanisms'] widget.
+        """
+        mech_name = new
+
+        avaliable_params = self.model.mechs_to_params[mech_name]
+        param_name = avaliable_params[0]
+        
+        self.view.widgets.selectors['graph_param'].options = avaliable_params
+        self.view.widgets.selectors['graph_param'].value = param_name
+
+        
+
+
 
     ## SELECTORS
 
@@ -262,37 +301,165 @@ class Presenter(IOMixin, NavigationMixin,
         # return group
         return self.view.widgets.selectors['group'].value
 
+    def make_distributed_callback(self, event):
+        param_name = self.selected_param
+        logger.debug(f'Making {param_name} distributed')
+        self.model.make_distributed(param_name)
+        self._update_graph_param(param_name)
+
+        self._toggle_distributed_param_panel(param_name)
+
+    def make_global_callback(self, event):
+        param_name = self.selected_param
+        logger.debug(f'Making {param_name} global')
+        # self.model.make_global(param_name)
+
     ### selectors['graph_param']
 
     @log
-    def select_range_param_callback(self, attr, old, new):
+    def select_param_callback(self, attr, old, new):
         """
         Callback for the selectors['graph_param'] widget.
         Show the panel with distribution sliders for the 
         selected range parameter.
         """
         param_name = new
-        group_name = self.selected_group
+
         if self.view.widgets.tabs['section'].active == 2:
-            param_name = self.selected_param
-            group_name = self.selected_group
-            self._update_group_selector_on_param_selection(param_name)
-            group_name = self.selected_group # update group name after updating the group selector
-            self._toggle_distribution_panel(param_name, group_name)
-            self._update_distribution_plot(param_name)
-    
+
+            # HANDLE DISTRIBUTED PARAM
+            if param_name in self.model.distributed_params:
+                self._toggle_distributed_param_panel(param_name)
+                # self._update_group_selector_on_param_selection(param_name)
+                # self._toggle_distribution_panel(param_name, group_name)
+                # self._update_distribution_plot(param_name)
+
+            # HANDLE GLOBAL PARAM
+            elif param_name in self.model.global_params:
+                self._toggle_global_param_panel(param_name)
+
+        self._update_graph_param(param_name, update_colors=True)
+
+    # ****************************************************************
+    # DISTRIBUTED PARAMS
+    # ****************************************************************
+
     @log
-    def _update_group_selector_on_param_selection(self, param_name):
+    def _toggle_distributed_param_panel(self, param_name):
         """
-        Update selectors['group'] when selectors['graph_param'] is updated
-        to show only the groups that contain the selected parameter.
+        Updates the panel with the sliders for the distributed parameters.
         """
-        if self.view.widgets.tabs['section'].active == 2:
-            groups_containing_param = self.model.parameters_to_groups[param_name]
-            self.view.widgets.selectors['group'].options = groups_containing_param
-            if not self.view.widgets.selectors['group'].value in groups_containing_param:
-                group_name = groups_containing_param[0] or None
-                self.view.widgets.selectors['group'].value = group_name
+        logger.debug(f'Updating distributed param panel for {param_name}')
+        self.view.DOM_elements['select_distribution_panel'].visible = True
+        self.view.widgets.buttons['make_distributed'].visible = False
+        self.view.widgets.buttons['make_global'].visible = True
+
+        group_name = self.selected_group
+
+        # Show distribution type
+        with remove_callbacks(self.view.widgets.selectors['distribution_type']):    
+            self.view.widgets.selectors['distribution_type'].value = self.model.distributed_params[param_name][group_name].function_name
+
+        # Show distribution sliders
+        self._toggle_distributed_param_widget(param_name, group_name)
+
+    @log
+    def _toggle_distributed_param_widget(self, param_name, group_name):
+
+        def make_slider_callback(slider_title):
+            def slider_callback(attr, old, new):
+                self.model.distributed_params[param_name][group_name].update_parameters(**{slider_title: new})
+                self.model.distribute(param_name)
+                self._update_graph_param(param_name)
+                # self._update_distribution_plot(param_name)
+            return slider_callback
+
+        sliders = []
+        for k, v in self.model.distributed_params[param_name][group_name].parameters.items():
+            logger.info(f'Adding slider for {k} with value {v}')
+            slider = AdjustableSpinner(title=k, value=v)
+            slider_callback = make_slider_callback(slider.title)
+            slider.on_change('value_throttled', slider_callback)
+            slider.on_change('value_throttled', self.voltage_callback_on_change)
+            logger.info(f'Slider title is {slider.title}, value is {slider.value}')
+            sliders.append(slider.get_widget())
+        self.view.DOM_elements['distribution_widgets_panel'].children = sliders
+
+    ### selectors['distribution']
+
+    def update_distribution_type_callback(self, attr, old, new):
+        """
+        Callback for the selectors['distribution_type'] widget.
+        """
+        group_name = self.selected_group
+        param_name = self.selected_param
+        function_name = new
+        self.model.set_distributed_param(param_name, 
+                                         group_name,
+                                         distr_type=function_name)
+        self._toggle_distributed_param_widget(param_name, group_name)
+        # self._update_distribution_plot(param_name)
+
+    
+    def _update_distribution_plot(self, param_name):
+
+        SEC_TYPE_TO_IDX = {'soma': 0, 'axon': 1, 'dend': 2, 'apic': 3}
+
+        selected_segs = self.selected_segs
+
+        data = {'x': [seg.distance_to_root for seg in selected_segs],
+                'y': [seg.get_param_value(param_name) for seg in selected_segs],
+                'color': [self.view.theme.palettes['sec_type'][SEC_TYPE_TO_IDX[seg._section.domain]] for seg in selected_segs], 
+                'label': [str(seg.idx) for seg in selected_segs]}
+
+        self.view.sources['distribution'].data = data
+
+    # ****************************************************************
+    # GLOBAL PARAMS
+    # ****************************************************************
+
+    def _toggle_global_param_panel(self, param_name):
+        """
+        Updates the panel with the sliders for the global parameters.
+        """
+        logger.debug(f'Updating global param panel for {param_name}')
+        self.view.DOM_elements['select_distribution_panel'].visible = False
+        self.view.widgets.buttons['make_global'].visible = False
+        self.view.widgets.buttons['make_distributed'].visible = True
+        
+        self._toggle_global_param_widget(param_name)
+
+    def _toggle_global_param_widget(self, param_name):
+        
+        def make_slider_callback(slider_title):
+            def slider_callback(attr, old, new):
+                self.model.set_global_param(param_name, new)
+                self._update_graph_param(param_name)
+            return slider_callback
+
+        sliders = []
+        value = self.model.global_params[param_name]
+
+        slider = AdjustableSpinner(title=param_name, value=value)
+        slider_callback = make_slider_callback(slider.title)
+        slider.on_change('value_throttled', slider_callback)
+        slider.on_change('value_throttled', self.voltage_callback_on_change)
+        logger.info(f'Slider title is {slider.title}, value is {slider.value}')
+        sliders.append(slider.get_widget())
+        self.view.DOM_elements['distribution_widgets_panel'].children = sliders
+    
+    # @log
+    # def _update_group_selector_on_param_selection(self, param_name):
+    #     """
+    #     Update selectors['group'] when selectors['graph_param'] is updated
+    #     to show only the groups that contain the selected parameter.
+    #     """
+    #     if self.view.widgets.tabs['section'].active == 2:
+    #         groups_containing_param = self.model.parameters_to_groups[param_name]
+    #         self.view.widgets.selectors['group'].options = groups_containing_param
+    #         if not self.view.widgets.selectors['group'].value in groups_containing_param:
+    #             group_name = groups_containing_param[0] or None
+    #             self.view.widgets.selectors['group'].value = group_name
 
     # @log
     # def _update_param_selector_on_group_selection(self, group_name):
@@ -327,14 +494,23 @@ class Presenter(IOMixin, NavigationMixin,
         if self.view.widgets.tabs['section'].active == 1:
             self._toggle_group_panel(group_name)
         if self.view.widgets.tabs['section'].active == 2:
-            self._toggle_distribution_panel(param_name, group_name)
+            
+            # Show distribution type
+            with remove_callbacks(self.view.widgets.selectors['distribution_type']):    
+                self.view.widgets.selectors['distribution_type'].value = self.model.distributed_params[param_name][group_name].function_name
+
+            self._toggle_distributed_param_widget(param_name, group_name)
+            
             self._update_distribution_plot(group_name)
+
 
 
     @log
     def _select_group_secs_in_graph(self, group_name):
         group = self.model.groups[group_name]
-        seg_ids = [seg.idx for sec in group.nodes for seg in sec.segments]
+        logger.debug(f'Selected group {group_name} with {(group.sections)} sections')
+        seg_ids = [seg.idx for sec in group.sections for seg in sec.segments]
+
         self.view.figures['graph'].renderers[0].node_renderer.data_source.selected.indices = seg_ids
         # else:
         #     self.view.figures['graph'].renderers[0].node_renderer.data_source.selected.indices = []
@@ -345,79 +521,23 @@ class Presenter(IOMixin, NavigationMixin,
         Updates two widgets: multichoice['mechanisms'] and 
         multichoice['params']
         """
-        self._update_group_mechnaisms_widget(group_name)
-        self._update_available_params_widget(group_name)
+        self._update_inserted_mechnaisms_widget(group_name)
+        # self._update_available_params_widget(group_name)
 
-    
-    def _update_group_mechnaisms_widget(self, group_name):
+    @log
+    def _update_inserted_mechnaisms_widget(self, group_name):
         """
         Updates the multichoice['mechanisms'] widget on group selection.
         """
         group = self.model.groups[group_name]
         with remove_callbacks(self.view.widgets.multichoice['mechanisms']):
-            self.view.widgets.multichoice['mechanisms'].value = list(group.mechanisms.keys())
+            mech_names = [
+                mech_name for mech_name in group.mechanisms 
+                if mech_name != 'Independent'
+            ]
+            self.view.widgets.multichoice['mechanisms'].value = mech_names
 
-    def _toggle_distribution_panel(self, param_name, group_name):
 
-        group = self.model.groups[group_name]
-
-        logger.debug(f'Group {group_name} has parameters: {group.parameters}, selected param: {param_name}')
-        
-        with remove_callbacks(self.view.widgets.selectors['distribution_type']):
-                self.view.widgets.selectors['distribution_type'].value = \
-                    group.parameters[param_name].function_name
-
-        if group is None:
-            self.view.DOM_elements['distribution_panel'].children = []
-            return
-
-        def make_slider_callback(slider_title):
-            def slider_callback(attr, old, new):
-                group.update_distribution_parameters(param_name, **{slider_title: new})
-                for g in self.model.groups.values():
-                    if param_name in g.parameters:
-                        g.distribute(param_name)
-                self._update_graph_param(param_name)
-                self._update_distribution_plot(param_name)
-            return slider_callback
-
-        sliders = []
-        for k, v in group.parameters[param_name].parameters.items():
-            logger.info(f'Adding slider for {k} with value {v}')
-            slider = AdjustableSpinner(title=k, value=v)
-            slider_callback = make_slider_callback(slider.title)
-            slider.on_change('value_throttled', slider_callback)
-            slider.on_change('value_throttled', self.voltage_callback_on_change)
-            logger.info(f'Slider title is {slider.title}, value is {slider.value}')
-            sliders.append(slider.get_widget())
-        self.view.DOM_elements['distribution_panel'].children = sliders
-
-    ### selectors['distribution']
-
-    def update_distribution_type_callback(self, attr, old, new):
-        """
-        Callback for the selectors['distribution_type'] widget.
-        """
-        group_name = self.selected_group
-        param_name = self.selected_param
-        function_name = new
-        self.model.groups[group_name].set_distribution(param_name, function_name)
-        self._toggle_distribution_panel()
-        self._update_distribution_plot(param_name)
-
-    
-    def _update_distribution_plot(self, param_name):
-
-        SEC_TYPE_TO_IDX = {'soma': 0, 'axon': 1, 'dend': 2, 'apic': 3}
-
-        selected_segs = self.selected_segs
-
-        data = {'x': [seg.distance_to_root for seg in selected_segs],
-                'y': [seg.get_param_value(param_name) for seg in selected_segs],
-                'color': [self.view.theme.palettes['sec_type'][SEC_TYPE_TO_IDX[seg._section.domain]] for seg in selected_segs], 
-                'label': [str(seg.idx) for seg in selected_segs]}
-
-        self.view.sources['distribution'].data = data
 
 
 
@@ -444,7 +564,7 @@ class Presenter(IOMixin, NavigationMixin,
         N_syn = self.view.widgets.spinners['N_syn'].value
         syn.add_group(segments=segments, N_syn=N_syn)
 
-        self.update_graph_param(syn.name)
+        self._update_graph_param(syn.name)
 
         self.view.widgets.selectors['syn_group'].options = [group.name for group in syn.groups]
         self.view.widgets.selectors['syn_group'].value = syn.groups[-1].name
@@ -456,7 +576,7 @@ class Presenter(IOMixin, NavigationMixin,
         logger.debug(f'Removing group {group.name} from {syn.name}')
 
         syn.remove_group(group)
-        self.update_graph_param(syn.name)
+        self._update_graph_param(syn.name)
 
         self.view.widgets.selectors['syn_group'].options = [group.name for group in syn.groups]
         self.view.widgets.selectors['syn_group'].value = syn.groups[-1].name if syn.groups else None
@@ -646,13 +766,15 @@ class Presenter(IOMixin, NavigationMixin,
         
 
     def record_callback(self, attr, old, new):
+        seg = self.selected_segs[0]
+        sec, loc = seg._section, seg.x
         if new:
-            self.model.simulator.add_recording(seg=self.selected_segs[0])
-            self.recorded_segments.append(self.selected_segs[0])
+            self.model.add_recording(sec, loc)
+            self.recorded_segments.append(seg)
             self._update_graph_param('recordings')
         else:
-            self.model.simulator.remove_recording(seg=self.selected_segs[0])
-            self.recorded_segments.remove(self.selected_segs[0])
+            self.model.remove_recording(sec, loc)
+            self.recorded_segments.remove(seg)
             self._update_graph_param('recordings')
 
     @log
@@ -706,7 +828,7 @@ class Presenter(IOMixin, NavigationMixin,
     #         ch = self.selected_channel
     #         domain = self.selected_domain
     #         ch.apply_groups(domain)
-    #         self.update_graph_param(param_name)
+    #         self._update_graph_param(param_name)
 
     #     range_slider.on_change('value_throttled', range_slider_callback)
 
@@ -733,7 +855,7 @@ class Presenter(IOMixin, NavigationMixin,
     #         f_name = group.distribution.f.func.__name__
     #         group.distribution = Distribution(f_name, **{slider.children[1].title: slider.children[1].value for slider in sliders})
     #         logger.debug(f'Updated {group.distribution}')
-    #         self.update_graph_param(param_name)
+    #         self._update_graph_param(param_name)
 
     #     sliders = []
     #     for k, v in group.distribution.f.keywords.items():

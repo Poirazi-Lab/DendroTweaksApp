@@ -10,11 +10,24 @@ class SWCReader():
         """
         Read the SWC file and return a DataFrame.
         """
+        with open(path_to_swc_file, 'r') as f:
+            lines = f.readlines()
+        lines = [' '.join(line.split()) for line in lines if line.strip()]
+        with open(path_to_swc_file, 'w') as f:
+            f.write('\n'.join(lines))
+
         df = pd.read_csv(
             path_to_swc_file, 
-            sep=' ', header=None, 
-            names=['Index', 'Type', 'X', 'Y', 'Z', 'R', 'Parent']
+            sep=' ', 
+            header=None, 
+            comment='#', 
+            names=['Index', 'Type', 'X', 'Y', 'Z', 'R', 'Parent'],
+            index_col=False
         )
+
+        if (df['R'] == 0).all():
+            df['R'] = 1.0
+
         if df['Index'].duplicated().any():
             raise ValueError("The SWC file contains duplicate node ids.")
         return df

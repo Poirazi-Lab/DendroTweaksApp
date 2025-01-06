@@ -30,7 +30,7 @@ class SimulationMixin():
             return
 
         ### Get labels for recorded segments ###
-        labels = [str(seg.idx) for seg in self.model.simulator.recordings.keys()]
+        labels = [seg.idx for seg in self.model.simulator.recordings.keys()]
         logger.info(f'Recording voltage from {labels}')
 
         duration = self.view.widgets.sliders['duration'].value
@@ -57,8 +57,8 @@ class SimulationMixin():
         self.view.sources['sim'].data = {'xs': ts[:len(vs)], 'ys': vs, 'label': factors}
         self.view.sources['curr'].data = {'xs': ts[:len(Is)], 'ys': Is, 'label': factors}
     
-        if self.model.synapses:
-            self.update_spike_times_data()
+        # if self.model.synapses:
+        #     self.update_spike_times_data()
 
     
     @log
@@ -112,6 +112,8 @@ class SimulationMixin():
 
     @log
     def toggle_iclamp_callback(self, attr, old, new):
+        seg = self.selected_segs[0]
+        sec, loc = seg._section, seg.x
         if new:
             with remove_callbacks(self.view.widgets.sliders['iclamp_amp']):
                 self.view.widgets.sliders['iclamp_amp'].value = 0
@@ -120,14 +122,14 @@ class SimulationMixin():
             self.view.widgets.sliders['iclamp_duration'].visible = True
             self.view.widgets.sliders['iclamp_amp'].visible = True
             # self.view.widgets.selectors['iclamp_amp_unit'].visible = True
-            self.model.add_iclamp(seg=self.selected_segs[0])
-            self.update_graph_param('iclamps')
+            self.model.add_iclamp(sec=sec, loc=loc)
+            self._update_graph_param('iclamps')
         else:
-            self.model.remove_iclamp(seg=self.selected_segs[0])
+            self.model.remove_iclamp(sec=sec, loc=loc)
             self.view.widgets.sliders['iclamp_duration'].visible = False
             self.view.widgets.sliders['iclamp_amp'].visible = False
             # self.view.widgets.selectors['iclamp_amp_unit'].visible = False
-            self.update_graph_param('iclamps')
+            self._update_graph_param('iclamps')
 
     def update_equilibtium_potentials(self):
         for ch in self.model.channels.values():

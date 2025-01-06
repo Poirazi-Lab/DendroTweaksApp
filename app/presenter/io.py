@@ -28,12 +28,15 @@ class IOMixin():
         swc_file_name = new
         self.create_morpohlogy(swc_file_name)
 
-        # LOAD MECHANISMS ----------------------------------------------
-        self.add_archive('Base', recompile=False)
+        # LOAD MECHANISMS -----------------------------------------
+        self.add_archive('Default')
+        self.model.load_archive('Synapses', recompile=False)
 
-        # GROUPS -------------------------------------------------
-        self.add_default_group()
-        self.distribute_params(param_names=['cm', 'Ra']) # needed for segmentation
+        # PARAMETERS ----------------------------------------------
+        self.model.add_group('all')
+        self.model.set_global_param('cm', 1)
+        self.model.set_global_param('Ra', 100)
+        self._update_group_selector_widget()
         
 
         # SEGMENTATION --------------------------------------------
@@ -43,7 +46,6 @@ class IOMixin():
         
         # MISC ---------------------------------------------------
         self._attach_download_js()
-
 
 
     def from_json_callback(self, attr, old, new):
@@ -130,11 +132,11 @@ class IOMixin():
         """
         Callback for the selectors['mod_archives'] widget.
         """
-        self.add_archive(new, recompile=self.view.widgets.switches['recompile'].active)
+        self.add_archive(new)
         self.view.widgets.selectors['mod_archives'].disabled = True
 
     @log
-    def add_archive(self, archive_name, recompile=False):
+    def add_archive(self, archive_name):
         """
         Creates Mechanism object from an archive of mod files 
         and adds them to model.mechanisms.
@@ -147,17 +149,7 @@ class IOMixin():
         logger.debug(f'Loaded mechanisms: {self.model.mechanisms.keys()}')
 
     # GROUPS
-    @log
-    def add_default_group(self):
-        """
-        Adds the default 'all' group to the model.
-        """
-        # Add the group to the model
-        sections = self.model.sec_tree.sections
-        self.add_group('all', sections)
-        # Add parameters to the group
-        self.model.groups['all'].add_parameter('cm', dd.ParametrizedFunction('uniform', value=1.1))
-        self.model.groups['all'].add_parameter('Ra', dd.ParametrizedFunction('uniform', value=100))
+
     
     def add_groups_from_json(self, data):
         for group_name, group_data in data['groups'].items():
@@ -167,11 +159,11 @@ class IOMixin():
             self.model.add_group(group_name, sections)
             # Add mechanisms to the group
             for mech_name in group_data['mechanisms']:
-                self.insert_mechs(mech_names=[mech_name], 
-                                  group_names=[group_name])
+                self.insert_mech(mech_name=mech_name, 
+                                  group_name=group_name)
             # Add parameters to the group
             for param_name, param_data in group_data['parameters'].items():
-                func = dd.ParametrizedFunction.from_dict(param_data)
+                func = dd.Distribution.from_dict(param_data)
                 self.model.groups[group_name].add_parameter(param_name, func)
 
 
@@ -188,11 +180,10 @@ class IOMixin():
         Updates the segmentation based on the current d_lambda
         and builds the seg tree.
         """
-        if not 'cm' in self.model.parameters_to_groups:
-            raise ValueError('Capacitance is not set for any group.')
+        # if not 'cm' in self.model.parameters_to_groups:
+        #     raise ValueError('Capacitance is not set for any group.')
         logger.info(f'Aimed for {1/d_lambda} segments per length constant at {100} Hz')
-        self.model.set_geom_nseg(d_lambda=d_lambda, f=100)
-        self.model.build_seg_tree()
+        self.model.set_segmentation(d_lambda=d_lambda, f=100)
         logger.info(f'Total nseg: {len(self.model.seg_tree)}')
 
         self._create_graph_renderer()
