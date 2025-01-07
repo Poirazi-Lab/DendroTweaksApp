@@ -330,8 +330,6 @@ class Presenter(IOMixin, NavigationMixin,
             # HANDLE DISTRIBUTED PARAM
             if param_name in self.model.distributed_params:
                 self._toggle_distributed_param_panel(param_name)
-                # self._update_group_selector_on_param_selection(param_name)
-                # self._toggle_distribution_panel(param_name, group_name)
                 # self._update_distribution_plot(param_name)
 
             # HANDLE GLOBAL PARAM
@@ -354,14 +352,23 @@ class Presenter(IOMixin, NavigationMixin,
         self.view.widgets.buttons['make_distributed'].visible = False
         self.view.widgets.buttons['make_global'].visible = True
 
-        group_name = self.selected_group
+        mech_name = self.view.widgets.selectors['mechanism'].value
+        mech_groups = [group_name for group_name in self.model.groups.keys() 
+                       if mech_name in self.model.groups[group_name].mechanisms]
 
-        # Show distribution type
-        with remove_callbacks(self.view.widgets.selectors['distribution_type']):    
-            self.view.widgets.selectors['distribution_type'].value = self.model.distributed_params[param_name][group_name].function_name
+        with remove_callbacks(self.view.widgets.selectors['group']):
+            self.view.widgets.selectors['group'].options = mech_groups
+            self.view.widgets.selectors['group'].value = mech_groups[0] if mech_groups else None
 
-        # Show distribution sliders
-        self._toggle_distributed_param_widget(param_name, group_name)
+        self._select_group()
+
+
+        # # Show distribution type
+        # with remove_callbacks(self.view.widgets.selectors['distribution_type']):    
+        #     self.view.widgets.selectors['distribution_type'].value = self.model.distributed_params[param_name][group_name].function_name
+
+        # # Show distribution sliders
+        # self._toggle_distributed_param_widget(param_name, group_name)
 
     @log
     def _toggle_distributed_param_widget(self, param_name, group_name):
@@ -489,10 +496,14 @@ class Presenter(IOMixin, NavigationMixin,
         group_name = group_name or self.selected_group
         param_name = self.selected_param
 
-        # self._update_param_selector_on_group_selection(group_name)
+        # Show group in the graph
         self._select_group_secs_in_graph(group_name)
+
+        # Show group panel
         if self.view.widgets.tabs['section'].active == 1:
             self._toggle_group_panel(group_name)
+
+        # Show distributed param panel
         if self.view.widgets.tabs['section'].active == 2:
             
             # Show distribution type

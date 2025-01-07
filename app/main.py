@@ -867,7 +867,7 @@ def create_distribution_tab():
         view.DOM_elements['distribution_widgets_panel']
     ])
 
-    distribution_tab = TabPanel(title='Distributions', 
+    distribution_tab = TabPanel(title='Parameters', 
                                 child=distibution_panel)
     
     return distribution_tab
@@ -988,7 +988,7 @@ def tab_section_callback(attr, old, new):
         view.widgets.selectors['group'].options = options
         view.widgets.selectors['group'].value = options[0] if options else None
     elif new == 2:
-        logger.debug('Switching to Distributions tab')
+        logger.debug('Switching to Parameters tab')
         view.widgets.selectors['mechanism'].options = list(p.model.mechs_to_params.keys())
         view.widgets.selectors['mechanism'].value = 'Independent'
         view.widgets.selectors['graph_param'].options = list(p.model.mechs_to_params['Independent'])

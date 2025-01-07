@@ -60,7 +60,6 @@ class NavigationMixin():
             self.remove_segments(seg_ids_to_remove)
         if seg_ids_to_add:
             self.add_segments(seg_ids_to_add)
-
         
 
     def add_segments(self, seg_ids):
@@ -71,9 +70,6 @@ class NavigationMixin():
         self.selected_segs = [seg for seg in self.selected_segs if seg.idx not in seg_ids]
         self.selected_secs = set([seg._section for seg in self.selected_segs])
 
-    def clear_segments(self):
-        self.selected_secs = set()
-        self.selected_segs = []
 
     @log
     def cell_tap_callback(self, attr, old, new):
