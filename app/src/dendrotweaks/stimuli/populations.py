@@ -1,24 +1,58 @@
-from dendrotweaks.morphology.sec_trees import Section
+from dendrotweaks.morphology.seg_trees import Segment
 from dendrotweaks.stimuli.synapses import Synapse
 
 from typing import List
 import numpy as np
+
+KINETIC_PARAMS = {
+    'AMPA': {
+        'gmax': 0.001,
+        'tau_rise': 0.1,
+        'tau_decay': 2.5,
+        'e': 0
+    },
+    'NMDA': {
+        'gmax': 0.7 * 0.001,
+        'tau_rise': 2,
+        'tau_decay': 30,
+        'e': 0,
+        'gamma': 0.062,
+        'mu': 0.28,
+    },
+    'AMPA_NMDA': {
+        'gmax_AMPA': 0.001,
+        'gmax_NMDA': 0.7 * 0.001,
+        'tau_rise_AMPA': 0.1,
+        'tau_decay_AMPA': 2.5,
+        'tau_rise_NMDA': 2,
+        'tau_decay_NMDA': 30,
+        'e': 0,
+        'gamma': 0.062,
+        'mu': 0.28,
+    },
+    'GABAa': {
+        'gmax': 0.001,
+        'tau_rise': 0.1,
+        'tau_decay': 8,
+        'e': -70
+    }
+}
 
 class Population():
     """
     A population of "virtual" presynaptic neurons.
     """
 
-    def __init__(self, name: str, sections: List[Section], N: int, syn_type: str) -> None:
+    def __init__(self, idx: str, segments: List[Segment], N: int, syn_type: str) -> None:
 
-        self.name = name
-        self.sections = sections
+        self.idx = idx
+        self.segments = segments
         self.syn_type = syn_type
 
         self.N = N
 
         self.synapses = {}
-        self.n_per_sec = {sec.idx: 0 for sec in sections}
+        self.n_per_seg = {}
 
         self.input_params = {
             'rate': 1,
@@ -29,14 +63,14 @@ class Population():
             'delay': 0
         }
 
-        self.kinetic_params = {
-            "gmax": 0.001,
-            "tau_rise": 0.2,
-            "tau_decay": 1.4,
-            "e": 0,
-            "gamma": 0.062,
-            "mu": 0.28
-        }
+        self.kinetic_params = KINETIC_PARAMS[syn_type]
+
+    def __repr__(self):
+        return f"<Population({self.name}, N={self.N})>"
+    
+    @property
+    def name(self):
+        return f"{self.syn_type}_{self.idx}"
 
     def update_kinetic_params(self, params:dict):
         self.kinetic_params.update(**params)
@@ -52,25 +86,36 @@ class Population():
 
     # ALLOCATION METHODS
 
-    def _calculate_n_per_sec(self):
+    def _calculate_n_per_seg(self):
         """Assigns each section a random number of synapses 
         so that the sum of all synapses is equal to N synapses.
         returns a dict {sec:n_syn}"""
-        self.n_per_sec = {sec.idx: 0 for sec in self.sections}
+        self.n_per_seg = {seg.idx: 0 for seg in self.segments}
         for i in range(self.N):
-            sec = np.random.choice(self.sections)
-            self.n_per_sec[sec.idx] += 1
+            seg = np.random.choice(self.segments)
+            self.n_per_seg[seg.idx] += 1
+
+    # def allocate_synapses(self):
+    #     """Assigns each synapse a section and a location on that section."""
+    #     self.synapses = {}
+    #     self._calculate_n_per_seg()
+    #     for sec in self.sections:
+    #         n_per_sec = self.n_per_sec[sec.idx]
+    #         # assign a random location between 0 and 1
+    #         locs = np.round(np.random.rand(n_per_sec), decimals=2)
+    #         syn_type = self.syn_type
+    #         self.synapses[sec.idx] = [Synapse(syn_type, sec, loc) for loc in locs]
+
+    #     self.update_kinetic_params(params=self.kinetic_params)
 
     def allocate_synapses(self):
         """Assigns each synapse a section and a location on that section."""
         self.synapses = {}
-        self._calculate_n_per_sec()
-        for sec in self.sections:
-            n_per_sec = self.n_per_sec[sec.idx]
-            # assign a random location between 0 and 1
-            locs = np.round(np.random.rand(n_per_sec), decimals=2)
+        self._calculate_n_per_seg()
+        for seg in self.segments:
+            n_per_seg = self.n_per_seg[seg.idx]
             syn_type = self.syn_type
-            self.synapses[sec.idx] = [Synapse(syn_type, sec, loc) for loc in locs]
+            self.synapses[seg.idx] = [Synapse(syn_type, seg) for _ in range(n_per_seg)]
 
         self.update_kinetic_params(params=self.kinetic_params)
 
@@ -108,10 +153,20 @@ class Population():
 
     def _synapses_to_dict(self):
         synapses_list = []
-        for sec in self.sections:
-            if self.synapses[sec.idx]:
+        for seg in self.segments:
+            if self.synapses.get(seg.idx, False):
                 synapses_list.append({
-                    'sec_idx': sec.idx,
-                    'locs': [syn.loc for syn in self.synapses[sec.idx]]
+                    'sec_idx': seg._section.idx,
+                    'locs': [syn.seg.x for syn in self.synapses[seg.idx]]
                 })
         return synapses_list
+
+    def clean(self):
+        for seg in self.segments:
+            for syn in self.synapses[seg.idx]:
+                if syn._ref_stim is not None:
+                    syn._clear_stim()
+                if syn._ref_con is not None:
+                    syn._clear_con()
+                syn = None
+            self.synapses.pop(seg.idx)

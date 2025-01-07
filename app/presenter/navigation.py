@@ -80,7 +80,7 @@ class NavigationMixin():
         else: 
             seg_ids = []
 
-        # self.select_seg_x(seg_ids)
+        self.select_seg_x(seg_ids)
 
         with remove_callbacks(self.view.widgets.selectors['section']):
             self.view.widgets.selectors['section'].value = str(secs[0].idx) if new else ''
@@ -191,8 +191,8 @@ class NavigationMixin():
         self.model.simulator.remove_all_recordings()
         self.model.remove_all_iclamps()
         self.model.remove_all_synapses()
-        self.view.DOM_elements['syn_group_panel'].children = []
-        self.view.widgets.selectors['syn_group'].options = []
+        self.view.DOM_elements['population_panel'].children = []
+        self.view.widgets.selectors['population'].options = []
         self._update_graph_param('iclamps')
         self._update_graph_param('recordings')
         for name in self.model.synapses:

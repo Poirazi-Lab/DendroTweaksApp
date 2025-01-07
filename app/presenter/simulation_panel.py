@@ -57,31 +57,29 @@ class SimulationMixin():
         self.view.sources['sim'].data = {'xs': ts[:len(vs)], 'ys': vs, 'label': factors}
         self.view.sources['curr'].data = {'xs': ts[:len(Is)], 'ys': Is, 'label': factors}
     
-        # if self.model.synapses:
-        #     self.update_spike_times_data()
-
+        
+        self.update_spike_times_data()
     
     @log
     @timeit
     def update_spike_times_data(self):
-        # logger.warning('Not implemented')
         data = {'x': [], 'y': [], 'color': []}
-        for syn in self.model.synapses.values():
-            for group in syn.groups:
-                # if group.recordings:
-                for seg, seg_stims in group.stims.items():
-                    for i, stim in enumerate(seg_stims):
-                        stim = stim[1].to_python()
-                        for spike_time in stim:
-                            data['x'].append(spike_time)
-                            data['y'].append(f'G_{group.name}_at_{get_seg_name(seg)}_Syn_{i}')
-                            data['color'].append('blue' if syn.name in ['GABAa', 'GABAb'] else 'orange')
+        for syn_type, pops in self.model.populations.items():
+            for pop_name, pop in pops.items():
+                if not pop: continue
+                for seg_idx, synapses in pop.synapses.items():
+                    for i, syn in enumerate(synapses):
+                        label = f'Pop_{pop_name}_seg_{seg_idx}_syn_{i}'
+                        color = 'blue' if syn_type in ['GABAa', 'GABAb'] else 'orange'
+                        data['x'].extend(syn.spike_times)
+                        data['y'].extend([label] * len(syn.spike_times))
+                        data['color'].extend([color] * len(syn.spike_times))
         
-
-        synapse_names = sorted(set(data['y']))
-        self.view.figures['spikes'].y_range.factors = synapse_names
-        if len(synapse_names) > 20:
-            self.view.figures['spikes'].yaxis.ticker = []
+        if data['y']:
+            synapse_names = sorted(set(data['y']))
+            self.view.figures['spikes'].y_range.factors = synapse_names
+            if len(synapse_names) > 20:
+                self.view.figures['spikes'].yaxis.ticker = []
 
         self.view.sources['spikes'].data = data
 

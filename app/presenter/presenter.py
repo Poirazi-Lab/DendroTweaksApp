@@ -532,117 +532,157 @@ class Presenter(IOMixin, NavigationMixin,
     # SYNAPSES
     # -----------------------------------------------------------------
 
+    @property
+    def selected_population(self):
+        syn_type = self.view.widgets.selectors['syn_type'].value
+        pop_name = self.view.widgets.selectors['population'].value
+        population = self.model.populations[syn_type].get(pop_name, None)
+        return population
+
+    
+    # SELECT SYNAPSE TYPE ------------------------------------------------------
+
+    def select_synapse_type_callback(self, attr, old, new):
+        
+        syn_type = self.view.widgets.selectors['syn_type'].value
+
+        options = list(self.model.populations[syn_type].keys())
+        self.view.widgets.selectors['population'].options = options
+        self.view.widgets.selectors['graph_param'].value = syn_type
+        self.view.widgets.selectors['population'].value = options[-1] if options else None
+    
+
+    # ADD / REMOVE POPULATION -----------------------------------------
 
     @log
-    def add_synapse_group_callback(self, event):
+    def add_population_callback(self, event):
         
-        segments = self.selected_segs
-        syn = self.selected_synapse
+        segments = self.selected_segs[:]
+        syn_type = self.view.widgets.selectors['syn_type'].value
         N_syn = self.view.widgets.spinners['N_syn'].value
-        syn.add_group(segments=segments, N_syn=N_syn)
-
-        self._update_graph_param(syn.name)
-
-        self.view.widgets.selectors['syn_group'].options = [group.name for group in syn.groups]
-        self.view.widgets.selectors['syn_group'].value = syn.groups[-1].name
-
-
-    def remove_synapse_group_callback(self, event):
-        syn = self.selected_synapse
-        group = self.selected_syn_group
         
-        logger.debug(f'Removing group {group.name} from {syn.name}')
+        self.model.add_population(
+            segments=segments,
+            N=N_syn,
+            syn_type=syn_type
+            )
 
-        syn.remove_group(group)
-        self._update_graph_param(syn.name)
+        self._update_graph_param(syn_type)
 
-        self.view.widgets.selectors['syn_group'].options = [group.name for group in syn.groups]
-        self.view.widgets.selectors['syn_group'].value = syn.groups[-1].name if syn.groups else None
+        options = list(self.model.populations[syn_type])
+        self.view.widgets.selectors['population'].options = options
+        self.view.widgets.selectors['population'].value = options[-1]
 
 
-    def toggle_synapse_group_panel(self):
+    def remove_population_callback(self, event):
         
-        group = self.selected_syn_group
-        if group is None:
-            self.view.DOM_elements['syn_group_panel'].children = []
+        pop_name = self.view.widgets.selectors['population'].value
+        syn_type = self.view.widgets.selectors['syn_type'].value
+
+        self.model.remove_population(pop_name)
+        
+        self._update_graph_param(syn_type)
+
+        options = list(self.model.populations[syn_type])
+        self.view.widgets.selectors['population'].options = options
+        self.view.widgets.selectors['population'].value = options[-1] if options else None
+
+
+    # SELECT POPULATION ------------------------------------------------------
+
+    def select_population_callback(self, attr, old, new):
+        self.toggle_population_panel()
+        self.select_population_segs_in_graph()
+
+
+    def toggle_population_panel(self):
+        
+        population = self.selected_population
+        if population is None:
+            self.view.DOM_elements['population_panel'].children = []
             return
 
-        def make_slider_callback(slider_title):
+        def make_kinetic_param_slider_callback(slider_title):
             def slider_callback(attr, old, new):
-                setattr(group, slider_title, new)
+                population.update_kinetic_params({slider_title: new})
+            return slider_callback
+
+        def make_input_param_slider_callback(slider_title):
+            def slider_callback(attr, old, new):
+                population.update_input_params({slider_title: new})
             return slider_callback
 
         
-        rate_slider = Slider(title='Rate', value=group.rate, start=0.1, end=100, step=0.1, width=300)
-        rate_slider.on_change('value_throttled', make_slider_callback('rate'))
+        rate_slider = Slider(title='Rate', value=population.input_params['rate'], start=0.1, end=100, step=0.1, width=300)
+        rate_slider.on_change('value_throttled', make_input_param_slider_callback('rate'))
         rate_slider.on_change('value_throttled', self.voltage_callback_on_change)
 
-        noise_slider = Slider(title='Noise', value=group.noise, start=0, end=1, step=0.01, width=300)
-        noise_slider.on_change('value_throttled', make_slider_callback('noise'))
+        noise_slider = Slider(title='Noise', value=population.input_params['noise'], start=0, end=1, step=0.01, width=300)
+        noise_slider.on_change('value_throttled', make_input_param_slider_callback('noise'))
         noise_slider.on_change('value_throttled', self.voltage_callback_on_change)
 
-        weight_slider = Slider(title='Weight', value=group.weight, start=0, end=100, step=1, width=300)
-        weight_slider.on_change('value_throttled', make_slider_callback('weight'))
+        weight_slider = Slider(title='Weight', value=population.input_params['weight'], start=0, end=100, step=1, width=300)
+        weight_slider.on_change('value_throttled', make_input_param_slider_callback('weight'))
         weight_slider.on_change('value_throttled', self.voltage_callback_on_change)
 
-        if group.syn_type == 'AMPA_NMDA':
-            logger.debug(f'gmax AMPA: {group.gmax_AMPA}, gmax NMDA: {group.gmax_NMDA}')
-            gmax_ampa_slider = Slider(title='gmax_AMPA', value=group.gmax_AMPA, start=0, end=0.01, step=0.0001, width=300, format='0.00000')
-            gmax_ampa_slider.on_change('value_throttled', make_slider_callback('gmax_AMPA'))
+        if population.syn_type == 'AMPA_NMDA':
+            logger.debug(f'gmax AMPA: {population.kinetic_params["gmax_AMPA"]}, gmax NMDA: {population.kinetic_params["gmax_NMDA"]}')
+            gmax_ampa_slider = Slider(title='gmax_AMPA', value=population.kinetic_params['gmax_AMPA'], start=0, end=0.01, step=0.0001, width=300, format='0.00000')
+            gmax_ampa_slider.on_change('value_throttled', make_kinetic_param_slider_callback('gmax_AMPA'))
             gmax_ampa_slider.on_change('value_throttled', self.voltage_callback_on_change)
 
-            gmax_nmda_slider = Slider(title='gmax_NMDA', value=group.gmax_NMDA, start=0, end=0.01, step=0.0001, width=300, format='0.00000')
-            gmax_nmda_slider.on_change('value_throttled', make_slider_callback('gmax_NMDA'))
+            gmax_nmda_slider = Slider(title='gmax_NMDA', value=population.kinetic_params['gmax_NMDA'], start=0, end=0.01, step=0.0001, width=300, format='0.00000')
+            gmax_nmda_slider.on_change('value_throttled', make_kinetic_param_slider_callback('gmax_NMDA'))
             gmax_nmda_slider.on_change('value_throttled', self.voltage_callback_on_change)
 
             gmax_sliders = [gmax_ampa_slider, gmax_nmda_slider]
 
-            tau_rise_ampa_slider = Slider(title='tau_rise_AMPA', value=group.tau_rise_AMPA, start=0, end=10, step=0.01, width=150)
-            tau_rise_ampa_slider.on_change('value_throttled', make_slider_callback('tau_rise_AMPA'))
+            tau_rise_ampa_slider = Slider(title='tau_rise_AMPA', value=population.kinetic_params['tau_rise_AMPA'], start=0, end=10, step=0.01, width=150)
+            tau_rise_ampa_slider.on_change('value_throttled', make_kinetic_param_slider_callback('tau_rise_AMPA'))
             tau_rise_ampa_slider.on_change('value_throttled', self.voltage_callback_on_change)
 
-            tau_decay_ampa_slider = Slider(title='tau_decay_AMPA', value=group.tau_decay_AMPA, start=0, end=10, step=0.01, width=150)
-            tau_decay_ampa_slider.on_change('value_throttled', make_slider_callback('tau_decay_AMPA'))
+            tau_decay_ampa_slider = Slider(title='tau_decay_AMPA', value=population.kinetic_params['tau_decay_AMPA'], start=0, end=10, step=0.01, width=150)
+            tau_decay_ampa_slider.on_change('value_throttled', make_kinetic_param_slider_callback('tau_decay_AMPA'))
             tau_decay_ampa_slider.on_change('value_throttled', self.voltage_callback_on_change)
 
-            tau_rise_nmda_slider = Slider(title='tau_rise_NMDA', value=group.tau_rise_NMDA, start=0, end=10, step=0.01, width=150)
-            tau_rise_nmda_slider.on_change('value_throttled', make_slider_callback('tau_rise_NMDA'))
+            tau_rise_nmda_slider = Slider(title='tau_rise_NMDA', value=population.kinetic_params['tau_rise_NMDA'], start=0, end=10, step=0.01, width=150)
+            tau_rise_nmda_slider.on_change('value_throttled', make_kinetic_param_slider_callback('tau_rise_NMDA'))
             tau_rise_nmda_slider.on_change('value_throttled', self.voltage_callback_on_change)
 
-            tau_decay_nmda_slider = Slider(title='tau_decay_NMDA', value=group.tau_decay_NMDA, start=0, end=100, step=0.1, width=150)
-            tau_decay_nmda_slider.on_change('value_throttled', make_slider_callback('tau_decay_NMDA'))
+            tau_decay_nmda_slider = Slider(title='tau_decay_NMDA', value=population.kinetic_params['tau_decay_NMDA'], start=0, end=100, step=0.1, width=150)
+            tau_decay_nmda_slider.on_change('value_throttled', make_kinetic_param_slider_callback('tau_decay_NMDA'))
             tau_decay_nmda_slider.on_change('value_throttled', self.voltage_callback_on_change)
 
             tau_sliders = column(row(tau_rise_ampa_slider, tau_decay_ampa_slider), row(tau_rise_nmda_slider, tau_decay_nmda_slider))
 
         else:
-            logger.debug(f'gmax: {group.gmax}')
-            gmax_slider = Slider(title='gmax', value=group.gmax, start=0, end=0.01, step=0.0001, width=300, format='0.00000')
-            gmax_slider.on_change('value_throttled', make_slider_callback('gmax'))
+            logger.debug(f'gmax: {population.kinetic_params["gmax"]}')
+            gmax_slider = Slider(title='gmax', value=population.kinetic_params['gmax'], start=0, end=0.01, step=0.0001, width=300, format='0.00000')
+            gmax_slider.on_change('value_throttled', make_kinetic_param_slider_callback('gmax'))
             gmax_slider.on_change('value_throttled', self.voltage_callback_on_change)
             gmax_sliders = [gmax_slider]
 
-            tau_rise_slider = Slider(title='tau_rise', value=group.tau_rise, start=0, end=10, step=0.01, width=150)
-            tau_rise_slider.on_change('value_throttled', make_slider_callback('tau_rise'))
+            tau_rise_slider = Slider(title='tau_rise', value=population.kinetic_params['tau_rise'], start=0, end=10, step=0.01, width=150)
+            tau_rise_slider.on_change('value_throttled', make_kinetic_param_slider_callback('tau_rise'))
             tau_rise_slider.on_change('value_throttled', self.voltage_callback_on_change)
 
-            tau_decay_slider = Slider(title='tau_decay', value=group.tau_decay, start=0, end=10, step=0.01, width=150)
-            tau_decay_slider.on_change('value_throttled', make_slider_callback('tau_decay'))
+            tau_decay_slider = Slider(title='tau_decay', value=population.kinetic_params['tau_decay'], start=0, end=10, step=0.01, width=150)
+            tau_decay_slider.on_change('value_throttled', make_kinetic_param_slider_callback('tau_decay'))
             tau_decay_slider.on_change('value_throttled', self.voltage_callback_on_change)
 
             tau_sliders = row(tau_rise_slider, tau_decay_slider)
 
-        e_spinner = Spinner(title='E_syn', value=group.e, low=-100, high=100, step=1, width=50)
-        e_spinner.on_change('value_throttled', make_slider_callback('e'))
+        e_spinner = Spinner(title='E_syn', value=population.kinetic_params['e'], low=-100, high=100, step=1, width=50)
+        e_spinner.on_change('value_throttled', make_kinetic_param_slider_callback('e'))
         e_spinner.on_change('value_throttled', self.voltage_callback_on_change)
         spinners = [e_spinner]
 
-        if group.syn_type == 'AMPA_NMDA' or group.syn_type == 'NMDA':
-            gamma_spinner = Spinner(title='Gamma', value=group.gamma, low=0, high=1, step=0.001, width=100)
-            gamma_spinner.on_change('value_throttled', make_slider_callback('gamma'))
+        if 'NMDA' in population.syn_type:
+            gamma_spinner = Spinner(title='Gamma', value=population.kinetic_params['gamma'], low=0, high=1, step=0.001, width=100)
+            gamma_spinner.on_change('value_throttled', make_kinetic_param_slider_callback('gamma'))
             gamma_spinner.on_change('value_throttled', self.voltage_callback_on_change)
-            mu_spinner = Spinner(title='Mu', value=group.mu, low=0, high=1, step=0.001, width=100)
-            mu_spinner.on_change('value_throttled', make_slider_callback('mu'))
+            mu_spinner = Spinner(title='Mu', value=population.kinetic_params['mu'], low=0, high=1, step=0.001, width=100)
+            mu_spinner.on_change('value_throttled', make_kinetic_param_slider_callback('mu'))
             mu_spinner.on_change('value_throttled', self.voltage_callback_on_change)
 
             spinners += [gamma_spinner, mu_spinner]
@@ -650,19 +690,18 @@ class Presenter(IOMixin, NavigationMixin,
         range_slider = RangeSlider(title=f'Range', 
                                    start=0, 
                                    end=self.view.widgets.sliders['duration'].value, 
-                                   value=(group.start, group.end), 
+                                   value=(population.input_params['start'], population.input_params['end']), 
                                    step=1, 
                                    width=300)
 
         def range_slider_callback(attr, old, new):
-            group.start = new[0]
-            group.end = new[1]
+            population.update_input_params({'start': new[0], 'end': new[1]})
 
         range_slider.on_change('value_throttled', range_slider_callback)
         range_slider.on_change('value_throttled', self.voltage_callback_on_change)
 
         
-        self.view.DOM_elements['syn_group_panel'].children = [rate_slider, 
+        self.view.DOM_elements['population_panel'].children = [rate_slider, 
                                                               noise_slider, 
                                                               range_slider, 
                                                               weight_slider, 
@@ -671,31 +710,18 @@ class Presenter(IOMixin, NavigationMixin,
                                                                 row(spinners)]
                                                               
                                                               
-
-    def select_synapse_type_callback(self, attr, old, new):
-        if self.view.widgets.tabs['section'].active == 2:
-            syn = self.selected_synapse
-        self.view.widgets.selectors['syn_group'].options = [group.name for group in syn.groups]
-        self.view.widgets.selectors['graph_param'].value = syn.name
-        if self.view.widgets.selectors['syn_group'].options:
-            self.view.widgets.selectors['syn_group'].value = self.view.widgets.selectors['syn_group'].options[-1]
-        else:
-            self.view.widgets.selectors['syn_group'].value = None
-    
-
-    def select_synapse_group_segs_in_graph(self):
-        if self.view.widgets.selectors['syn_group'].options:
-            group = self.selected_syn_group
-            seg_names = [get_seg_name(seg) for seg in group.segments]
-            indices = [i for i, name in enumerate(self.view.figures['graph'].renderers[0].node_renderer.data_source.data['name']) if name in seg_names]
-            self.view.figures['graph'].renderers[0].node_renderer.data_source.selected.indices = indices
+    def select_population_segs_in_graph(self):
+        if self.view.widgets.selectors['population'].options:
+            population = self.selected_population
+            seg_ids = [seg.idx for seg in population.segments]
+            self.view.figures['graph'].renderers[0].node_renderer.data_source.selected.indices = seg_ids
         else:
             self.view.figures['graph'].renderers[0].node_renderer.data_source.selected.indices = []
 
 
-    def select_synapse_group_callback(self, attr, old, new):
-        self.toggle_synapse_group_panel()
-        self.select_synapse_group_segs_in_graph()
+    # =================================================================
+    # CHANNELS TAB
+    # =================================================================
 
 
     @property
@@ -708,14 +734,6 @@ class Presenter(IOMixin, NavigationMixin,
             chs = [ch for ch in self.model.channels.values() if ch.suffix == suffix]
             return chs[0] if chs else self.model.capacitance
 
-
-    @property
-    def selected_syn_group(self):
-        group_name = self.view.widgets.selectors['syn_group'].value
-        syn = self.selected_synapse
-        group = syn.get_by_name(group_name)
-        return group
-        
     @log
     def select_channel_callback(self, attr, old, new):
         self.toggle_channel_panel()

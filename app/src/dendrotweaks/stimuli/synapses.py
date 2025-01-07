@@ -1,7 +1,7 @@
 from typing import List
 from neuron import h
 import numpy as np
-from dendrotweaks.morphology.sec_trees import Section
+from dendrotweaks.morphology.seg_trees import Segment
 
 class Synapse():
     """
@@ -18,25 +18,29 @@ class Synapse():
 
     """
 
-    def __init__(self, syn_type: str, sec: Section, loc: float) -> None:
+    def __init__(self, syn_type: str, seg: Segment) -> None:
         """
         Creates a new synapse object.
         """
         self.Model = getattr(h, syn_type)
-        self.sec = sec
-        self.sec_idx = sec.idx
-        self.loc = loc
+        self.seg = seg
 
-        self._ref_syn = self.Model(self.seg)
+        self._ref_syn = self.Model(self.seg._ref)
         self._ref_stim = None
         self._ref_con = None
 
-    @property
-    def seg(self):
-        return self.sec._ref(self.loc)
+    # @property
+    # def seg(self):
+    #     return self.sec._ref(self.loc)
 
     def __repr__(self):
-        return f"<Synapse(sec[{self.sec_idx}]({self.loc:.2f}))>"
+        return f"<Synapse({self.seg})>"
+
+    @property
+    def spike_times(self):
+        if self._ref_stim is not None:
+            return self._ref_stim[1].to_python()
+        return []
 
     def _clear_stim(self):
         self._ref_stim[0] = None

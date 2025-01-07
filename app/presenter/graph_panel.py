@@ -77,7 +77,7 @@ class GraphMixin():
         logger.info('Using layout: ' + graph_layout)
         if graph_layout == 'kamada-kawai':
             pos = nx.kamada_kawai_layout(self.G, scale=1, center=(0, 0), dim=2)
-        elif graph_layout in ['dot', 'neato']:
+        elif graph_layout in ['dot', 'neato', 'twopi']:
             pos = graphviz_layout(self.G, 
                 prog=graph_layout,
                 root=0)
@@ -244,7 +244,10 @@ class GraphMixin():
             return 1 if self.model.iclamps.get(seg) is not None else 0
 
         elif param_name in ['AMPA', 'NMDA', 'GABAa', 'AMPA_NMDA']:
-            return sum(group.n_per_seg[seg] for group in self.model.synapses[param_name].groups if seg in group.segments) if self.model.synapses[param_name].groups else 0
+            relevant_populations = self.model.populations[param_name]
+            return sum(pop.n_per_seg[seg.idx] 
+                       for pop in relevant_populations.values()
+                       if seg in pop.segments) if relevant_populations else 0
 
         elif param_name == 'weights':
             if self.model.synapses.get(seg) is not None:
@@ -253,6 +256,10 @@ class GraphMixin():
             return 0
         
         # NORMAL PARAMS
+        elif param_name in ['Ra']:
+            return seg._section._ref.Ra
+        elif param_name in ['dist']:
+            return seg.distance_to_root
         else:
             return seg.get_param_value(param_name)
 

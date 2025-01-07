@@ -13,6 +13,7 @@ from dendrotweaks.membrane.io import MODFileLoader
 from dendrotweaks.morphology.io import TreeFactory
 from dendrotweaks.stimuli.iclamps import IClamp
 from dendrotweaks.membrane.distributions import Distribution
+from dendrotweaks.stimuli.populations import Population
 from dendrotweaks.utils import calculate_lambda_f, dynamic_import
 
 from collections import OrderedDict, defaultdict
@@ -91,7 +92,7 @@ class Model():
 
         # Stimuli
         self.iclamps = {}
-        self.populations = {}
+        self.populations = {'AMPA': {}, 'NMDA': {}, 'AMPA_NMDA': {}, 'GABAa': {}}
 
         # Simulator
         if simulator_name == 'NEURON':
@@ -596,7 +597,7 @@ class Model():
 
 
     def remove_all_iclamps(self):
-        for seg in self.iclamps.keys():
+        for seg in list(self.iclamps.keys()):
             sec, loc = seg._section, seg.x
             self.remove_iclamp(sec, loc)
         if self.iclamps:
@@ -609,13 +610,21 @@ class Model():
     # -----------------------------------------------------------------------
 
     def _add_population(self, population):
-        self.populations[population.name] = population
+        self.populations[population.syn_type][population.name] = population
 
 
-    def add_population(self, name, synapse_type, size, sections):
-        population = Population(name, synapse_type, size, sections)
+    def add_population(self, segments, N, syn_type):
+        idx = len(self.populations[syn_type])
+        population = Population(idx, segments, N, syn_type)
+        population.allocate_synapses()
+        population.create_inputs()
         self._add_population(population)
 
+    def remove_population(self, name):
+        syn_type, idx = name.rsplit('_', 1)
+        population = self.populations[syn_type].pop(name)
+        population.clean()
+        
 
     # ========================================================================
     # SIMULATION
@@ -658,32 +667,39 @@ class Model():
             The dictionary representation of the model.
         """
         return {
-                'metadata': {
-                    'name': self.name,
-                },
-                'simulation': {
-                    'd_lambda': self._d_lambda,
-                    **self.simulator.to_dict(),
-                },
-                'groups': {
-                    group.name : [sec.idx for sec in group.sections]
-                    for group in self._groups
-                },
-                'parameters': {
-                    mechanism_name: {
-                        param_name: {
-                            group_name: distribution.to_dict() if isinstance(distribution, Distribution) else distribution
-                            for group_name, distribution in group.items()
-                        }
-                        for param_name, group in mechanism.items()
+            'metadata': {
+                'name': self.name,
+            },
+            'simulation': {
+                'd_lambda': self._d_lambda,
+                **self.simulator.to_dict(),
+            },
+            'global_params': self.global_params,
+            'distributed_params': self.distributed_params,
+            'groups': [
+                group.to_dict() for group in self._groups
+            ],
+            'stimuli': {
+                'iclamps': [
+                    {
+                        'sec_idx': seg._section.idx,
+                        'loc': seg.x,
+                        'amp': iclamp.amp,
+                        'delay': iclamp.delay,
+                        'dur': iclamp.dur
                     }
-                    for mechanism_name, mechanism in self.parameters.items()
-                }
-                    
-                # 'stimuli': {
-                #     {}
-            }
-
+                    for seg, iclamp in self.iclamps.items()
+                ],
+                'recordings': [
+                    {
+                        'sec_idx': seg._section.idx,
+                        'loc': seg.x,
+                    }
+                    for seg in self.recordings
+                ],
+            },
+        }
+            
 
     def to_json(self, path_to_json, **kwargs):
         """
