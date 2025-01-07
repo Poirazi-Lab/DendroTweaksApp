@@ -10,6 +10,11 @@ The simplest case is to assign a single value to a parameter for all sections of
     >>> model.set_global_parameter('cm', 1.0)
     >>> model.set_global_parameter('Ra', 100.0)
 
+.. code-block:: python
+
+    >>> model.global_params
+    {'cm': 1, 'Ra': 100, 'ena': 50, 'ek': -77}
+
 However, in many cases, we want to set different values for different groups of sections. Ion channels, for example, are often distributed non-uniformly across the cell. To achieve this, we can create groups of sections and assign distribution functions to parameters.
 
 Selecting sections
@@ -70,6 +75,13 @@ Groups can be thought of as layers rather than partitions of the cell. This repr
 
 This layer-based approach has several advantages. The most important one is that if a group of sections is removed, the sections will revert to the previous layer they belonged to. By default, the entire cell is considered a single group called 'all', which serves as the base layer.
 
+We can move groups up and down in the layer stack using the :code:`move_group_up` and :code:`move_group_down` methods. For example, to move the 'apic' group up and down, we can use the following code:
+
+.. code-block:: python
+
+    >>> model.move_group_down('apic')
+    >>> model._groups
+    [Group("apic", 52), Group("soma", 1)]
 
 
 Distributing Parameters
@@ -108,7 +120,17 @@ To assign a distribution function to a parameter, we can use the :code:`set_dist
 
 .. code-block:: python
 
-    >>> model.groups['all'].set_distribution('cm', 'uniform', value=1)
+    >>> model.make_distributed('cm')
+
+.. code-block:: python
+
+    >>> model.set_distributed_param('cm', group_name='all', distr_type='uniform', value=1)
+    >>> model.set_distributed_param('cm', group_name='soma', distr_type='uniform', value=2)
+
+.. code-block:: python
+
+    >>> model.distributed_params
+    {'cm': {'all': Distribution("uniform", 1), 'soma': Distribution("uniform", 2)}
 
 Combining Distributions
 ------------------------------------------
@@ -118,7 +140,7 @@ Distributions can be combined. For example a step-like distribution can be creat
 .. code-block:: python
 
     >>> model.add_group('apic', lambda sec: sec.domain == 'apic')
-    >>> model.groups['apic'].set_distribution('gbar_Cav', 'uniform', value=0.0001)
+    >>> model.set_distributed_param('gbar_Cav', group_name='apic', distr_type='uniform', value=0.0001)
     >>> model.add_group('apic_hot_spot', lambda sec: sec.domain == 'apic' & 100 < sec.distance < 200)
-    >>> model.groups['apic_hot_spot'].set_distribution('gbar_Cav', 'uniform', value=0.001)
+    >>> model.set_distributed_param('gbar_Cav', group_name='apic_hot_spot', distr_type='uniform', value=0.001)
     
