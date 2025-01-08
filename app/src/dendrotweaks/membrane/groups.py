@@ -55,8 +55,9 @@ class SectionGroup:
             The group in dictionary format.
         """
         return {
-            'sections': [section.idx for sec in self.sections],
-            'mechanisms': [mechanism_name for mechanism_name in self.mechanisms]
+            'name': self.name,
+            'mechanisms': [mechanism_name for mechanism_name in self.mechanisms],
+            # 'sections': [sec.idx for sec in self.sections],
         }
 
     def __repr__(self):

@@ -1,0 +1,148 @@
+{
+    "metadata": {
+        "name": "Park_2019",
+        "archives": [
+            "Default",
+            "Park_test"
+        ]
+    },
+    "simulation": {
+        "d_lambda": 0.1,
+        "temperature": 37,
+        "v_init": -79,
+        "dt": 0.025
+    },
+    "groups": [
+        {
+            "name": "all",
+            "mechanisms": [
+                "Independent",
+                "Leak",
+                "Na",
+                "Kv"
+            ]
+        },
+        {
+            "name": "soma",
+            "mechanisms": [
+                "Independent",
+                "Na",
+                "Kv"
+            ]
+        }
+    ],
+    "global_params": {
+        "Ra": 100,
+        "ena": 60,
+        "ek": -80,
+        "eca": 140,
+        "e_Leak": -79,
+        "Rma_Na": 0.182,
+        "Rmb_Na": 0.14,
+        "v12m_Na": -30,
+        "qm_Na": 9.8,
+        "Rhb_Na": 0.0091,
+        "Rha_Na": 0.024,
+        "v12ha_Na": -45,
+        "v12hb_Na": -70,
+        "qh_Na": 5,
+        "v12hinf_Na": -60,
+        "qhinf_Na": 6.2,
+        "temp_Na": 23,
+        "q10_Na": 2.3,
+        "Ra_Kv": 0.02,
+        "Rb_Kv": 0.006,
+        "v12_Kv": 25,
+        "q_Kv": 9,
+        "temp_Kv": 23,
+        "q10_Kv": 2.3
+    },
+    "distributed_params": {
+        "cm": {
+            "all": {
+                "function": "uniform",
+                "parameters": {
+                    "value": 1
+                }
+            },
+            "soma": {
+                "function": "uniform",
+                "parameters": {
+                    "value": 2
+                }
+            }
+        },
+        "gbar_Leak": {
+            "all": {
+                "function": "uniform",
+                "parameters": {
+                    "value": 0.0001
+                }
+            }
+        },
+        "gbar_Na": {
+            "all": {
+                "function": "uniform",
+                "parameters": {
+                    "value": 0.03
+                }
+            },
+            "soma": {
+                "function": "uniform",
+                "parameters": {
+                    "value": 0.05
+                }
+            }
+        },
+        "gbar_Kv": {
+            "all": {
+                "function": "uniform",
+                "parameters": {
+                    "value": 0.003
+                }
+            },
+            "soma": {
+                "function": "uniform",
+                "parameters": {
+                    "value": 0.005
+                }
+            }
+        }
+    },
+    "stimuli": {
+        "iclamps": [
+            {
+                "name": "iclamp_0",
+                "amp": 0.15,
+                "delay": 100.0,
+                "dur": 100.0
+            }
+        ],
+        "populations": {
+            "AMPA": [
+                {
+                    "name": "AMPA_0",
+                    "syn_type": "AMPA",
+                    "N": 100,
+                    "input_params": {
+                        "rate": 11,
+                        "noise": 1,
+                        "start": 100,
+                        "end": 200,
+                        "weight": 1,
+                        "delay": 0
+                    },
+                    "kinetic_params": {
+                        "gmax": 0.001,
+                        "tau_rise": 0.1,
+                        "tau_decay": 2.5,
+                        "e": 0
+                    }
+                }
+            ],
+            "NMDA": [],
+            "AMPA_NMDA": [],
+            "GABAa": []
+        }
+    }
+}

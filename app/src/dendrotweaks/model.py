@@ -1,6 +1,7 @@
 from typing import List, Union, Callable
 import os
 import warnings
+import json
 
 from dendrotweaks.morphology.swc_trees import SWCTree
 from dendrotweaks.morphology.sec_trees import Section, SectionTree
@@ -23,6 +24,8 @@ from collections import OrderedDict, defaultdict
 from dendrotweaks.path_manager import PathManager
 
 from dataclasses import dataclass
+
+import pandas as pd
 
 INDEPENDENT_PARAMS = {
     'cm': 1, # uF/cm2
@@ -69,6 +72,7 @@ class Model():
         self.sec_tree = None
 
         # Mechanisms
+        self._loaded_archives = []
         self.mechanisms = {}
 
         # Parameters
@@ -302,6 +306,7 @@ class Model():
         for mechanism_name in self.path_manager.list_archives()[archive_name]:
             self.add_mechanism(mechanism_name, archive_name)
             self.load_mechanism(mechanism_name, archive_name, recompile)
+        self._loaded_archives.append(archive_name)
 
 
     def add_mechanism(self, mechanism_name: str, 
@@ -334,9 +339,19 @@ class Model():
             mech = self.mechanism_factory.create_channel(**paths)
         # Add the mechanism to the model
         self.mechanisms[mech.name] = mech
+        # Update the global parameters
+        if getattr(mech, 'ion', None) is not None:
+            self._update_equilibrium_potentials(mech.ion)
         
         print(f'Mechanism {mech.name} added to model.')
 
+    def _update_equilibrium_potentials(self, ion: str) -> None:
+        if ion == 'na':
+            self.global_params['ena'] = 50
+        elif ion == 'k':
+            self.global_params['ek'] = -77
+        elif ion == 'ca':
+            self.global_params['eca'] = 140
 
     def load_archive(self, archive_name: str = '', recompile=True) -> None:
         """
@@ -669,37 +684,49 @@ class Model():
         return {
             'metadata': {
                 'name': self.name,
+                'archives': self._loaded_archives,
             },
             'simulation': {
                 'd_lambda': self._d_lambda,
                 **self.simulator.to_dict(),
             },
-            'global_params': self.global_params,
-            'distributed_params': self.distributed_params,
             'groups': [
                 group.to_dict() for group in self._groups
             ],
+            'global_params': self.global_params,
+            'distributed_params': {
+                param_name: {
+                    group_name: distribution.to_dict()
+                    for group_name, distribution in distributions.items()
+                }
+                for param_name, distributions in self.distributed_params.items()
+            },
             'stimuli': {
                 'iclamps': [
                     {
-                        'sec_idx': seg._section.idx,
-                        'loc': seg.x,
+                        'name': f'iclamp_{i}',
                         'amp': iclamp.amp,
                         'delay': iclamp.delay,
                         'dur': iclamp.dur
                     }
-                    for seg, iclamp in self.iclamps.items()
+                    for i, (seg, iclamp) in enumerate(self.iclamps.items())
                 ],
-                'recordings': [
-                    {
-                        'sec_idx': seg._section.idx,
-                        'loc': seg.x,
-                    }
-                    for seg in self.recordings
-                ],
+                'populations': {
+                    syn_type: [pop.to_dict() for pop in pops.values()]
+                    for syn_type, pops in self.populations.items()
+                }
             },
         }
             
+    def export_data(self):
+        path_to_json = self.path_manager.get_file_path('json', self.name, extension='json')
+        path_to_groups_csv = self.path_manager.get_file_path('csv', self.name + '_groups', extension='csv')
+        path_to_stimuli_csv = self.path_manager.get_file_path('csv', self.name + '_stimuli', extension='csv')
+
+        self.to_json(path_to_json, indent=4)
+        self.groups_to_csv(path_to_groups_csv)
+        self.stimuli_to_csv(path_to_stimuli_csv)
+
 
     def to_json(self, path_to_json, **kwargs):
         """
@@ -715,12 +742,82 @@ class Model():
         str
             The JSON representation of the model.
         """
-        import json
         data = self.to_dict()
-        if path_to_json:
-            with open(path_to_json, 'w') as f:
-                json.dump(data, f, **kwargs)
-        return json.dumps(data, **kwargs)
+
+        with open(path_to_json, 'w') as f:
+            json.dump(data, f, **kwargs)
+
+    def stimuli_to_csv(self, path_to_csv=None):
+        """
+        Write the model to a CSV file.
+
+        Parameters
+        ----------
+        path_to_csv : str
+            The path to the CSV file to write.
+        """
+        
+        rec_data = {
+            'type': ['recording'] * len(self.recordings),
+            'idx': [i for i in range(len(self.recordings))],
+            'sec_idx': [seg._section.idx for seg in self.recordings],
+            'loc': [seg.x for seg in self.recordings],
+            'n_per_seg': [1] * len(self.recordings)
+        }
+
+        print(rec_data)
+
+        iclamp_data = {
+            'type': ['iclamp'] * len(self.iclamps),
+            'idx': [i for i in range(len(self.iclamps))],
+            'sec_idx': [seg._section.idx for seg in self.iclamps],
+            'loc': [seg.x for seg in self.iclamps],
+            'n_per_seg': [1] * len(self.iclamps)
+        }
+        
+        synapses_data = {
+            'type': [],
+            'idx': [],
+            'sec_idx': [],
+            'loc': [],
+            'n_per_seg': []
+        }
+
+        for syn_type, pops in self.populations.items():
+            for pop_name, pop in pops.items():
+                pop_data = pop.to_csv()
+                synapses_data['type'] += pop_data['syn_type']
+                synapses_data['idx'] += [int(name.rsplit('_', 1)[1]) for name in pop_data['name']]
+                synapses_data['sec_idx'] += pop_data['sec_idx']
+                synapses_data['loc'] += pop_data['loc']
+                synapses_data['n_per_seg'] += pop_data['n_per_seg']
+
+        df = pd.concat([
+            pd.DataFrame(rec_data),
+            pd.DataFrame(iclamp_data),
+            pd.DataFrame(synapses_data)
+        ], ignore_index=True)
+        df['sec_idx'] = df['sec_idx'].astype(int)
+        if path_to_csv: df.to_csv(path_to_csv, index=False)
+
+        return df
+
+    def groups_to_csv(self, path_to_csv=None):
+
+        groups_data = {
+            'sec_idx': [sec.idx for sec in self.sec_tree.sections]
+        }
+
+        for group_name, group in self.groups.items():
+            groups_data[group_name] = [
+            int(sec.idx in [s.idx for s in group.sections]) for sec in self.sec_tree.sections
+            ]
+
+        df = pd.DataFrame(groups_data)
+        if path_to_csv:
+            df.to_csv(path_to_csv, index=False)
+
+        return df
 
 
     def to_swc(self, file_name):
@@ -739,3 +836,109 @@ class Model():
 
     def to_mod(self):
         ...
+
+
+    def load_data(self):
+        """
+        Load a model from a JSON file.
+
+        Parameters
+        ----------
+        path_to_json : str
+            The path to the JSON file to load.
+        """
+
+        path_to_json = self.path_manager.get_file_path('json', self.name, extension='json')
+        path_to_groups_csv = self.path_manager.get_file_path('csv', self.name + '_groups', extension='csv')
+        path_to_stimuli_csv = self.path_manager.get_file_path('csv', self.name + '_stimuli', extension='csv')
+
+        with open(path_to_json, 'r') as f:
+            data = json.load(f)
+
+        df_groups = pd.read_csv(path_to_groups_csv)
+        df_stimuli = pd.read_csv(path_to_stimuli_csv)
+
+        self.name = data['metadata']['name']
+
+        self.simulator.from_dict(data['simulation'])
+
+        swc_file_name = data['metadata']['name'] + '.swc'
+        self.from_swc(swc_file_name)
+        self.create_and_reference_sections_in_simulator()
+
+        for archive in data['metadata']['archives']:
+            self.add_archive(archive)
+        self.load_archive('Synapses', recompile=False)
+
+        for group_name in df_groups.columns[1:]:
+            sections = [sec for sec in self.sec_tree.sections if df_groups[group_name][sec.idx]]
+            self.add_group(group_name, sections)
+
+        for group in data['groups']:
+            for mech_name in group['mechanisms']:
+                if mech_name == 'Independent':
+                    continue
+                self.insert_mechanism(mech_name, group['name'])
+        
+        self.distributed_params = {
+            param_name: {
+                group_name: Distribution.from_dict(distribution)
+                for group_name, distribution in distributions.items()
+            }
+            for param_name, distributions in data['distributed_params'].items()
+        }
+        self.global_params = {k:v for k,v in data['global_params'].items()}
+
+        for param_name in ['cm', 'Ra']:
+            if param_name in self.distributed_params:
+                self.distribute(param_name)
+            else:
+                self.set_global_param(param_name, self.global_params[param_name])
+
+        self.set_segmentation(data['simulation']['d_lambda'])
+
+        for param_name in self.distributed_params:
+            self.distribute(param_name)
+        for param_name, value in self.global_params.items():
+            try:
+                self.set_global_param(param_name, value)
+            except:
+                print(f'Could not set global parameter {param_name} to {value}.')
+
+        df_recs = df_stimuli[df_stimuli['type'] == 'recording']
+        for i, row in df_recs.iterrows():
+            self.add_recording(
+                self.sec_tree.sections[row['sec_idx']], row['loc']
+            )
+
+        df_iclamps = df_stimuli[df_stimuli['type'] == 'iclamp'].reset_index(drop=True, inplace=False)
+
+        for i, row in df_iclamps.iterrows():
+            self.add_iclamp(
+            self.sec_tree.sections[row['sec_idx']], 
+            row['loc'],
+            data['stimuli']['iclamps'][i]['amp'],
+            data['stimuli']['iclamps'][i]['delay'],
+            data['stimuli']['iclamps'][i]['dur']
+            )
+
+
+        syn_types = ['AMPA', 'NMDA', 'AMPA_NMDA', 'GABAa']
+
+        df_syn = df_stimuli[df_stimuli['type'] == 'AMPA']
+    
+        for i, pop_data in enumerate(data['stimuli']['populations']['AMPA']):
+            segments = [self.sec_tree.sections[sec_idx](loc) 
+                        for sec_idx, loc in zip(df_syn['sec_idx'], df_syn['loc'])]
+            
+            pop = Population(i, 
+                             segments, 
+                             pop_data['N'], 
+                             'AMPA')
+            n_per_seg = {seg: n for seg, n in zip(segments, df_syn['n_per_seg'])}
+            pop.allocate_synapses(n_per_seg=n_per_seg)
+            pop.update_kinetic_params(pop_data['kinetic_params'])
+            pop.update_input_params(pop_data['input_params'])
+            self._add_population(pop)
+
+        

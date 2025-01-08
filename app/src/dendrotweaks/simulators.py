@@ -11,7 +11,7 @@ class NEURONSimulator(Simulator):
     A class to represent a NEURON simulator.
     """
 
-    def __init__(self, celsius=37, v_init=-70, dt=0.025, cvode=False):
+    def __init__(self, temperature=37, v_init=-70, dt=0.025, cvode=False):
         super().__init__()
         from neuron import h
         from neuron.units import ms, mV
@@ -21,7 +21,7 @@ class NEURONSimulator(Simulator):
         # self.h.load_file('nrngui.hoc')
         # self.h.load_file('import3d')
 
-        self.celsius = celsius
+        self.temperature = temperature
         self.v_init = v_init * mV
 
         self.dt = dt
@@ -53,7 +53,7 @@ class NEURONSimulator(Simulator):
 
     def _init_simulation(self):
         self.h.CVode().active(self._cvode)
-        self.h.celsius = self.celsius
+        self.h.celsius = self.temperature
         self.h.dt = self.dt
         self.h.stdinit()
         self.h.init()
@@ -97,10 +97,15 @@ class NEURONSimulator(Simulator):
 
     def to_dict(self):
         return {
-            'temperature': self.celsius,
+            'temperature': self.temperature,
             'v_init': self.v_init,
             'dt': self.dt,
         }
+
+    def from_dict(self, data):
+        self.temperature = data['temperature']
+        self.v_init = data['v_init']
+        self.dt = data['dt']
 
 
 class JaxleySimulator(Simulator):

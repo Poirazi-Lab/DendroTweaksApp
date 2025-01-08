@@ -43,6 +43,11 @@ from presenter.channel_panel import ChannelMixin
 from presenter.temp import TempMixin
 
 
+# TODO: Remove this when dd installed through pip
+import sys
+sys.path.append('app/src')
+from dendrotweaks.membrane import StandardIonChannel
+
 class Presenter(IOMixin, NavigationMixin, 
                 CellMixin, SectionMixin, GraphMixin, SimulationMixin, ChannelMixin, 
                 ValidationMixin, TempMixin):
@@ -296,6 +301,80 @@ class Presenter(IOMixin, NavigationMixin,
         
         self.view.widgets.selectors['graph_param'].options = avaliable_params
         self.view.widgets.selectors['graph_param'].value = param_name
+
+        self.toggle_kinetic_plots(mech_name)
+
+    @log
+    def toggle_kinetic_plots(self, mech_name):
+
+        if mech_name in ['Independent', 'Leak']:
+            self.view.widgets.buttons['standardize'].disabled = True
+            self.view.figures['inf_log'].visible = False
+            self.view.figures['inf'].visible = False
+            self.view.figures['tau_log'].visible = False
+            self.view.figures['tau'].visible = False
+            return
+
+        mech = self.model.mechanisms[mech_name]
+
+        logger.debug(f'Toggling kinetic plots for {mech.name}')
+
+        if isinstance(mech, StandardIonChannel):
+            ch_type = 'fit'
+            self.view.widgets.buttons['standardize'].disabled = True
+        else:
+            ch_type = 'orig'
+            self.view.widgets.buttons['standardize'].disabled = False
+
+        data = mech.get_data()
+        logger.debug(f'Updating kinetic plots for {mech.name} with data: {data}')
+        xs = data.pop('x').tolist()
+
+        if mech.independent_var_name == 'v':
+            self.view.figures['inf_log'].visible = False
+            self.view.figures['inf'].visible = True
+            self.view.figures['tau_log'].visible = False
+            self.view.figures['tau'].visible = True
+        elif mech.independent_var_name == 'cai':
+            self.view.figures['inf'].visible = False
+            self.view.figures['inf_log'].visible = True
+            self.view.figures['tau'].visible = False
+            self.view.figures['tau_log'].visible = True
+
+        inf_values = []
+        inf_labels = []
+        tau_values = []
+        tau_labels = []
+
+        for state_name, state in data.items():
+            inf_values.append(state['inf'].tolist())
+            inf_labels.append(f'{state_name}Inf')
+            tau_values.append(state['tau'].tolist())
+            tau_labels.append(f'{state_name}Tau')
+
+        color_inf = [Bokeh[8][2*i+1] for i in range(len(inf_labels))]
+        color_tau = [Bokeh[8][2*i+1] for i in range(len(tau_labels))]
+
+        self.view.sources[f'inf_{ch_type}'].data = {
+            'xs': [xs] * len(inf_values), 
+            'ys': inf_values, 
+            'label': inf_labels,
+            'color': color_inf
+        }
+
+        self.view.sources[f'tau_{ch_type}'].data = {
+            'xs': [xs] * len(tau_values), 
+            'ys': tau_values, 
+            'label': tau_labels,
+            'color': color_tau
+        }
+
+        self.view.figures[f'inf'].title.text = f'Steady state, {mech.name}'
+        self.view.figures[f'tau'].title.text = f'Time constant, {mech.name}'
+
+        self.view.sources['inf_fit'].data = {'xs': [], 'ys': [], 'label': [], 'color': []}
+        self.view.sources['tau_fit'].data = {'xs': [], 'ys': [], 'label': [], 'color': []}
+
 
     
     # -----------------------------------------------------------------

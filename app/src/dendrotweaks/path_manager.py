@@ -12,6 +12,8 @@ class PathManager:
             'python': os.path.join(path_to_data, 'python'),
             'templates': os.path.join(path_to_data, 'templates'),
             'swc': os.path.join(path_to_data, 'swc'),
+            'csv': os.path.join(path_to_data, 'csv'),
+            'json': os.path.join(path_to_data, 'json'),
         }
 
     def __repr__(self):

@@ -245,7 +245,7 @@ class GraphMixin():
 
         elif param_name in ['AMPA', 'NMDA', 'GABAa', 'AMPA_NMDA']:
             relevant_populations = self.model.populations[param_name]
-            return sum(pop.n_per_seg[seg.idx] 
+            return sum(pop.n_per_seg[seg] 
                        for pop in relevant_populations.values()
                        if seg in pop.segments) if relevant_populations else 0
 

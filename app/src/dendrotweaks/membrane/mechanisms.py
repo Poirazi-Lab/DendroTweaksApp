@@ -14,6 +14,12 @@ class Mechanism():
     def params_with_suffix(self):
         return {f"{param}_{self.name}":value for param, value in self.params.items()}
 
+    def to_dict(self):
+        return {
+            'name': self.name,
+            'params': self.params
+        }
+
 
 class CaDynamics(Mechanism):
 

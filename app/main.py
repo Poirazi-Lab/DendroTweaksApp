@@ -53,7 +53,7 @@ from utils import get_sec_name, get_sec_type, get_sec_id
 
 from collections import defaultdict
 
-
+from bokeh_utils import AdjustableSpinner
 
 
 from view import CellView
@@ -70,10 +70,14 @@ p = Presenter(view=view, model=model)
 
 
 
-# MAIN WORKSPACE
+# =================================================================
+# FIGURES
+# =================================================================
 
+# -----------------------------------------------------------------
+# CELL FIGURE
+# -----------------------------------------------------------------
 
-## CELL PANEL
 view.figures['cell'] = figure(title='Cell',
        width=400,
        height=500,
@@ -106,7 +110,10 @@ curdoc().add_root(panel_cell)
 
 
 
-## SECTION PANEL
+# -----------------------------------------------------------------
+# SECTION FIGURE
+# -----------------------------------------------------------------
+
 
 ### Section diameters
 view.figures['section_diam'] = figure(title='Section diameters', x_axis_label='Length, μm',
@@ -211,8 +218,10 @@ panel_section = column(view.figures['section_diam'],
 
 
 
+# -----------------------------------------------------------------
+# GRAPH FIGURE
+# -----------------------------------------------------------------
 
-## GRAPH PANEL
 
 view.figures['graph'] = figure(title='Graph', 
                       width=700, 
@@ -310,7 +319,10 @@ curdoc().add_root(panel_graph)
 
 
 
-## SIMULATION PANEL
+# -----------------------------------------------------------------
+# SIMULATION FIGURE
+# -----------------------------------------------------------------
+
 
 view.figures['sim'] = figure(width=600, height=300, 
                width_policy='fit',
@@ -551,7 +563,13 @@ curdoc().add_root(panel_simulation)
 
 
 
-# RIGHT HAND MENU
+# ****************************************************************
+# RIGHT MENU
+# ****************************************************************
+
+# =================================================================
+# MORPHOLOGY TAB
+# =================================================================
 
 ## Sliders
 view.widgets.sliders['n_seg'] = Slider(start=1, end=21, value=1, step=2, title='nseg')
@@ -613,31 +631,9 @@ widgets_section_vars = column([
                         ], name='widgets_section_vars')
 
 
-### Distribution selector
-
-def create_equilibrium_panel():
-    view.widgets.spinners['e_leak'] = Spinner(value=-70, title='e_leak', width=60, step=1, visible=False)
-    view.widgets.spinners['ena'] = Spinner(value=50, title='ena', width=60, step=1, visible=False)
-    view.widgets.spinners['ek'] = Spinner(value=-77, title='ek', width=60, step=1, visible=False)
-    view.widgets.spinners['eca'] = Spinner(value=140, title='eca', width=60, step=1, visible=False)
-
-    view.widgets.spinners['ena'].on_change('value', p.update_ena_callback)
-    view.widgets.spinners['ek'].on_change('value', p.update_ek_callback)
-    view.widgets.spinners['eca'].on_change('value', p.update_eca_callback)
-    view.widgets.spinners['e_leak'].on_change('value', p.update_e_leak_callback)
-
-    view.widgets.spinners['e_leak'].on_change('value', p.voltage_callback_on_change)
-    view.widgets.spinners['ena'].on_change('value', p.voltage_callback_on_change)
-    view.widgets.spinners['ek'].on_change('value', p.voltage_callback_on_change)
-    view.widgets.spinners['eca'].on_change('value', p.voltage_callback_on_change)
-
-    equilibrium_panel = row([view.widgets.spinners['e_leak'],
-                                view.widgets.spinners['ena'],
-                                view.widgets.spinners['ek'],
-                                view.widgets.spinners['eca'],
-                                ])
-
-    return equilibrium_panel
+# =================================================================
+# GROUP TAB
+# =================================================================
 
 def create_add_group_panel():
 
@@ -742,20 +738,6 @@ def create_insert_panel():
                          
     return insert_panel
 
-# def create_make_distributed_panel():
-
-#     view.widgets.multichoice['params'] = MultiChoice(title='Range parameters',
-#                                             options=[],
-#                                             width=300)
-
-#     view.widgets.multichoice['params'].on_change('value', p.update_group_parameters_callback)
-
-    
-#     make_distributed_panel = column([
-#                           view.widgets.multichoice['params'],
-#                          ])
-
-#     return make_distributed_panel
 
 
 def create_groups_tab():
@@ -773,6 +755,9 @@ def create_groups_tab():
     return groups_tab
 
 
+# =================================================================
+# PARAMETERS TAB
+# =================================================================
 
 
 def create_select_distribution_panel():
@@ -784,15 +769,11 @@ def create_select_distribution_panel():
 
     view.widgets.selectors['distribution_type'].on_change('value', p.update_distribution_type_callback)
 
-    # view.widgets.buttons['remove_distribution'].on_event(ButtonClick, p.remove_group_callback)
-    # view.widgets.buttons['remove_distribution'].on_event(ButtonClick, p.update_plots_on_param_change_callback)
-    # view.widgets.buttons['remove_distribution'].on_event(ButtonClick, p.voltage_callback_on_event)
-
     view.figures['distribution'] = figure(width=400,
                                           height=150,
                                           match_aspect=False,
                                           tools='pan, box_zoom, hover, reset, save',)
-    # hide toolbar and show only on hover
+
     view.figures['distribution'].toolbar.autohide = True
     view.figures['distribution'].background_fill_color = None
     view.figures['distribution'].border_fill_color = None
@@ -805,11 +786,7 @@ def create_select_distribution_panel():
     vspan = Span(location=0, dimension='height', line_color='white', line_width=1)
     view.figures['distribution'].add_layout(vspan)
 
-    
-    
-    
     view.DOM_elements['select_distribution_panel'] = column([
-        # Div(text='<hr style="width:30em; margin-top:3em">'), 
         row([
             view.widgets.selectors['group'],
             view.widgets.selectors['distribution_type']
@@ -826,6 +803,16 @@ def create_distribution_tab():
 
     view.widgets.selectors['mechanism'].on_change('value', p.select_mechanism_callback)
 
+    view.widgets.buttons['standardize'] = Button(label='Standardize',
+                                                button_type='primary',
+                                                disabled=False,
+                                                visible=True,
+                                                width=100,
+                                                styles={"padding-top":"20px"}
+                                                )
+
+    view.widgets.buttons['standardize'].on_event(ButtonClick, p.standardize_callback)
+
     view.widgets.selectors['graph_param'].on_change('value', p.select_param_callback)
 
     view.widgets.buttons['make_distributed'] = Button(label='Make distributed',
@@ -837,7 +824,6 @@ def create_distribution_tab():
                                                     )
 
     view.widgets.buttons['make_distributed'].on_event(ButtonClick, p.make_distributed_callback)
-    # view.widgets.buttons['make_distributed'].on_event(ButtonClick, p.voltage_callback_on_event)
 
     view.widgets.buttons['make_global'] = Button(label='Make global',
                                                 button_type='primary',
@@ -851,7 +837,8 @@ def create_distribution_tab():
     
 
     selection_panel = column([
-        view.widgets.selectors['mechanism'],
+        row([view.widgets.selectors['mechanism'],
+        view.widgets.buttons['standardize']]),
         row([view.widgets.selectors['graph_param'],
         view.widgets.buttons['make_distributed'],
         view.widgets.buttons['make_global']])
@@ -874,97 +861,106 @@ def create_distribution_tab():
 
 
 
+# -----------------------------------------------------------
+# STIMULI TAB 
+# -----------------------------------------------------------
+
+# -----------------------------------------------------------
+# RECORDINGS
+# -----------------------------------------------------------
+
+view.widgets.buttons['remove_all'] = Button(label='Remove all', button_type='danger')
+view.widgets.buttons['remove_all'].on_event(ButtonClick, p.remove_all_callback)
+view.widgets.buttons['remove_all'].on_event(ButtonClick, p.voltage_callback_on_event)
+
+view.widgets.switches['record_from_all'] = Switch(active=False, disabled=True)
+view.widgets.switches['record_from_all'].on_change('active', p.record_from_all_callback)
+view.widgets.switches['record_from_all'].on_change('active', p.voltage_callback_on_change)
+
+view.widgets.switches['record'] = Switch(active=False)
+view.widgets.switches['record'].on_change('active', p.record_callback)
+view.widgets.switches['record'].on_change('active', p.voltage_callback_on_change)
 
 
-
+# -----------------------------------------------------------
+# ICLAMPS
+# -----------------------------------------------------------
 
 view.widgets.switches['iclamp'] = Switch(active=False)
-
-
-        
-
 view.widgets.switches['iclamp'].on_change('active', p.toggle_iclamp_callback)
+view.widgets.switches['iclamp'].on_change('active', p.voltage_callback_on_change)
 
 view.widgets.sliders['iclamp_duration'] = RangeSlider(start=0, end=300, 
                                          value=(100,200), step=10, 
                                          title="Duration, ms", 
                                          visible=False)
-
-
-
 view.widgets.sliders['iclamp_duration'].on_change('value_throttled', p.iclamp_duration_callback)
-
-from bokeh_utils import AdjustableSpinner
-# view.widgets.sliders['iclamp_amp'] = Slider(start=-1000, end=1000, value=0,
-#                     step=1, title="Amp", format='0[.]00000', 
-#                     width=200, 
-#                     visible=False)
-view.widgets.sliders['iclamp_amp'] = AdjustableSpinner(title="Amp (pA)", value=0, step=1, visible=False)
-# view.widgets.selectors['iclamp_amp_unit'] = Select(value='pA', options=['pA', 'nA', 'uA'], title='Units', width=50, visible=False)
-# view.widgets.selectors['iclamp_amp_unit'].on_change('value', p.iclamp_amp_callback)
-
-view.widgets.sliders['iclamp_amp'].on_change('value_throttled', p.iclamp_amp_callback)
-
-view.widgets.switches['record'] = Switch(active=False)
-view.widgets.switches['record_from_all'] = Switch(active=False, disabled=True)
-
-view.widgets.switches['record_from_all'].on_change('active', p.record_from_all_callback)
-view.widgets.switches['record_from_all'].on_change('active', p.voltage_callback_on_change)
-
-view.widgets.switches['record'].on_change('active', p.record_callback)
-view.widgets.switches['record'].on_change('active', p.voltage_callback_on_change)
-view.widgets.switches['iclamp'].on_change('active', p.voltage_callback_on_change)
-view.widgets.sliders['iclamp_amp'].on_change('value_throttled', p.voltage_callback_on_change)
-# view.widgets.selectors['iclamp_amp_unit'].on_change('value', p.voltage_callback_on_change)
 view.widgets.sliders['iclamp_duration'].on_change('value_throttled', p.voltage_callback_on_change)
 
-remove_all_button = Button(label='Remove all', button_type='danger')
+view.widgets.sliders['iclamp_amp'] = AdjustableSpinner(title="Amp (pA)", value=0, step=1, visible=False)
+view.widgets.sliders['iclamp_amp'].on_change('value_throttled', p.iclamp_amp_callback)
+view.widgets.sliders['iclamp_amp'].on_change('value_throttled', p.voltage_callback_on_change)
 
-remove_all_button.on_event(ButtonClick, p.remove_all_callback)
-remove_all_button.on_event(ButtonClick, p.voltage_callback_on_event)
+# -----------------------------------------------------------
+# SYNAPSES
+# -----------------------------------------------------------
 
-view.widgets.selectors['syn_type'] = Select(value='AMPA_NMDA', options=['AMPA', 'NMDA', 'AMPA_NMDA', 'GABAa'], title='Synaptic type', width=150)
+# ADD POPULATION
 
+view.widgets.selectors['syn_type'] = Select(
+    title='Synaptic type', 
+    value='AMPA_NMDA', 
+    options=['AMPA', 'NMDA', 'AMPA_NMDA', 'GABAa'], 
+    width=150
+)
 view.widgets.selectors['syn_type'].on_change('value', p.select_synapse_type_callback)
 
 view.widgets.spinners['N_syn'] = NumericInput(value=1, title='N syn', width=100)
-view.widgets.selectors['syn_group'] = Select(options=[], title='Syn group')
-view.widgets.selectors['syn_group'].on_change('value', p.select_synapse_group_callback)
 
-view.DOM_elements['syn_group_panel'] = column(width=300)
-# view.widgets.sliders['syn rate'] = Slider(start=0, end=100, value=0, step=1, title="Rate, Hz", width=200)
-# view.widgets.sliders['noise'] = Slider(start=0, end=1, value=0, step=0.1, title="Noise", width=200)
+view.widgets.buttons['add_population'] = Button(label='Add population', 
+                                                button_type='primary', 
+                                                disabled=False)
+view.widgets.buttons['add_population'].on_event(ButtonClick, 
+                                                p.add_population_callback)
+view.widgets.buttons['add_population'].on_event(ButtonClick, 
+                                                p.voltage_callback_on_event)
 
-view.widgets.buttons['add_synapse_group'] = Button(label='Add synapse group', button_type='primary', disabled=False)
-view.widgets.buttons['remove_synapse_group'] = Button(label='Remove synapse group', button_type='danger', disabled=False)
+# SELECT / REMOVE POPULATION
+
+view.widgets.selectors['population'] = Select(options=[], title='Population', width=150)
+view.widgets.selectors['population'].on_change('value', p.select_population_callback)
+
+view.widgets.buttons['remove_population'] = Button(label='Remove population', button_type='danger', disabled=False, styles={"padding-top":"20px"})
+view.widgets.buttons['remove_population'].on_event(ButtonClick, p.remove_population_callback)
+view.widgets.buttons['remove_population'].on_event(ButtonClick, p.voltage_callback_on_event)
+
+view.DOM_elements['population_panel'] = column(width=300)
+
+widgets_point_processes = column([
+    view.widgets.buttons['remove_all'],
+    row([view.widgets.selectors['section'],
+    view.widgets.selectors['seg_x']]),
+    row([view.widgets.switches['record_from_all'], Div(text='Record from all')]),
+    row([view.widgets.switches['record'], Div(text='Record voltage')]),
+    row([view.widgets.switches['iclamp'], Div(text='Inject current')]),
+    view.widgets.sliders['iclamp_duration'], 
+    view.widgets.sliders['iclamp_amp'].get_widget(),
+    Div(text='<hr style="width:30em">'),
+    row([view.widgets.selectors['syn_type'], view.widgets.spinners['N_syn']]),
+    view.widgets.buttons['add_population'],
+    Div(text='<hr style="width:30em">'),
+    row([view.widgets.selectors['population'], view.widgets.buttons['remove_population']]),
+    view.DOM_elements['population_panel'],
+])
 
 
-view.widgets.buttons['add_synapse_group'].on_event(ButtonClick, p.add_synapse_group_callback)
-view.widgets.buttons['add_synapse_group'].on_event(ButtonClick, p.voltage_callback_on_event)
-view.widgets.buttons['remove_synapse_group'].on_event(ButtonClick, p.remove_synapse_group_callback)
-view.widgets.buttons['remove_synapse_group'].on_event(ButtonClick, p.voltage_callback_on_event)
+# -----------------------------------------------------------
+# TABS
+# -----------------------------------------------------------
 
-widgets_point_processes = column([remove_all_button,
-                          row([view.widgets.selectors['section'],
-                          view.widgets.selectors['seg_x']]),
-                          row([view.widgets.switches['record_from_all'], Div(text='Record from all')]),
-                          row([view.widgets.switches['record'], Div(text='Record voltage')]),
-                          row([view.widgets.switches['iclamp'], Div(text='Inject current')]),
-                          view.widgets.sliders['iclamp_duration'], 
-                        #   row(view.widgets.sliders['iclamp_amp'], view.widgets.selectors['iclamp_amp_unit']),
-                          view.widgets.sliders['iclamp_amp'].get_widget(),
-                          Div(text='<hr style="width:30em">'),
-                          row([view.widgets.selectors['syn_type'], view.widgets.spinners['N_syn']]),
-                        #   view.widgets.sliders['syn rate'],
-                        #     view.widgets.sliders['noise'],
-                          view.widgets.buttons['add_synapse_group'],
-                          view.widgets.selectors['syn_group'],
-                          view.widgets.buttons['remove_synapse_group'],
-                          view.DOM_elements['syn_group_panel'],
-                          ])
 
 tab_section_vars = TabPanel(title='Morphology', 
-                             child=widgets_section_vars)
+                            child=widgets_section_vars)
 
 tab_point_processes = TabPanel(title='Stimuli', 
                        child=widgets_point_processes)
@@ -993,6 +989,13 @@ def tab_section_callback(attr, old, new):
         view.widgets.selectors['mechanism'].value = 'Independent'
         view.widgets.selectors['graph_param'].options = list(p.model.mechs_to_params['Independent'])
         view.widgets.selectors['graph_param'].value = p.model.mechs_to_params['Independent'][0]
+        
+    if new == 2:
+        view.figures['inf'].visible = True
+        view.figures['tau'].visible = True
+    else:
+        view.figures['inf'].visible = False
+        view.figures['tau'].visible = False
 
     DEFAULT_TAB_PARAM = {0: 'domain', 1: 'domain', 2: 'cm', 3: 'recordings'}
     view.widgets.selectors['graph_param'].value = DEFAULT_TAB_PARAM[new]
@@ -1000,13 +1003,13 @@ def tab_section_callback(attr, old, new):
     
     panel_section.visible = True if new in [0] else False
     
-    # disable lasso tool
-    lasso_tool = view.figures['graph'].select_one(LassoSelectTool)
-    if new == 0:
-        if view.figures['graph'].toolbar.active_drag is lasso_tool:
-            view.figures['graph'].toolbar.active_drag = None
-    else:
-        view.figures['graph'].toolbar.active_drag = lasso_tool
+    # # disable lasso tool
+    # lasso_tool = view.figures['graph'].select_one(LassoSelectTool)
+    # if new == 0:
+    #     if view.figures['graph'].toolbar.active_drag is lasso_tool:
+    #         view.figures['graph'].toolbar.active_drag = None
+    # else:
+    #     view.figures['graph'].toolbar.active_drag = lasso_tool
 
 
 view.widgets.tabs['section'].on_change('active', tab_section_callback)
@@ -1048,12 +1051,12 @@ view.DOM_elements['channel_menu'] = column([row([view.widgets.selectors['channel
                                                  view.widgets.buttons['record_current']]),
                                             view.DOM_elements['channel_panel']])
 
-right_menu = column(view.widgets.buttons['toggle_activation_curves'],
-                    row(view.widgets.tabs['section'], 
-                        view.DOM_elements['channel_menu']
-                        ), 
-                    align='center',
-                    name='right_menu_section')
+right_menu = column(
+    view.widgets.buttons['toggle_activation_curves'],
+    row(view.widgets.tabs['section'], view.DOM_elements['channel_menu']), 
+    align='center',
+    name='right_menu_section'
+)
 
 curdoc().add_root(right_menu)
 
@@ -1074,12 +1077,12 @@ curdoc().add_root(right_menu)
 # ------------------------------------------------------------------------------------
 
 # Loading a model from JSON
-view.widgets.selectors['from_json'] = Select(value='Load a cell from JSON',
-                                options=['Load a cell from JSON'] + os.listdir('app/static/data/json'),
+view.widgets.selectors['from_json'] = Select(value='Load a model',
+                                options=['Choose a model to load'] + os.listdir('app/static/data/json'),
                                 title='Load JSON',
                                 width=242)
 
-view.widgets.selectors['from_json'].on_change('value', p.from_json_callback)
+view.widgets.selectors['from_json'].on_change('value', p.load_model_callback)
 
 view.widgets.selectors['from_json'].description = 'Select a cell to load. To select another cell, reload the page.'
 
@@ -1099,8 +1102,8 @@ view.widgets.sliders['d_lambda'].on_change('value_throttled', p.build_seg_tree_c
 # view.widgets.buttons['build_seg_tree'].on_event(ButtonClick, p.build_seg_tree_callback)
 
 # Export to JSON
-view.widgets.buttons['to_json'] = Button(label='Export as JSON', button_type='primary', disabled=False)
-view.widgets.buttons['to_json'].on_event(ButtonClick, p.to_json_callback)
+view.widgets.buttons['to_json'] = Button(label='Export model', button_type='primary', disabled=False)
+view.widgets.buttons['to_json'].on_event(ButtonClick, p.export_model_callback)
 
 # File import
 view.widgets.file_input['all'] = FileInput(accept='.swc, .asc, .mod', name='file', visible=True, width=242, disabled=False)
@@ -1314,7 +1317,10 @@ def update_voltage_plot_y_range(attr, old, new):
 view.widgets.sliders['voltage_plot_x_range'].on_change('value_throttled', update_voltage_plot_x_range)
 view.widgets.sliders['voltage_plot_y_range'].on_change('value_throttled', update_voltage_plot_y_range)
 
-view.widgets.selectors['graph_layout'] = Select(title='Graph layout', options=['kamada-kawai', 'dot', 'neato'], value='kamada-kawai')
+view.widgets.selectors['graph_layout'] = Select(title='Graph layout', 
+    options=['kamada-kawai', 'dot', 'neato', 'twopi'], 
+    value='twopi',
+)
 
 settings_panel = column(view.widgets.selectors['theme'],
                         # view.widgets.selectors['output_format'],

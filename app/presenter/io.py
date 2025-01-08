@@ -48,48 +48,28 @@ class IOMixin():
         self._attach_download_js()
 
 
-    def from_json_callback(self, attr, old, new):
+    def load_model_callback(self, attr, old, new):
         import os
         import json
 
-        path_to_json = os.path.join('app', 'static', 'data', 'json', new)
+        self.model.name = new.replace('.json', '')
 
-        with open(path_to_json, 'r') as f:
-            data = json.load(f)
+        self.model.load_data()
 
-        self.model.name = data['metadata']['name']
-
-        # MORPHOLOGY --------------------------------------------
-        swc_file_name = data['metadata']['swc_data']['swc_file_name']
-        self.create_morpohlogy(swc_file_name)
-
-        # LOAD MECHANISMS ----------------------------------------------
-        self.add_archive('Base', recompile=False)
-        for archive in data['metadata']['mod_data']['archives']:
-            self.add_archive(archive, 
-                        recompile=self.view.widgets.switches['recompile'].active)
-
-        # GROUPS fetch params ------------------------------------------
-        self.add_groups_from_json(data)
-        # DISTRIBUTE SECTION PARAMETERS --------------------------------
-        self.distribute_params(param_names=['cm', 'Ra']) # needed for segmentation
-
-        # SEGMENTATION ------------------------------------------------
-        # Rebuild the seg tree
-        d_lambda = data['simulation']['d_lambda']
-        self.build_seg_tree(d_lambda)
+        self._create_cell_renderer()
+        self._init_cell_widgets()
+        self._create_graph_renderer()
         
-        # DISTRIBUTE SEGMENT PARAMETERS push to segments --------------
-        for group in self.model.groups.values():
-            for param_name in group.parameters:
-                group.distribute(param_name)
-
-        # UPDATE GRAPH (pull from segments) ---------------------------
-        for param_name in self.model.parameters_to_groups:
+        for param_name in self.model.params:
+            self._update_graph_param(param_name, update_colors=False)
+        for param_name in ['AMPA', 'NMDA', 'GABAa', 'AMPA_NMDA', 'recordings', 'iclamps']:
             self._update_graph_param(param_name, update_colors=False)
 
         # MISC --------------------------------------------------------
         self._attach_download_js() # needed to update the names of the files to download
+
+        self.recorded_segments = [seg for seg in self.model.recordings]
+        self.update_voltage()
 
     # MORPHOLOGY
     @log
@@ -151,20 +131,20 @@ class IOMixin():
     # GROUPS
 
     
-    def add_groups_from_json(self, data):
-        for group_name, group_data in data['groups'].items():
-            # Add the group to the model
-            sections = [sec for sec in self.model.sec_tree.sections 
-                        if sec.idx in group_data['nodes']]
-            self.model.add_group(group_name, sections)
-            # Add mechanisms to the group
-            for mech_name in group_data['mechanisms']:
-                self.insert_mech(mech_name=mech_name, 
-                                  group_name=group_name)
-            # Add parameters to the group
-            for param_name, param_data in group_data['parameters'].items():
-                func = dd.Distribution.from_dict(param_data)
-                self.model.groups[group_name].add_parameter(param_name, func)
+    # def add_groups_from_json(self, data):
+    #     for group_name, group_data in data['groups'].items():
+    #         # Add the group to the model
+    #         sections = [sec for sec in self.model.sec_tree.sections 
+    #                     if sec.idx in group_data['nodes']]
+    #         self.model.add_group(group_name, sections)
+    #         # Add mechanisms to the group
+    #         for mech_name in group_data['mechanisms']:
+    #             self.insert_mech(mech_name=mech_name, 
+    #                               group_name=group_name)
+    #         # Add parameters to the group
+    #         for param_name, param_data in group_data['parameters'].items():
+    #             func = dd.Distribution.from_dict(param_data)
+    #             self.model.groups[group_name].add_parameter(param_name, func)
 
 
     # SEGMENTATION
@@ -236,10 +216,8 @@ class IOMixin():
     # OUTPUT METHODS
     # =========================================================================
 
-    def to_json_callback(self, event):
-        import os
-        path_to_json = os.path.join('app', 'static', 'data', 'json', f'{self.model.name}.json')
-        self.model.to_json(path_to_json, indent=4, sort_keys=False)
+    def export_model_callback(self, event):        
+        self.model.export_data()
         
     def to_swc_callback(self, event):
         import os

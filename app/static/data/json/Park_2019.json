@@ -1,18 +1,9 @@
 {
     "metadata": {
         "name": "Park_2019",
-        "simulator_name": "NEURON",
-        "group_by": "sections",
-        "path_to_data": "app/src/data/",
-        "swc_data": {
-            "swc_file_name": "Park_2019.swc"
-        },
-        "mod_data": {
-            "archives": [
-                "Base",
-                "Park_test"
-            ]
-        }
+        "archives": [
+            "Default"
+        ]
     },
     "simulation": {
         "d_lambda": 0.1,
@@ -20,128 +11,29 @@
         "v_init": -70,
         "dt": 0.025
     },
-    "groups": {
-        "all": {
-            "nodes": [
-                0,
-                1,
-                2,
-                3,
-                4,
-                5,
-                6,
-                7,
-                8,
-                9,
-                10,
-                11,
-                12,
-                13,
-                14,
-                15,
-                16,
-                17,
-                18,
-                19,
-                20,
-                21,
-                22,
-                23,
-                24,
-                25,
-                26,
-                27,
-                28,
-                29,
-                30,
-                31,
-                32,
-                33,
-                34,
-                35,
-                36,
-                37,
-                38,
-                39,
-                40,
-                41,
-                42,
-                43,
-                44,
-                45,
-                46,
-                47,
-                48,
-                49,
-                50,
-                51
-            ],
+    "groups": [
+        {
+            "name": "all",
             "mechanisms": [
-                "Leak",
-                "Na",
-                "Kv"
-            ],
-            "parameters": {
-                "cm": {
-                    "function": "uniform",
-                    "parameters": {
-                        "value": 1
-                    }
-                },
-                "Ra": {
-                    "function": "uniform",
-                    "parameters": {
-                        "value": 100
-                    }
-                },
-                "gbar_Leak": {
-                    "function": "uniform",
-                    "parameters": {
-                        "value": 0.0001
-                    }
-                },
-                "gbar_Na": {
-                    "function": "uniform",
-                    "parameters": {
-                        "value": 0.03
-                    }
-                },
-                "gbar_Kv": {
-                    "function": "uniform",
-                    "parameters": {
-                        "value": 0.0015
-                    }
-                }
-            }
-        },
-        "somatic": {
-            "nodes": [
-                0
-            ],
-            "mechanisms": [
-                "Na",
-                "Kv"
-            ],
-            "parameters": {
-                "cm": {
-                    "function": "uniform",
-                    "parameters": {
-                        "value": 2
-                    }
-                },
-                "gbar_Na": {
-                    "function": "uniform",
-                    "parameters": {
-                        "value": 0.05
-                    }
-                },
-                "gbar_Kv": {
-                    "function": "uniform",
-                    "parameters": {
-                        "value": 0.005
-                    }
-                }
-            }
+                "Independent"
+            ]
+        }
+    ],
+    "global_params": {
+        "cm": 1,
+        "Ra": 100,
+        "ena": 50,
+        "ek": -77,
+        "eca": 140
+    },
+    "distributed_params": {},
+    "stimuli": {
+        "iclamps": [],
+        "populations": {
+            "AMPA": [],
+            "NMDA": [],
+            "AMPA_NMDA": [],
+            "GABAa": []
         }
     }
 }
