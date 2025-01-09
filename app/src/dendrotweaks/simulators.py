@@ -5,6 +5,9 @@ class Simulator:
     def __init__(self):
         pass
 
+import contextlib
+
+
 
 class NEURONSimulator(Simulator):
     """
@@ -21,6 +24,10 @@ class NEURONSimulator(Simulator):
         # self.h.load_file('nrngui.hoc')
         # self.h.load_file('import3d')
 
+        if self.residings:
+            self.reset_neuron()
+            print('Neuron reset.')
+
         self.temperature = temperature
         self.v_init = v_init * mV
 
@@ -29,6 +36,29 @@ class NEURONSimulator(Simulator):
 
         self.recordings = {}
         # self.t = []
+
+    @property
+    def residings(self):
+        return [sec for sec in self.h.allsec()]
+
+    def reset_neuron(self):
+
+        @contextlib.contextmanager
+        def push_section(section):
+            section.push()
+            yield
+            self.h.pop_section()
+        
+        # h('forall delete_section()')
+        # h('forall delete_all()')
+        # h('forall delete()')
+
+        for sec in self.residings:
+            with push_section(sec):
+                self.h.delete_section()
+
+        if self.residings:
+            warnings.warn('Sections were not deleted.')
 
     def add_recording(self, sec, loc, var='v'):
         seg = sec(loc)

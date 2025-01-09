@@ -581,8 +581,6 @@ view.widgets.buttons['reduce'] = Button(label='Reduce subtree', button_type='war
 view.widgets.buttons['reduce'].on_event(ButtonClick, p.reduce_subtree_callback)
 view.widgets.buttons['reduce'].on_event(ButtonClick, p.voltage_callback_on_event)
 
-view.widgets.buttons['to_swc'] = Button(label='Export to SWC', button_type='default')
-view.widgets.buttons['to_swc'].on_event(ButtonClick, p.to_swc_callback)
 
 view.DOM_elements['stats'] = Div(text='Stats:')
 
@@ -601,7 +599,7 @@ delete_button.on_event(ButtonClick, p.delete_subtree_callback)
 
 widgets_section_vars = column([
                         view.widgets.sliders['n_seg'],
-                        row([view.widgets.buttons['reduce'], view.widgets.buttons['to_swc']]),
+                        view.widgets.buttons['reduce'],
                         delete_button,
                         stats_panel,
                         ], name='widgets_section_vars')
@@ -1059,71 +1057,59 @@ curdoc().add_root(right_menu)
 # ------------------------------------------------------------------------------------
 
 # Loading a model from JSON
-view.widgets.selectors['from_json'] = Select(value='Load a model',
-                                options=['Choose a model to load'] + os.listdir('app/static/data/json'),
-                                title='Load JSON',
+view.widgets.selectors['model'] = Select(value='Select a model to load',
+                                options=['Select a model to load'] + p.model.path_manager.list_models(),
+                                title='Model',
                                 width=242)
 
-view.widgets.selectors['from_json'].on_change('value', p.load_model_callback)
+view.widgets.selectors['model'].on_change('value', p.select_model_callback)
 
-view.widgets.selectors['from_json'].description = 'Select a cell to load. To select another cell, reload the page.'
+view.widgets.selectors['model'].description = 'Select a neuronal model to load. To select another model, reload the page.'
 
-# Loading morphology from SWC
-view.widgets.selectors['from_swc'] = Select(value='Load morphology from SWC',
-                       options=['Load morphology from SWC'] + model.path_manager.list_swc(), 
-                       title='Cell:', 
-                       width=242)
+view.widgets.buttons['load_swc'] = Button(label='Load morphology', button_type='primary', width=100, styles={"margin-right":"20px"})
+view.widgets.buttons['load_swc'].on_event(ButtonClick, p.load_swc_callback)
 
-view.widgets.selectors['from_swc'].on_change('value', p.from_swc_callback)
+view.widgets.buttons['load_mod'] = Button(label='Load mechanisms', button_type='primary', width=100)
+view.widgets.buttons['load_mod'].on_event(ButtonClick, p.load_mod_callback)
 
-view.widgets.buttons['load'] = Dropdown(
-    label='Load', 
-    button_type='primary', 
-    menu=[('Load morphology', 'load_swc'), 
-          ('Load mechanisms', 'load_mod'), 
-          ('Load model', 'load_all')
-          ],
-    width=242
-    )
+view.widgets.buttons['load_model'] = Button(label='Load model', button_type='primary', width=242)
+view.widgets.buttons['load_model'].on_event(ButtonClick, p.load_model_callback)
 
 
 # Segmentation
-view.widgets.sliders['d_lambda'] = Slider(start=0, end=0.2, value=0.1, step=0.01, title="d_lambda", width=200)
-view.widgets.sliders['d_lambda'].on_change('value_throttled', p.build_seg_tree_callback)                                            
+view.widgets.sliders['d_lambda'] = Slider(start=0, end=0.2, value=0.1, step=0.01, title="d_lambda", width=242)
 
-# view.widgets.buttons['build_seg_tree'] = Button(label='Build segments', button_type='primary', disabled=False)
-# view.widgets.buttons['build_seg_tree'].on_event(ButtonClick, p.build_seg_tree_callback)
+view.widgets.buttons['set_segmentation'] = Button(label='Build segments', button_type='primary', disabled=False, width=242)
+view.widgets.buttons['set_segmentation'].on_event(ButtonClick, p.build_seg_tree_callback)
 
-# Export to JSON
-view.widgets.buttons['to_json'] = Button(label='Export model', button_type='primary', disabled=False)
-view.widgets.buttons['to_json'].on_event(ButtonClick, p.export_model_callback)
+# Export model
+view.widgets.buttons['export_model'] = Button(label='Export model', button_type='primary', disabled=False, width=242)
+view.widgets.buttons['export_model'].on_event(ButtonClick, p.export_model_callback)
+
+view.widgets.buttons['export_swc'] = Button(label='Export morphology', button_type='primary')
+view.widgets.buttons['export_swc'].on_event(ButtonClick, p.to_swc_callback)
 
 # File import
 view.widgets.file_input['all'] = FileInput(accept='.swc, .asc, .mod', name='file', visible=True, width=242, disabled=False)
 view.widgets.file_input['all'].on_change('filename', p.import_file_callback)
 view.widgets.file_input['all'].on_change('value', p.import_file_callback)
 
-# Load mechanism from mod files archives
-view.widgets.selectors['mod_archives'] = Select(title='Mechanism archives',
-                                    options = ['Select archive'] + [k for k in p.model.path_manager.list_archives().keys() if k != 'Base'],
-                                    value = 'Select archive',
-                                    width=242)
-
-view.widgets.selectors['mod_archives'].on_change('value', p.mod_archives_callback)
-
 
 tab_io = TabPanel(title='Input/Output', 
                 child=column(
-                    view.widgets.selectors['from_json'],
-                    view.widgets.selectors['from_swc'],
-                    view.widgets.buttons['load'],
+                    view.widgets.selectors['model'],
+                    row([view.widgets.buttons['load_swc'],
+                    view.widgets.buttons['load_mod']]),
+                    view.widgets.buttons['load_model'],
+                    Div(text='<hr style="width:18.5em; margin-top:3em">'), 
                     view.widgets.sliders['d_lambda'],
-                    view.widgets.selectors['mod_archives'],
-                    Div(text='<hr style="width:15em; margin-top:3em">'), 
+                    view.widgets.buttons['set_segmentation'],
+                    Div(text='<hr style="width:18.5em; margin-top:3em">'), 
                     view.widgets.file_input['all'],
-                    view.widgets.buttons['to_json'],
-                    Div(text='<hr style="width:15em; margin-top:3em">'), 
-                )
+                    view.widgets.buttons['export_swc'],
+                    view.widgets.buttons['export_model'],
+                    Div(text='<hr style="width:18.5em; margin-top:3em">')
+                    )
                 )
 
 # ------------------------------------------------------------------------------------

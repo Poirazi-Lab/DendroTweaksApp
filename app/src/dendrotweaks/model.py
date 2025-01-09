@@ -58,8 +58,8 @@ class Model():
                  group_by='sections') -> None:
 
         # Metadata
-        self.name = name
-        self.path_manager = PathManager(path_to_data)
+        self._name = name
+        self.path_manager = PathManager(path_to_data, model_name=name)
         self.simulator_name = simulator_name
 
         # File managers
@@ -79,9 +79,6 @@ class Model():
         self.global_params = {
             'cm': 1, # uF/cm2
             'Ra': 100, # Ohm cm
-            'ena': 50, # mV
-            'ek': -77, # mV
-            'eca': 140 # mV
         }
 
         # Groups
@@ -111,6 +108,14 @@ class Model():
     # PROPERTIES
     # -----------------------------------------------------------------------
 
+    @property
+    def name(self):
+        return self._name
+
+    @name.setter
+    def name(self, name):
+        self._name = name
+        self.path_manager.update_paths(name)
 
     @property
     def recordings(self):
@@ -292,8 +297,17 @@ class Model():
     # MECHANISMS
     # ========================================================================
 
+    def add_default_mechanisms(self, recompile=False):
+        """
+        Add default mechanisms to the model.
+        """
+        leak = LeakChannel()
+        self.mechanisms[leak.name] = leak
 
-    def add_archive(self, archive_name: str, recompile=True) -> None:
+        self.load_mechanisms('default_mod', recompile=False)
+
+
+    def add_mechanisms(self, dir_name:str = 'mod', recompile=True) -> None:
         """
         Add a set of mechanisms from an archive to the model.
 
@@ -303,14 +317,11 @@ class Model():
             The name of the archive to add.
         """
         # Create Mechanism objects and add them to the model
-        for mechanism_name in self.path_manager.list_archives()[archive_name]:
-            self.add_mechanism(mechanism_name, archive_name)
-            self.load_mechanism(mechanism_name, archive_name, recompile)
-        self._loaded_archives.append(archive_name)
-
+        for mechanism_name in self.path_manager.list_files(dir_name, extension='mod'):
+            self.add_mechanism(mechanism_name)
+            self.load_mechanism(mechanism_name, dir_name, recompile)
 
     def add_mechanism(self, mechanism_name: str, 
-                      archive_name: str = '', 
                       python_template_name: str = 'default',
                       **kwargs) -> None:
         """
@@ -323,20 +334,11 @@ class Model():
         archive_name : str, optional
             The name of the archive to add.
         """
-        if mechanism_name == 'Leak':
-            path_to_mod_file = self.path_manager.get_file_path(
-                'mod', 'Leak', 
-                extension='mod', 
-                archive=archive_name
-            )
-            mech = self.mechanism_factory.create_leak_channel(path_to_mod_file)
-        else:
-            paths = self.path_manager.get_channel_paths(
-                mechanism_name, 
-                archive_name,
-                python_template_name=python_template_name
-            )
-            mech = self.mechanism_factory.create_channel(**paths)
+        paths = self.path_manager.get_channel_paths(
+            mechanism_name, 
+            python_template_name=python_template_name
+        )
+        mech = self.mechanism_factory.create_channel(**paths)
         # Add the mechanism to the model
         self.mechanisms[mech.name] = mech
         # Update the global parameters
@@ -353,23 +355,23 @@ class Model():
         elif ion == 'ca':
             self.global_params['eca'] = 140
 
-    def load_archive(self, archive_name: str = '', recompile=True) -> None:
+    def load_mechanisms(self, dir_name: str = 'mod', recompile=True) -> None:
         """
         Load mechanisms from an archive.
 
         Parameters
         ----------
-        archive_name : str, optional
+        dir_name : str, optional
             The name of the archive to load mechanisms from.
         recompile : bool, optional
             Whether to recompile the mechanisms.
         """
-        archive = self.path_manager.list_archives().get(archive_name, [])
-        for mechanism_name in archive:
-            self.load_mechanism(mechanism_name, archive_name, recompile)
+        mod_files = self.path_manager.list_files(dir_name, extension='mod')
+        for mechanism_name in mod_files:
+            self.load_mechanism(mechanism_name, dir_name, recompile)
 
 
-    def load_mechanism(self, mechanism_name: str, archive_name: str = '', recompile=False) -> None:
+    def load_mechanism(self, mechanism_name, dir_name='mod', recompile=False) -> None:
         """
         Load a mechanism from the specified archive.
 
@@ -377,13 +379,11 @@ class Model():
         ----------
         mechanism_name : str
             The name of the mechanism to load.
-        archive_name : str, optional
-            The name of the archive to load the mechanism from.
         recompile : bool, optional
             Whether to recompile the mechanism.
         """
         path_to_mod_file = self.path_manager.get_file_path(
-            'mod', mechanism_name, extension='mod', archive=archive_name
+            dir_name, mechanism_name, extension='mod'
         )
         self.mod_loader.load_mechanism(
             path_to_mod_file=path_to_mod_file, recompile=recompile
@@ -518,7 +518,7 @@ class Model():
         if param_name in self.distributed_params:
             raise ValueError(f'Parameter {param_name} is a distributed parameter.')
 
-        if param_name in ['celsius', 'v_init']:
+        if param_name in ['temperature', 'v_init']:
             setattr(self.simulator, param_name, value)
             return
 
@@ -862,13 +862,12 @@ class Model():
 
         self.simulator.from_dict(data['simulation'])
 
-        swc_file_name = data['metadata']['name'] + '.swc'
+        swc_file_name = data['metadata']['name']
         self.from_swc(swc_file_name)
         self.create_and_reference_sections_in_simulator()
 
-        for archive in data['metadata']['archives']:
-            self.add_archive(archive)
-        self.load_archive('Synapses', recompile=False)
+        self.add_default_mechanisms()
+        self.add_mechanisms('mod', recompile=True)
 
         for group_name in df_groups.columns[1:]:
             sections = [sec for sec in self.sec_tree.sections if df_groups[group_name][sec.idx]]

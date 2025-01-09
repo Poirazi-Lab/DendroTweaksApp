@@ -1,10 +1,7 @@
 {
     "metadata": {
         "name": "Park_2019",
-        "archives": [
-            "Default",
-            "Park_test"
-        ]
+        "archives": []
     },
     "simulation": {
         "d_lambda": 0.1,
@@ -35,7 +32,6 @@
         "Ra": 100,
         "ena": 60,
         "ek": -80,
-        "eca": 140,
         "e_Leak": -79,
         "Rma_Na": 0.182,
         "Rmb_Na": 0.14,
@@ -123,9 +119,9 @@
                 {
                     "name": "AMPA_0",
                     "syn_type": "AMPA",
-                    "N": 100,
+                    "N": 10,
                     "input_params": {
-                        "rate": 11,
+                        "rate": 100,
                         "noise": 1,
                         "start": 100,
                         "end": 200,
