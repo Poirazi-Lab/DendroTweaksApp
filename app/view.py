@@ -70,10 +70,6 @@ THEMES = {
 
 
 PARAMS_TO_UNITS = {
-    'gbar': 'Conductance (S/cm²)',
-}
-
-PARAMS = {
     'morph': {'domain': 'Section domain',
               'diam': 'Diameter (μm)',
               'area': 'Area (μm²)',
@@ -82,7 +78,8 @@ PARAMS = {
               'Ra': 'Axial resistance (Ωcm)',
               },
     'ephys': {'cm': 'Capacitance (μF/cm²)',
-              'Ra': 'Axial resistance (Ωcm)'
+              'Ra': 'Axial resistance (Ωcm)',
+              'gbar': 'Conductance (S/cm²)',
               },
     'sim': {'iclamps': 'Injected current (nA)',
             'AMPA': 'Number of synapses',
@@ -91,6 +88,14 @@ PARAMS = {
             'GABAa': 'Number of synapses',
             'recordings': 'Recordings',
             'voltage': 'Voltage',}
+}
+
+PARAMS = {
+    'Topology': ['domain', 'subtree_size'],
+    'Geometry': ['diam', 'area', 'distance'],
+    'Stimuli': ['iclamps'],
+    'Recordings': ['recordings'],
+    'Synapses': ['AMPA', 'NMDA', 'AMPA_NMDA', 'GABAa']
 }
 
 
@@ -104,30 +109,10 @@ class CellView():
         self.renderers = {}
         self.widgets = WidgetManager()
         self.DOM_elements = {}
-        self._params = PARAMS
+        self.params = PARAMS
         self._add_theme_callbacks()
         self._file_content = None
         self._filename = None
-
-    @property
-    def params(self):
-        """Return as flattend dict"""
-        return {k: v for d in self._params.values() for k, v in d.items()}
-
-    @property
-    def ephys_params(self):
-        return self._params['ephys']
-
-    # def update_ephys_params(self, new_ephys_params):
-    #     #self._params['ephys'].update(new_ephys_params)
-    #     self._params['ephys'] = {**{'cm': 'Capacitance (μF/cm²)'}, **new_ephys_params}
-    def add_ephys_param(self, param_name):
-        # check if any key from PARAMS_TO_UNITS is in the param_name string and use this key to get the unit
-        for key in PARAMS_TO_UNITS:
-            if key in param_name:
-                self._params['ephys'][param_name] = PARAMS_TO_UNITS[key]
-                return
-        self._params['ephys'][param_name] = f'{param_name} (unknown units)'
 
 
     def set_theme(self, theme_name):

@@ -53,7 +53,7 @@ class GraphMixin():
                             diam = seg.diam,
                             area = seg.area,
                             subtree_size = seg.subtree_size,
-                            dist = seg.distance_to_root,
+                            distance = seg.distance_to_root,
                             recordings='None',
                             iclamps=0,
                             radius=radius*0.002,
@@ -99,7 +99,7 @@ class GraphMixin():
                             diam = sec._ref.diam,
                             # area = sec.area,
                             subtree_size = sec.subtree_size,
-                            dist = sec.distance_to_root(),
+                            distance = sec.distance_to_root(),
                             recordings='None',
                             iclamps=0,
                             radius=radius*0.002,
@@ -145,7 +145,7 @@ class GraphMixin():
         self.view.figures['graph'].renderers.append(graph_renderer)
 
         # UPDATE PARAM OPTIONS
-        self.view.widgets.selectors['graph_param'].options = list(self.view.params)
+        self.view.widgets.selectors['graph_param'].options = {**self.view.params, **self.model.mechs_to_params}
 
         self.add_lasso_callback()
 
@@ -258,7 +258,7 @@ class GraphMixin():
         # NORMAL PARAMS
         elif param_name in ['Ra']:
             return seg._section._ref.Ra
-        elif param_name in ['dist']:
+        elif param_name in ['distance']:
             return seg.distance_to_root
         else:
             return seg.get_param_value(param_name)
@@ -334,6 +334,7 @@ class GraphMixin():
             max_val = max(graph_renderer.node_renderer.data_source.data[param])
 
             self.view.widgets.sliders['graph_param_high'].end = max_val
+            self.view.widgets.sliders['graph_param_high'].step = max_val / 100
             self.view.widgets.sliders['graph_param_high'].value = max_val
         graph_renderer.node_renderer.glyph.fill_color = {'field': param, 'transform': color_mapper}
         graph_renderer.node_renderer.selection_glyph.fill_color = {'field': param, 'transform': color_mapper}

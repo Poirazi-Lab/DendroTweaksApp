@@ -271,11 +271,11 @@ class Presenter(IOMixin, NavigationMixin,
 
     def _update_mechanism_selector_widget(self, group_name):
         """
-        Updates the multiselect['mechanisms'] widget with the mechanisms that 
-        are available for the selected group.
+        Updates the selectors['mechanism'] widget options when a mechanism is added or removed.
         """
         group = self.model.groups[group_name]
         with remove_callbacks(self.view.widgets.selectors['mechanism']):
+            logger.debug(f'Updating mechanism selector from {groups.name}: {group.mechanisms}')
             self.view.widgets.selectors['mechanism'].options = group.mechanisms
             mech_name = group.mechanisms[0] if group.mechanisms else None
             self.view.widgets.selectors['mechanism'].value = mech_name
@@ -299,8 +299,8 @@ class Presenter(IOMixin, NavigationMixin,
         avaliable_params = self.model.mechs_to_params[mech_name]
         param_name = avaliable_params[0]
         
-        self.view.widgets.selectors['graph_param'].options = avaliable_params
-        self.view.widgets.selectors['graph_param'].value = param_name
+        self.view.widgets.selectors['param'].options = avaliable_params
+        self.view.widgets.selectors['param'].value = param_name
 
         self.toggle_kinetic_plots(mech_name)
 
@@ -381,26 +381,30 @@ class Presenter(IOMixin, NavigationMixin,
     # PARAMETERS
     # -----------------------------------------------------------------
 
+    def select_param_callback(self, attr, old, new):
+        """
+        Callback for the selectors['param'] widget.
+        """
+        param_name = new
+
+        # HANDLE DISTRIBUTED PARAM
+        if param_name in self.model.distributed_params:
+            self._toggle_distributed_param_panel(param_name)
+            # self._update_distribution_plot(param_name)
+
+        # HANDLE GLOBAL PARAM
+        elif param_name in self.model.global_params:
+            self._toggle_global_param_panel(param_name)
+
+        self.view.widgets.selectors['graph_param'].value = new
 
     @log
-    def select_param_callback(self, attr, old, new):
+    def select_graph_param_callback(self, attr, old, new):
         """
         Callback for the selectors['graph_param'] widget.
         Toggles the panel with widgets for the selected parameter.
         """
         param_name = new
-
-        if self.view.widgets.tabs['section'].active == 2:
-
-            # HANDLE DISTRIBUTED PARAM
-            if param_name in self.model.distributed_params:
-                self._toggle_distributed_param_panel(param_name)
-                # self._update_distribution_plot(param_name)
-
-            # HANDLE GLOBAL PARAM
-            elif param_name in self.model.global_params:
-                self._toggle_global_param_panel(param_name)
-
         self._update_graph_param(param_name, update_colors=True)
 
 

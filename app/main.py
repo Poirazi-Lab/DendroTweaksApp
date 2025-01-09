@@ -266,16 +266,18 @@ view.widgets.selectors['mechanism'] = Select(title='Mechanism:')
 
 view.widgets.selectors['graph_param'] = Select(title="Parameter:", 
                                               width=150,
+                                              options = {**view.params},
+                                              value='domain'
                                               )
 
 view.widgets.sliders['graph_param_high'] = Slider(start=0, end=1, value=1, 
-                                                 step=0.01, title="High", width=200, visible=True)
+                                                 step=0.01, title="Colormap max", width=100, visible=True)
 view.widgets.sliders['time_slice'] = Spinner(title="Time slice", low=0, high=1000, step=0.1, value=100, width=100, visible=False)
 
 view.widgets.sliders['time_slice'].on_change('value_throttled', p.update_time_slice_callback)
 
 # Attach the callback to the dropdown selector
-# view.widgets.selectors['graph_param'].on_change('value', p.update_graph_colors_callback)
+view.widgets.selectors['graph_param'].on_change('value', p.select_graph_param_callback)
 
 
 def update_high(attr, old, new):
@@ -288,19 +290,17 @@ def update_high(attr, old, new):
         new_color_mapper = LinearColorMapper(palette=palette, low=0, high=new)
         param = graph_renderer.node_renderer.glyph.fill_color.field
         graph_renderer.node_renderer.glyph.fill_color = {'field': param, 'transform': new_color_mapper}
-        # graph_renderer.node_renderer.selection_glyph.fill_color = {'field': param, 'transform': new_color_mapper}
-        # graph_renderer.node_renderer.nonselection_glyph.fill_color = {'field': param, 'transform': new_color_mapper}
+        graph_renderer.node_renderer.selection_glyph.fill_color = {'field': param, 'transform': new_color_mapper}
+        graph_renderer.node_renderer.nonselection_glyph.fill_color = {'field': param, 'transform': new_color_mapper}
         view.figures['graph'].renderers[0] = graph_renderer
 
 view.widgets.sliders['graph_param_high'].on_change('value', update_high)
 
 panel_graph = column(view.figures['graph'], 
                     row(
-                        # view.widgets.selectors['section'],
-                        # view.widgets.selectors['seg_x'],
-                        view.widgets.selectors['graph_param'], 
+                        [view.widgets.selectors['graph_param'], 
                          view.widgets.sliders['graph_param_high'],
-                        view.widgets.sliders['time_slice'],
+                        view.widgets.sliders['time_slice'],]
                          ), 
                     name='panel_graph',
                     width_policy='fit',
@@ -576,23 +576,6 @@ view.widgets.sliders['n_seg'] = Slider(start=1, end=21, value=1, step=2, title='
 
 view.widgets.sliders['n_seg'].on_change('value_throttled', p.nseg_callback)
 
-view.widgets.sliders['length'] = Slider(start=1, end=200, 
-                           value=1, 
-                           step=1, title='Length (μm)', visible=False)
-
-    
-view.widgets.sliders['length'].on_change('value_throttled', p.length_callback)
-
-view.widgets.sliders['Ra'] = Slider(start=1, end=200,
-                          value=100,
-                            step=1, title='Ra, Ω*cm', visible=False)
-
-# view.widgets.sliders['Ra'].on_change('value_throttled', p.Ra_callback)
-
-view.widgets.spinners['Ra'] = Spinner(value=100, title='Ra', width=60, step=1, visible=True)
-view.widgets.spinners['Ra'].on_change('value', p.update_Ra_callback)
-view.widgets.spinners['Ra'].on_change('value', p.voltage_callback_on_change)
-
 view.widgets.buttons['reduce'] = Button(label='Reduce subtree', button_type='warning')
 
 view.widgets.buttons['reduce'].on_event(ButtonClick, p.reduce_subtree_callback)
@@ -617,14 +600,7 @@ delete_button = Button(label='Delete subtree', button_type='danger')
 delete_button.on_event(ButtonClick, p.delete_subtree_callback)
 
 widgets_section_vars = column([
-                        # row([selectors['root'], selectors['section']]),
-                        # row([buttons['parent'], buttons['sibling'], buttons['child']]),
-                        # column([Div(text='Parameter:'), view.widgets.selectors['graph_param']]),
-                        view.widgets.sliders['length'],
-                        view.widgets.sliders['Ra'],
                         view.widgets.sliders['n_seg'],
-                        view.widgets.spinners['Ra'],
-                        # panel_section,
                         row([view.widgets.buttons['reduce'], view.widgets.buttons['to_swc']]),
                         delete_button,
                         stats_panel,
@@ -813,7 +789,12 @@ def create_distribution_tab():
 
     view.widgets.buttons['standardize'].on_event(ButtonClick, p.standardize_callback)
 
-    view.widgets.selectors['graph_param'].on_change('value', p.select_param_callback)
+    view.widgets.selectors['param'] = Select(title='Parameter',
+                                            options=[],
+                                            value=None,
+                                            width=150)
+
+    view.widgets.selectors['param'].on_change('value', p.select_param_callback)
 
     view.widgets.buttons['make_distributed'] = Button(label='Make distributed',
                                                     button_type='primary',
@@ -839,7 +820,7 @@ def create_distribution_tab():
     selection_panel = column([
         row([view.widgets.selectors['mechanism'],
         view.widgets.buttons['standardize']]),
-        row([view.widgets.selectors['graph_param'],
+        row([view.widgets.selectors['param'],
         view.widgets.buttons['make_distributed'],
         view.widgets.buttons['make_global']])
     ])
@@ -975,7 +956,7 @@ def tab_section_callback(attr, old, new):
     if p.model.sec_tree is None:
         return
     if new in [0, 3]:
-        view.widgets.selectors['graph_param'].options = list(view.params)
+        view.widgets.selectors['graph_param'].options = {**view.params}
         view.widgets.selectors['section'].value = '0'
     elif new == 1:
         logger.debug(f'Switching to Groups tab') 
@@ -984,11 +965,12 @@ def tab_section_callback(attr, old, new):
         view.widgets.selectors['group'].options = options
         view.widgets.selectors['group'].value = options[0] if options else None
     elif new == 2:
+        view.widgets.selectors['graph_param'].options = {**view.params, **p.model.mechs_to_params}
         logger.debug('Switching to Parameters tab')
         view.widgets.selectors['mechanism'].options = list(p.model.mechs_to_params.keys())
         view.widgets.selectors['mechanism'].value = 'Independent'
-        view.widgets.selectors['graph_param'].options = list(p.model.mechs_to_params['Independent'])
-        view.widgets.selectors['graph_param'].value = p.model.mechs_to_params['Independent'][0]
+        view.widgets.selectors['param'].options = list(p.model.mechs_to_params['Independent'])
+        view.widgets.selectors['param'].value = p.model.mechs_to_params['Independent'][0]
         
     if new == 2:
         view.figures['inf'].visible = True
@@ -1094,6 +1076,17 @@ view.widgets.selectors['from_swc'] = Select(value='Load morphology from SWC',
 
 view.widgets.selectors['from_swc'].on_change('value', p.from_swc_callback)
 
+view.widgets.buttons['load'] = Dropdown(
+    label='Load', 
+    button_type='primary', 
+    menu=[('Load morphology', 'load_swc'), 
+          ('Load mechanisms', 'load_mod'), 
+          ('Load model', 'load_all')
+          ],
+    width=242
+    )
+
+
 # Segmentation
 view.widgets.sliders['d_lambda'] = Slider(start=0, end=0.2, value=0.1, step=0.01, title="d_lambda", width=200)
 view.widgets.sliders['d_lambda'].on_change('value_throttled', p.build_seg_tree_callback)                                            
@@ -1123,6 +1116,7 @@ tab_io = TabPanel(title='Input/Output',
                 child=column(
                     view.widgets.selectors['from_json'],
                     view.widgets.selectors['from_swc'],
+                    view.widgets.buttons['load'],
                     view.widgets.sliders['d_lambda'],
                     view.widgets.selectors['mod_archives'],
                     Div(text='<hr style="width:15em; margin-top:3em">'), 
