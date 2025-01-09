@@ -21,8 +21,12 @@ class Kv(IonChannel):
             "q": 9,
             "temp": 23,
             "q10": 2.3
-            ,
-        }
+            }
+        self.range_params = {
+            "gbar": 0.0,
+            "v12": 25,
+            "q": 9
+            }
         self.states = {
             "n": 0.0
             }

@@ -9,16 +9,24 @@ class Mechanism():
     def __init__(self, name):
         self.name = name
         self.params = {}
+        self.range_params = {}
 
     @property
     def params_with_suffix(self):
         return {f"{param}_{self.name}":value for param, value in self.params.items()}
+
+    @property
+    def range_params_with_suffix(self):
+        return {f"{param}_{self.name}":value for param, value in self.range_params.items()}
 
     def to_dict(self):
         return {
             'name': self.name,
             'params': self.params
         }
+
+    def __repr__(self):
+        return f"<Mechnaism({self.name})>"
 
 
 class CaDynamics(Mechanism):
@@ -256,3 +264,4 @@ class LeakChannel(Mechanism):
     def __init__(self):
         self.name = 'Leak'
         self.params = {'gbar': 0.0, 'e': -70}
+        self.range_params = {'gbar': 0.0, 'e': -70}

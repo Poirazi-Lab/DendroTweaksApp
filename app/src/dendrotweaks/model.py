@@ -454,7 +454,9 @@ class Model():
         mechanism = self.mechanisms[mechanism_name]
 
         if all(mechanism.name not in group.mechanisms for group in self._groups):
-            self.global_params.update(mechanism.params_with_suffix)
+            for key, value in mechanism.range_params_with_suffix.items():
+                if key not in self.global_params:
+                    self.global_params[key] = value
 
         group = self.groups[group_name]
         group.mechanisms.append(mechanism.name)
@@ -491,6 +493,8 @@ class Model():
 
         group = self.groups[group_name]
         group.mechanisms.remove(mechanism.name)
+
+        # TODO: Remove params if no group uses the mechanism
 
         for section in group.sections:
             section.uninsert_mechanism(mechanism.name)

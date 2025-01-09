@@ -105,9 +105,7 @@ class SectionMixin():
         # self.update_seg_x_selector()
 
         if len(self.selected_secs) == 1:
-            self.view.widgets.sliders['n_seg'].value = self.selected_sec.nseg
-            # self.view.widgets.sliders['length'].value = self.selected_sec.L
-            self.view.widgets.sliders['Ra'].value = self.selected_sec._ref.Ra
+            self.view.widgets.sliders['n_seg'].value = self.selected_sec.nseg   
 
         self.update_navigation_buttons_on_reaching_terminal_branch()
 

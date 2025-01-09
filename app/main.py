@@ -771,8 +771,8 @@ def create_select_distribution_panel():
 def create_distribution_tab():
 
     view.widgets.selectors['mechanism'] = Select(title='Mechanism',
-                                                options=['Independent'],
-                                                value = 'Independent'
+                                                options=[],
+                                                value = None
                                                 )
 
     view.widgets.selectors['mechanism'].on_change('value', p.select_mechanism_callback)
@@ -791,6 +791,8 @@ def create_distribution_tab():
                                             options=[],
                                             value=None,
                                             width=150)
+
+    view.widgets.selectors['param'].description = 'Select a parameter defined as a RANGE variable in the MOD file.'
 
     view.widgets.selectors['param'].on_change('value', p.select_param_callback)
 
@@ -915,12 +917,10 @@ view.widgets.buttons['remove_population'].on_event(ButtonClick, p.voltage_callba
 
 view.DOM_elements['population_panel'] = column(width=300)
 
-widgets_point_processes = column([
+widgets_stimuli = column([
     view.widgets.buttons['remove_all'],
     row([view.widgets.selectors['section'],
     view.widgets.selectors['seg_x']]),
-    row([view.widgets.switches['record_from_all'], Div(text='Record from all')]),
-    row([view.widgets.switches['record'], Div(text='Record voltage')]),
     row([view.widgets.switches['iclamp'], Div(text='Inject current')]),
     view.widgets.sliders['iclamp_duration'], 
     view.widgets.sliders['iclamp_amp'].get_widget(),
@@ -932,6 +932,12 @@ widgets_point_processes = column([
     view.DOM_elements['population_panel'],
 ])
 
+widgets_recordings = column([
+    row([view.widgets.selectors['section'],
+    view.widgets.selectors['seg_x']]),
+    row([view.widgets.switches['record_from_all'], Div(text='Record from all')]),
+    row([view.widgets.switches['record'], Div(text='Record voltage')]),
+])
 
 # -----------------------------------------------------------
 # TABS
@@ -941,34 +947,50 @@ widgets_point_processes = column([
 tab_section_vars = TabPanel(title='Morphology', 
                             child=widgets_section_vars)
 
-tab_point_processes = TabPanel(title='Stimuli', 
-                       child=widgets_point_processes)
+tab_recordings = TabPanel(title='Recordings',
+                            child=widgets_recordings)
+
+tab_stimuli = TabPanel(title='Stimuli', 
+                       child=widgets_stimuli)
 
 view.widgets.tabs['section'] = Tabs(tabs=[tab_section_vars, 
                                           create_groups_tab(), 
                                           create_distribution_tab(),
-                                          tab_point_processes])
+                                          tab_recordings,
+                                          tab_stimuli])
 
-def tab_section_callback(attr, old, new):
+def switch_tab_callback(attr, old, new):
     
     if p.model.sec_tree is None:
         return
-    if new in [0, 3]:
+    if new == 0:
+        logger.debug('Switching to Morphology tab')
         view.widgets.selectors['graph_param'].options = {**view.params}
+        view.widgets.selectors['graph_param'].value = 'domain'
         view.widgets.selectors['section'].value = '0'
     elif new == 1:
-        logger.debug(f'Switching to Groups tab') 
-        logger.debug(f'Avaliable groups: {p.model.groups.keys()}')
+        logger.debug(f'Switching to Groups tab')
+        view.widgets.selectors['graph_param'].options = {**view.params}
+        view.widgets.selectors['graph_param'].value = 'domain'
         options = list(p.model.groups.keys())
         view.widgets.selectors['group'].options = options
         view.widgets.selectors['group'].value = options[0] if options else None
     elif new == 2:
-        view.widgets.selectors['graph_param'].options = {**view.params, **p.model.mechs_to_params}
         logger.debug('Switching to Parameters tab')
+        view.widgets.selectors['graph_param'].options = {**view.params, **p.model.mechs_to_params}
         view.widgets.selectors['mechanism'].options = list(p.model.mechs_to_params.keys())
         view.widgets.selectors['mechanism'].value = 'Independent'
-        view.widgets.selectors['param'].options = list(p.model.mechs_to_params['Independent'])
-        view.widgets.selectors['param'].value = p.model.mechs_to_params['Independent'][0]
+        logger.debug(f"Selected {view.widgets.selectors['mechanism'].value}")
+    elif new == 3:
+        logger.debug('Switching to Recordings tab')
+        view.widgets.selectors['graph_param'].options = {**view.params}
+        view.widgets.selectors['graph_param'].value = 'recordings'
+        view.widgets.selectors['section'].value = '0'
+    elif new == 4:
+        logger.debug('Switching to Stimuli tab')
+        view.widgets.selectors['graph_param'].options = {**view.params}
+        view.widgets.selectors['graph_param'].value = 'iclamps'
+        view.widgets.selectors['section'].value = '0'
         
     if new == 2:
         view.figures['inf'].visible = True
@@ -976,23 +998,11 @@ def tab_section_callback(attr, old, new):
     else:
         view.figures['inf'].visible = False
         view.figures['tau'].visible = False
-
-    DEFAULT_TAB_PARAM = {0: 'domain', 1: 'domain', 2: 'cm', 3: 'recordings'}
-    view.widgets.selectors['graph_param'].value = DEFAULT_TAB_PARAM[new]
         
-    
     panel_section.visible = True if new in [0] else False
-    
-    # # disable lasso tool
-    # lasso_tool = view.figures['graph'].select_one(LassoSelectTool)
-    # if new == 0:
-    #     if view.figures['graph'].toolbar.active_drag is lasso_tool:
-    #         view.figures['graph'].toolbar.active_drag = None
-    # else:
-    #     view.figures['graph'].toolbar.active_drag = lasso_tool
 
 
-view.widgets.tabs['section'].on_change('active', tab_section_callback)
+view.widgets.tabs['section'].on_change('active', switch_tab_callback)
 
 
 view.widgets.selectors['channel'] = Select(title='Channel', options=[], visible=False)
@@ -1003,37 +1013,9 @@ view.widgets.buttons['record_current'].on_event(ButtonClick, p.record_current_ca
 
 view.DOM_elements['channel_panel'] = column([Div(text='Select a channel')], width=300)
 
-view.widgets.buttons['toggle_activation_curves'] = RadioButtonGroup(labels=['Cell', 'Channels'], active=0, margin=(5, 5, 20, 80))
-
-def toggle_activation_curves_callback(attr, old, new):
-    if new == 0:
-        view.widgets.selectors['channel'].visible = False
-        view.widgets.buttons['record_current'].visible = False
-        view.DOM_elements['channel_panel'].visible = False
-        view.widgets.tabs['section'].visible = True
-        view.figures['inf'].visible = False
-        view.figures['inf_log'].visible = False
-        view.figures['tau'].visible = False
-        view.figures['tau_log'].visible = False
-        if view.widgets.tabs['section'].active == 0: panel_section.visible = True
-    elif new == 1:
-        view.widgets.tabs['section'].visible = False
-        view.widgets.selectors['channel'].visible = True
-        view.widgets.buttons['record_current'].visible = True
-        view.DOM_elements['channel_panel'].visible = True
-        panel_section.visible = False
-        view.figures['inf'].visible = True
-        view.figures['tau'].visible = True
-
-view.widgets.buttons['toggle_activation_curves'].on_change('active', toggle_activation_curves_callback)
-
-view.DOM_elements['channel_menu'] = column([row([view.widgets.selectors['channel'], 
-                                                 view.widgets.buttons['record_current']]),
-                                            view.DOM_elements['channel_panel']])
 
 right_menu = column(
-    view.widgets.buttons['toggle_activation_curves'],
-    row(view.widgets.tabs['section'], view.DOM_elements['channel_menu']), 
+    view.widgets.tabs['section'], 
     align='center',
     name='right_menu_section'
 )

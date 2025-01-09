@@ -52,7 +52,7 @@ class IOMixin():
         for param_name in self.model.params:
             self._update_graph_param(param_name, update_colors=False)
         for param_name in ['AMPA', 'NMDA', 'GABAa', 'AMPA_NMDA', 'recordings', 'iclamps']:
-            self._update_graph_param(param_name, update_colors=False)
+            self._update_graph_param(param_name, update_colors=False)       
 
         # MISC --------------------------------------------------------
         self._attach_download_js() # needed to update the names of the files to download
@@ -233,8 +233,10 @@ class IOMixin():
     # EXPORT METHODS
     # =========================================================================
 
+    @log
     def export_model_callback(self, event):        
         self.model.export_data()
+        logger.info(f'Model exported.')
         
     def to_swc_callback(self, event):
         import os

@@ -28,8 +28,21 @@ class Na(IonChannel):
             "qhinf": 6.2,
             "temp": 23,
             "q10": 2.3
-            ,
-        }
+            }
+        self.range_params = {
+            "gbar": 0.0,
+            "Rma": 0.182,
+            "Rmb": 0.14,
+            "v12m": -30,
+            "qm": 9.8,
+            "Rhb": 0.0091,
+            "Rha": 0.024,
+            "v12ha": -45,
+            "v12hb": -70,
+            "qh": 5,
+            "v12hinf": -60,
+            "qhinf": 6.2
+            }
         self.states = {
             "m": 0.0,
             "h": 0.0

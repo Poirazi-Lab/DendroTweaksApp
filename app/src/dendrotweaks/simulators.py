@@ -1,13 +1,38 @@
 from collections import defaultdict
 import warnings
 
-class Simulator:
-    def __init__(self):
-        pass
+
+import neuron
+from neuron import h
+from neuron.units import ms, mV
+h.load_file('stdrun.hoc')
+# h.load_file('import3d.hoc')
+# h.load_file('nrngui.hoc')
+# h.load_file('import3d')
 
 import contextlib
 
+@contextlib.contextmanager
+def push_section(section):
+    section.push()
+    yield
+    h.pop_section()
 
+def reset_neuron():
+
+    # h('forall delete_section()')
+    # h('forall delete_all()')
+    # h('forall delete()')
+
+    for sec in h.allsec():
+        with push_section(sec):
+            h.delete_section()
+
+reset_neuron()            
+
+class Simulator:
+    def __init__(self):
+        pass
 
 class NEURONSimulator(Simulator):
     """
@@ -16,18 +41,7 @@ class NEURONSimulator(Simulator):
 
     def __init__(self, temperature=37, v_init=-70, dt=0.025, cvode=False):
         super().__init__()
-        from neuron import h
-        from neuron.units import ms, mV
-        self.h = h
-        self.h.load_file('stdrun.hoc')
-        # self.h.load_file('import3d.hoc')
-        # self.h.load_file('nrngui.hoc')
-        # self.h.load_file('import3d')
-
-        if self.residings:
-            self.reset_neuron()
-            print('Neuron reset.')
-
+        
         self.temperature = temperature
         self.v_init = v_init * mV
 
@@ -37,34 +51,12 @@ class NEURONSimulator(Simulator):
         self.recordings = {}
         # self.t = []
 
-    @property
-    def residings(self):
-        return [sec for sec in self.h.allsec()]
-
-    def reset_neuron(self):
-
-        @contextlib.contextmanager
-        def push_section(section):
-            section.push()
-            yield
-            self.h.pop_section()
-        
-        # h('forall delete_section()')
-        # h('forall delete_all()')
-        # h('forall delete()')
-
-        for sec in self.residings:
-            with push_section(sec):
-                self.h.delete_section()
-
-        if self.residings:
-            warnings.warn('Sections were not deleted.')
 
     def add_recording(self, sec, loc, var='v'):
         seg = sec(loc)
         if self.recordings.get(seg):
             self.remove_recording(sec, loc)
-        self.recordings[seg] = self.h.Vector().record(getattr(seg._ref, f'_ref_{var}'))
+        self.recordings[seg] = h.Vector().record(getattr(seg._ref, f'_ref_{var}'))
 
     def remove_recording(self, sec, loc):
         seg = sec(loc)
@@ -82,21 +74,21 @@ class NEURONSimulator(Simulator):
 
 
     def _init_simulation(self):
-        self.h.CVode().active(self._cvode)
-        self.h.celsius = self.temperature
-        self.h.dt = self.dt
-        self.h.stdinit()
-        self.h.init()
-        self.h.finitialize(self.v_init)
-        if self.h.cvode.active():
-            self.h.cvode.re_init()
+        h.CVode().active(self._cvode)
+        h.celsius = self.temperature
+        h.dt = self.dt
+        h.stdinit()
+        h.init()
+        h.finitialize(self.v_init)
+        if h.cvode.active():
+            h.cvode.re_init()
         else:
-            self.h.fcurrent()
-        self.h.frecord_init()
+            h.fcurrent()
+        h.frecord_init()
 
     def run(self, duration=300):
 
-        from neuron.units import ms, mV
+
 
         vs = list(self.recordings.values())
         Is = []
@@ -105,7 +97,7 @@ class NEURONSimulator(Simulator):
         #     # v = h.Vector().record(seg._ref_v)
         #     vs.append(v)
 
-        t = self.h.Vector().record(self.h._ref_t)
+        t = h.Vector().record(h._ref_t)
         self.t = t
 
         # if self.ch is None:
@@ -121,7 +113,7 @@ class NEURONSimulator(Simulator):
 
         self._init_simulation()
 
-        self.h.continuerun(duration * ms)
+        h.continuerun(duration * ms)
 
         return [t.to_python() for _ in vs], [v.to_python() for v in vs], [i.to_python() for i in Is]
 

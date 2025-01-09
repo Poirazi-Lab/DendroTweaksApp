@@ -44,14 +44,8 @@
         "qh_Na": 5,
         "v12hinf_Na": -60,
         "qhinf_Na": 6.2,
-        "temp_Na": 23,
-        "q10_Na": 2.3,
-        "Ra_Kv": 0.02,
-        "Rb_Kv": 0.006,
         "v12_Kv": 25,
-        "q_Kv": 9,
-        "temp_Kv": 23,
-        "q10_Kv": 2.3
+        "q_Kv": 9
     },
     "distributed_params": {
         "cm": {
@@ -109,7 +103,7 @@
         "iclamps": [
             {
                 "name": "iclamp_0",
-                "amp": 0.15,
+                "amp": 0.1,
                 "delay": 100.0,
                 "dur": 100.0
             }
@@ -121,7 +115,7 @@
                     "syn_type": "AMPA",
                     "N": 10,
                     "input_params": {
-                        "rate": 100,
+                        "rate": 30,
                         "noise": 1,
                         "start": 100,
                         "end": 200,

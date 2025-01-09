@@ -18,7 +18,14 @@ class {{ class_name }}(IonChannel):
             "{{ param }}": {{ value }}
                 {%- if not loop.last -%},
                 {%- endif %}
-            {% endfor -%},
+            {% endfor -%}
+        }
+        self.range_params = {
+            {% for param, value in range_params.items() -%}
+            "{{ param }}": {{ value }}
+                {%- if not loop.last -%},
+                {%- endif %}
+            {% endfor -%}
         }
         self.states = {
             {% for state in state_vars -%}

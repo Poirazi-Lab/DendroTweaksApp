@@ -64,7 +64,7 @@ class Presenter(IOMixin, NavigationMixin,
 
     @property
     def selected_param_name(self):
-        return self.view.widgets.selectors['graph_param'].value
+        return self.view.widgets.selectors['param'].value
 
     @property
     def selected_group_name(self):
@@ -132,9 +132,9 @@ class Presenter(IOMixin, NavigationMixin,
         Updates the selectors['group'] widget options when a group is added or removed.
         """
         with remove_callbacks(self.view.widgets.selectors['group']):
-            self.view.widgets.selectors['group'].options = list(self.model.groups.keys())
-            self.view.widgets.selectors['group'].value = group_name
-
+            options = list(self.model.groups.keys())
+            self.view.widgets.selectors['group'].options = options
+            self.view.widgets.selectors['group'].value = group_name or (options[-1] if options else None)
 
     def remove_group_callback(self, event):
 
@@ -221,6 +221,7 @@ class Presenter(IOMixin, NavigationMixin,
         """
         group = self.model.groups[group_name]
         with remove_callbacks(self.view.widgets.multichoice['mechanisms']):
+            self.view.widgets.multichoice['mechanisms'].options = list(self.model.mechanisms.keys())
             mech_names = [
                 mech_name for mech_name in group.mechanisms 
                 if mech_name != 'Independent'
@@ -275,10 +276,12 @@ class Presenter(IOMixin, NavigationMixin,
         """
         group = self.model.groups[group_name]
         with remove_callbacks(self.view.widgets.selectors['mechanism']):
-            logger.debug(f'Updating mechanism selector from {groups.name}: {group.mechanisms}')
             self.view.widgets.selectors['mechanism'].options = group.mechanisms
             mech_name = group.mechanisms[0] if group.mechanisms else None
             self.view.widgets.selectors['mechanism'].value = mech_name
+            
+        logger.debug(f'Updated options for mechanism selector: {group.mechanisms}')
+        logger.debug(f'Selected mechanism: {mech_name}')
 
     
     # =================================================================
@@ -298,6 +301,8 @@ class Presenter(IOMixin, NavigationMixin,
 
         avaliable_params = self.model.mechs_to_params[mech_name]
         param_name = avaliable_params[0]
+
+        logger.debug(f'Selected mechanism {mech_name} with params {avaliable_params}, selected param {param_name}')
         
         self.view.widgets.selectors['param'].options = avaliable_params
         self.view.widgets.selectors['param'].value = param_name
