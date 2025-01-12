@@ -66,7 +66,7 @@ class PythonCodeGenerator(CodeGenerator):
         variables = {
             'title': ast.title,
             # 'comment': ast.comment,
-            'class_name': ast.suffix.capitalize(),
+            'class_name': ast.suffix,
             'suffix': ast.suffix,
             'ion': ast.ion,
             'independent_var_name': ast.independent_var_name,

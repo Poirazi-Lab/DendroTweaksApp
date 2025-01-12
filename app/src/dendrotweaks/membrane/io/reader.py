@@ -1,5 +1,6 @@
 import re
 from typing import List, Dict
+import os
 
 class MODFileReader():
     """
@@ -45,6 +46,8 @@ class MODFileReader():
         with open(path_to_file, 'r') as f:
             content = f.read()
         
+        self._file_name = os.path.basename(path_to_file).replace('.mod', '')
+        self._path_to_file = path_to_file
         self._original_content = content
         self.content = content
         
@@ -55,6 +58,7 @@ class MODFileReader():
         """
         Preprocess the content of the file.
         """
+        self.replace_suffix_with_name(overwirte=True)
         if remove_inline_comments:
             self.remove_inline_comments()
         if remove_unitsoff:
@@ -71,12 +75,12 @@ class MODFileReader():
         Suffix is a string of the form SUFFIX suffix
 
         Parameters:
-            file_name (str): The name of the file to replace the suffix with.
+            overwirte (bool): Whether to overwrite the file with the modified content
         """
         suffix_pattern = r'SUFFIX\s+\w+'
-        match = re.search(suffix_pattern, self._content)
-        print(f"Replacing {match.group()} with SUFFIX {self.file_name}")
-        self._content = re.sub(suffix_pattern, f'SUFFIX {self.file_name}', self._content)
+        match = re.search(suffix_pattern, self.content)
+        print(f"Replacing {match.group()} with SUFFIX {self._file_name}")
+        self.content = re.sub(suffix_pattern, f'SUFFIX {self._file_name}', self.content)
         if overwirte:
             self._overwrite()
 
@@ -85,7 +89,7 @@ class MODFileReader():
         Overwrite the content of the file with the modified content.
         """
         with open(self._path_to_file, 'w') as f:
-            f.write(self._content)
+            f.write(self.content)
         print(f"Overwritten {self._path_to_file}")
 
     def remove_inline_comments(self) -> None:

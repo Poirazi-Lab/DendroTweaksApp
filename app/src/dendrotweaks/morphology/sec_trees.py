@@ -19,6 +19,7 @@ class Section(Node):
         self.pts3d = pts3d
         self.segments = []
         self._ref = None
+        self.domain = self.pts3d[0].domain
 
     # MAGIC METHODS
 
@@ -90,10 +91,6 @@ class Section(Node):
     def df(self):
         return pd.DataFrame({'idx': [self.idx],
                             'parent_idx': [self.parent_idx]})
-
-    @property
-    def domain(self):
-        return self.pts3d[0].domain
 
     @property
     def diam(self):
@@ -234,22 +231,22 @@ class Section(Node):
         return round(np.mean(seg_values), 16)
 
 
-    def set_param_value(self, parameter_name, distribution_function):
-        """
-        Update the parameter of the section.
-        """
-        if not isinstance(distribution_function, Callable):
-            raise ValueError('Distribution function must be callable.')
-        if self.segments and all([hasattr(seg._ref, parameter_name) for seg in self.segments]):
-            # print(f'Setting {parameter_name} in segments')
-            for seg in self.segments:
-                seg.set_param_value(parameter_name, distribution_function)
-        elif hasattr(self._ref, parameter_name):
-            # print(f'Setting {parameter_name} in section')
-            setattr(self._ref, parameter_name,
-                    distribution_function(self.distance_to_root(0.5)))
-        else:
-            raise ValueError(f'Parameter {parameter_name} not found in section.')
+    # def set_param_value(self, parameter_name, distribution_function):
+    #     """
+    #     Update the parameter of the section.
+    #     """
+    #     if not isinstance(distribution_function, Callable):
+    #         raise ValueError('Distribution function must be callable.')
+    #     if self.segments and all([hasattr(seg._ref, parameter_name) for seg in self.segments]):
+    #         # print(f'Setting {parameter_name} in segments')
+    #         for seg in self.segments:
+    #             seg.set_param_value(parameter_name, distribution_function)
+    #     elif hasattr(self._ref, parameter_name):
+    #         # print(f'Setting {parameter_name} in section')
+    #         setattr(self._ref, parameter_name,
+    #                 distribution_function(self.distance_to_root(0.5)))
+    #     else:
+    #         raise ValueError(f'Parameter {parameter_name} not found in section.')
 
     # GEOMETRIC METHODS
 
@@ -329,11 +326,32 @@ class Section(Node):
         ax.set_ylim(0, max(self.radii) + 0.1 * max(self.radii))
 
 
+# @dataclass
+# class Domain():
+#     name: str
+#     sections: List[Section]
+#     mechanisms: List[str] = field(default_factory=lambda: ['Independent'])
+
 
 class SectionTree(Tree):
-
     def __init__(self, sections: list[Section]) -> None:
         super().__init__(sections)
+        
+    @property
+    def domains_to_sections(self):
+        domains_to_sections = {}
+        for sec in self.sections:
+            domains_to_sections.setdefault(sec.domain, []).append(sec)
+        return domains_to_sections
+
+    # def _create_domains(self):
+    # """
+    # Create the domains in the tree.
+    # """
+    # for sec in self.sections:
+    #     if sec.domain not in self.domains:
+    #         self.domains[sec.domain] = Domain(sec.domain)
+    #     self.domains[sec.domain].sections.append(sec)
 
     @property
     def sections(self):

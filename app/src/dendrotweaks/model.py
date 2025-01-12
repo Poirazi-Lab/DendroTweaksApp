@@ -7,7 +7,7 @@ from dendrotweaks.morphology.swc_trees import SWCTree
 from dendrotweaks.morphology.sec_trees import Section, SectionTree
 from dendrotweaks.morphology.seg_trees import Segment, SegmentTree
 from dendrotweaks.simulators import NEURONSimulator
-from dendrotweaks.membrane.groups import SectionGroup
+from dendrotweaks.membrane.groups import SectionGroup, SegmentGroup
 from dendrotweaks.membrane.mechanisms import Mechanism, LeakChannel
 from dendrotweaks.membrane.io import MechanismFactory
 from dendrotweaks.membrane.io import MODFileLoader
@@ -72,20 +72,20 @@ class Model():
         self.sec_tree = None
 
         # Mechanisms
-        self._loaded_archives = []
         self.mechanisms = {}
+        self.domains_to_mechanisms = {}
 
         # Parameters
-        self.global_params = {
-            'cm': 1, # uF/cm2
-            'Ra': 100, # Ohm cm
+        self.params = {
+            'cm': {'all': Distribution('constant', value=1)}, # uF/cm2
+            'Ra': {'all': Distribution('constant', value=35.4)}, # Ohm cm
         }
 
         # Groups
         self._groups = []
 
         # Distributions
-        self.distributed_params = {}
+        # self.distributed_params = {}
 
         # Segmentation
         self._d_lambda = None
@@ -116,6 +116,10 @@ class Model():
     def name(self, name):
         self._name = name
         self.path_manager.update_paths(name)
+
+    @property
+    def domains(self):
+        return list({sec.domain for sec in self.sec_tree.sections})
 
     @property
     def recordings(self):
@@ -163,10 +167,10 @@ class Model():
         return dict(parameters_to_groups)
 
 
-    @property
-    def params(self):
-        # combine global and distributed parameters
-        return {**self.distributed_params, **self.global_params}
+    # @property
+    # def params(self):
+    #     # combine global and distributed parameters
+    #     return {**self.distributed_params, **self.global_params}
 
 
     @property
@@ -209,13 +213,26 @@ class Model():
             f"Path to data: {self.path_manager.path_to_data}\n"
             f"Simulator: {self.simulator_name}\n"
             f"Groups: {len(self.groups)}\n"
-            f"Mechanisms: {len(self.mechanisms)}\n"
+            f"Avaliable mechanisms: {len(self.mechanisms)}\n"
+            f"Inserted mechanisms: {len(self.mechs_to_params) - 1}\n"
             # f"Parameters: {len(self.parameters)}\n"
             f"IClamps: {len(self.iclamps)}\n"
         )
         print(info_str)
 
-
+    def params_to_dataframe(self):
+        data = []
+        for mech_name, params in self.mechs_to_params.items():
+            for param in params:
+                for group_name, distribution in self.params[param].items():
+                    data.append({
+                        'Mechanism': mech_name,
+                        'Parameter': param,
+                        'Group': group_name,
+                        'Distribution': distribution
+                    })
+        df = pd.DataFrame(data)
+        return df
     # ========================================================================
     # MORPHOLOGY
     # ========================================================================
@@ -241,6 +258,15 @@ class Model():
 
         self.swc_tree = swc_tree
         self.sec_tree = sec_tree
+        self.domains_to_mechanisms = {
+            sec.domain: ['Independent'] 
+            for sec in sec_tree.sections
+        }
+
+        self.create_and_reference_sections_in_simulator()
+        self.set_segmentation(d_lambda=0.1)
+        self.add_group('all', self.domains)
+
 
 
     def create_and_reference_sections_in_simulator(self):
@@ -342,18 +368,17 @@ class Model():
         # Add the mechanism to the model
         self.mechanisms[mech.name] = mech
         # Update the global parameters
-        if getattr(mech, 'ion', None) is not None:
-            self._update_equilibrium_potentials(mech.ion)
+
         
         print(f'Mechanism {mech.name} added to model.')
 
     def _update_equilibrium_potentials(self, ion: str) -> None:
-        if ion == 'na':
-            self.global_params['ena'] = 50
-        elif ion == 'k':
-            self.global_params['ek'] = -77
-        elif ion == 'ca':
-            self.global_params['eca'] = 140
+        if ion == 'na' and not self.params.get('ena'):
+            self.params['ena'] = {'all': Distribution('constant', value=50)}
+        elif ion == 'k' and not self.params.get('ek'):
+            self.params['ek'] = {'all': Distribution('constant', value=-77)}
+        elif ion == 'ca' and not self.params.get('eca'):
+            self.params['eca'] = {'all': Distribution('constant', value=140)}
 
     def load_mechanisms(self, dir_name: str = 'mod', recompile=True) -> None:
         """
@@ -392,55 +417,28 @@ class Model():
 
 
     # ========================================================================
-    # GROUPS
+    # DOMAINS
     # ========================================================================
 
-
-    def add_group(self, group_name, sections: Union[Callable, List[Section]] = None):
+    def set_domain(self, domain_name, sections=None):
         """
-        Add a group to the model.
+        Create a domain from a filter function.
 
         Parameters
         ----------
-        group_name : str
-            The name of the group.
-        sections : list[Section]
-            The sections to include in the group.
+        domain_name : str
+            The name of the domain.
+        filter_function : Callable
+            The filter function to use.
         """
-        if group_name in self.groups:
-            raise ValueError(f'Group {group_name} already exists')
         if sections is None:
             sections = self.sec_tree.sections
         if isinstance(sections, Callable):
             sections = self.get_sections(sections)
-        group = SectionGroup(group_name, sections)
-        self._groups.append(group)
-        # Add the group to the parameters dictionary
-        for param_name in self.distributed_params:
-            self.distributed_params[param_name][group_name] = Distribution('uniform', value=0)
-        
-
-    def remove_group(self, group_name):
-        self._groups = [group for group in self._groups if group.name != group_name]
-        for param_name in self.distributed_params:
-            self.distributed_params[param_name].pop(group_name)
-
-
-    def move_group_down(self, name):
-        idx = next(i for i, group in enumerate(self._groups) if group.name == name)
-        if idx > 0:
-            self._groups[idx-1], self._groups[idx] = self._groups[idx], self._groups[idx-1]
-        for param_name in self.distributed_params:
-            self.distribute(param_name)
-
-
-    def move_group_up(self, name):
-        idx = next(i for i, group in enumerate(self._groups) if group.name == name)
-        if idx < len(self._groups) - 1:
-            self._groups[idx+1], self._groups[idx] = self._groups[idx], self._groups[idx+1]
-        for param_name in self.distributed_params:
-            self.distribute(param_name)
-
+        for sec in sections:
+            sec.domain = domain_name
+        self.domains_to_mechanisms[domain_name] = ['Independent']
+            
 
     # -----------------------------------------------------------------------
     # INSERT / UNINSERT MECHANISMS
@@ -448,21 +446,27 @@ class Model():
 
 
     def insert_mechanism(self, mechanism_name: str, 
-                         group_name: str):
+                         domain_name: str):
         """
+        Insert a mechanism into all sections in a domain.
         """
-        mechanism = self.mechanisms[mechanism_name]
+        mech = self.mechanisms[mechanism_name]
 
-        if all(mechanism.name not in group.mechanisms for group in self._groups):
-            for key, value in mechanism.range_params_with_suffix.items():
-                if key not in self.global_params:
-                    self.global_params[key] = value
+        self.params.update({
+            param_name: {
+                'all': Distribution('constant', value=value)
+                }
+            for param_name, value in mech.range_params_with_suffix.items()
+            }
+            )
 
-        group = self.groups[group_name]
-        group.mechanisms.append(mechanism.name)
+        for sec in self.sec_tree.sections:
+            if sec.domain == domain_name:
+                sec.insert_mechanism(mech.name)
+        self.domains_to_mechanisms[domain_name].append(mech.name)
 
-        for section in group.sections:
-            section.insert_mechanism(mechanism.name)
+        if getattr(mech, 'ion', None) is not None:
+            self._update_equilibrium_potentials(mech.ion)
 
 
     def _find_nonoverlapping_nodes(self, mechanism_name, target_group):
@@ -505,52 +509,57 @@ class Model():
     # ========================================================================
 
     # -----------------------------------------------------------------------
-    # GLOBAL PARAMETERS
+    # GROUPS
     # -----------------------------------------------------------------------
 
-    def set_global_param(self, param_name: str, value: float) -> None:
+
+    def add_group(self, name, domains, min_dist=None, max_dist=None, min_diam=None, max_diam=None):
         """
-        Set a global parameter to a value.
+        Add a group to the model.
 
         Parameters
         ----------
-        param_name : str
-            The name of the parameter to set.
-        value : float
-            The value to set the parameter to.
+        group_name : str
+            The name of the group.
+        sections : list[Section]
+            The sections to include in the group.
         """
-        if param_name in self.distributed_params:
-            raise ValueError(f'Parameter {param_name} is a distributed parameter.')
-
-        if param_name in ['temperature', 'v_init']:
-            setattr(self.simulator, param_name, value)
-            return
-
-        for sec in self.sec_tree.sections:
-            sec.set_param_value(param_name, lambda x: value)
-            self.global_params[param_name] = value
-
-
-    def make_distributed(self, param_name):
-        value = self.global_params.get(param_name)
-        mech_name = self.params_to_mechs[param_name]
+        group = SegmentGroup(name, domains, min_dist, max_dist, min_diam, max_diam)
+        self._groups.append(group)
         
-        self.distributed_params[param_name] = {
-            group.name: Distribution('uniform', value=value) for group in self._groups
-            if mech_name in group.mechanisms
-            }
-        self.global_params.pop(param_name)
+
+    def remove_group(self, group_name):
+        self._groups = [group for group in self._groups if group.name != group_name]
+        for param_name in self.params:
+            if self.params.get(param_name):
+                self.params[param_name].pop(group_name, None)
+
+
+    def move_group_down(self, name):
+        idx = next(i for i, group in enumerate(self._groups) if group.name == name)
+        if idx > 0:
+            self._groups[idx-1], self._groups[idx] = self._groups[idx], self._groups[idx-1]
+        for param_name in self.distributed_params:
+            self.distribute(param_name)
+
+
+    def move_group_up(self, name):
+        idx = next(i for i, group in enumerate(self._groups) if group.name == name)
+        if idx < len(self._groups) - 1:
+            self._groups[idx+1], self._groups[idx] = self._groups[idx], self._groups[idx+1]
+        for param_name in self.distributed_params:
+            self.distribute(param_name)
 
 
     # -----------------------------------------------------------------------
-    # DISTRIBUTED PARAMETERS
+    # DISTRIBUTIONS
     # -----------------------------------------------------------------------
 
 
-    def set_distributed_param(self, param_name: str,
-                              group_name: str,
-                              distr_type: str = 'uniform',
-                                **distr_params):
+    def set_param(self, param_name: str,
+                        group_name: str = 'all',
+                        distr_type: str = 'uniform',
+                        **distr_params):
 
         self.set_distribution(param_name, group_name, distr_type, **distr_params)
         self.distribute(param_name)
@@ -560,38 +569,45 @@ class Model():
                          group_name: None,
                          distr_type: str = 'uniform',
                          **distr_params):
-        if param_name not in self.distributed_params:
-            raise ValueError(f'Parameter {param_name} is not a distributed parameter.')
+        
         distribution = Distribution(distr_type, **distr_params)
-        self.distributed_params[param_name][group_name] = distribution
+        self.params[param_name][group_name] = distribution
 
 
     def distribute(self, param_name: str):
-        # TODO: Eiter store distributed params within groups or
-        # introduce somehow the order of groups in distributed_params[param_name]
-        for group_name, distribution in self.distributed_params[param_name].items():
+        if param_name == 'Ra':
+            self._distribute_Ra()
+            return
+
+        for group_name, distribution in self.params[param_name].items():
             group = self.groups[group_name]
-
-            for section in group.sections:   
-                # if isinstance(distribution, (int, float)):
-                #     value = distribution
-                #     const_distr = lambda x: value
-                #     section.set_param_value(parameter_with_suffix, const_distr)
-                if isinstance(distribution, Distribution):
-                    section.set_param_value(param_name, distribution)
-                else:
-                    raise ValueError('Distribution has to be a Distribution object.')
+            filtered_segments = [
+                seg for seg in self.seg_tree.segments 
+                if seg in group
+            ]
+            for seg in filtered_segments:
+                value = distribution(seg.distance_to_root)
+                seg.set_param_value(param_name, value)
 
 
-    def make_global(self, param_name, mech_name='Independent'):
-        groups = self.parameters[mech_name][param_name]
-        values = [value for value in groups.values()]
-        if len(set(values)) == 1:
-            self.parameters[mech_name][param_name] = values[0]
-        else:
-            raise ValueError(f'Parameter {param_name} has different values in different groups.')
+    def _distribute_Ra(self):
+        for group_name, distribution in self.params['Ra'].items():
+            group = self.groups[group_name]
+            filtered_segments = [
+                seg for seg in self.seg_tree.segments
+                if seg in group
+            ]
+            for seg in filtered_segments:
+                value = distribution(seg._section(0.5).distance_to_root)
+                seg._section._ref.Ra = value
 
- 
+    def set_section_param(self, param_name, value, domains=None):
+
+        domains = domains or self.domains
+        for sec in self.sec_tree.sections:
+            if sec.domain in domains:
+                setattr(sec._ref, param_name, value)
+
     # ========================================================================
     # STIMULI
     # ========================================================================
@@ -693,6 +709,9 @@ class Model():
             'simulation': {
                 'd_lambda': self._d_lambda,
                 **self.simulator.to_dict(),
+            },
+            'domains': {
+                sec.idx: sec.domain for sec in self.sec_tree.sections
             },
             'groups': [
                 group.to_dict() for group in self._groups
@@ -869,6 +888,8 @@ class Model():
         swc_file_name = data['metadata']['name']
         self.from_swc(swc_file_name)
         self.create_and_reference_sections_in_simulator()
+        for sec_idx, domain in data['domains'].items():
+            setattr(self.sec_tree.sections[int(sec_idx)], 'domain', domain)
 
         self.add_default_mechanisms()
         self.add_mechanisms('mod', recompile=True)

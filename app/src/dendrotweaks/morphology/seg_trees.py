@@ -46,9 +46,8 @@ class Segment(Node):
     def distance_to_root(self):
         return self._section.distance_to_root(self.x)
 
-    def set_param_value(self, param_name, distribution_function):
-        setattr(self._ref, param_name,
-                distribution_function(self.distance_to_root))
+    def set_param_value(self, param_name, value):
+        setattr(self._ref, param_name, value)
 
     def get_param_value(self, param_name):
         return getattr(self, param_name, 

@@ -2,6 +2,27 @@ from typing import Callable, Dict
 import numpy as np
 
 # Define simple functions and store them alongside their defaults in FUNCTIONS
+def constant(position, value=0):
+    """
+    Constant function that returns a constant value for any position.
+
+    Parameters
+    ----------
+    position : float or np.ndarray
+        The position at which to evaluate the function.
+    value : float
+        The constant value to return.
+
+    Returns
+    -------
+    float or np.ndarray
+        The value of the constant function at the given position.
+    """
+    if isinstance(position, np.ndarray):
+        return np.full_like(position, value)
+    else:
+        return value
+
 
 def uniform(position, value=0):
     """
@@ -74,6 +95,7 @@ class Distribution:
     """
 
     FUNCTIONS = {
+        'constant': {'func': constant, 'defaults': {'value': 0}},
         'uniform': {'func': uniform, 'defaults': {'value': 0}},
         'linear': {'func': linear, 'defaults': {'slope': 1, 'intercept': 0}}
     }

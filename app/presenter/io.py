@@ -90,15 +90,15 @@ class IOMixin():
         self.model.add_default_mechanisms()
 
         # PARAMETERS ----------------------------------------------
-        self.model.add_group('all')
-        self.model.set_global_param('cm', 1)
-        self.model.set_global_param('Ra', 100)
-        self._update_group_selector_widget()
+        # self.model.set_section_param('cm', value=1)
+        # self.model.set_section_param('Ra', value=100)
+        
         
 
         # SEGMENTATION --------------------------------------------
         d_lambda = self.view.widgets.sliders['d_lambda'].value
         self.build_seg_tree(d_lambda)
+        # self._update_group_selector_widget()
         
         
         # MISC ---------------------------------------------------
@@ -127,11 +127,12 @@ class IOMixin():
         """
         Configures the widgets after the cell is loaded.
         """
-        SEC_TO_DOMAIN = {'soma': [], 'dend': [], 'axon': [], 'apic': [], 'none': ['']}
-        for sec in self.model.sec_tree.sections:
-            SEC_TO_DOMAIN[sec.domain].append(str(sec.idx))
+        domains_to_sec_ids = {domain: [str(sec.idx) for sec in sections] for domain, sections in self.model.sec_tree.domains_to_sections.items()}
+        self.view.widgets.selectors['section'].options = domains_to_sec_ids
 
-        self.view.widgets.selectors['section'].options=SEC_TO_DOMAIN
+        with remove_callbacks(self.view.widgets.selectors['domain']):
+            self.view.widgets.selectors['domain'].options = self.model.domains
+            self.view.widgets.selectors['domain'].value = self.model.domains[0]
 
         self.view.widgets.buttons['child'].disabled = False
         self.view.widgets.buttons['parent'].disabled = True

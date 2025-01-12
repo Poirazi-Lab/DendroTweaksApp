@@ -38,16 +38,33 @@ class WidgetManager():
 #     widgets: WidgetManager = field(default_factory=WidgetManager)
 #     DOM_elements: dict = field(default_factory=dict)
 
+DOMAINS_TO_COLORS = {
+    'soma': '#E69F00',       
+    'apic': '#0072B2',       
+    'dend': '#019E73',       
+    'basal': '#31A354',      
+    'axon': '#F0E442',       
+    'trunk': '#56B4E9',
+    'tuft': '#A55194', #'#9467BD',
+    'oblique': '#8C564B',
+    'perisomatic': '#D55E00',
+    # 'custom': '#BDBD22',
+    'custom': '#D62728',
+    'custom2': '#E377C2',
+    'undefined': '#7F7F7F',
+}
+
+
 import colorcet as cc
 
 dark_palettes = {
-    'sec_type': ['#E69F00', '#F0E442', '#019E73', '#0072B2'],
+    'domain': list(DOMAINS_TO_COLORS.values()),
     'trace': ["#fd7f6f", "#7eb0d5", "#b2e061", "#bd7ebe", "#ffb55a", "#ffee65", "#beb9db", "#fdcce5", "#8bd3c7"],
     'continuous': cc.glasbey_dark,
 }
 
 light_palettes = {
-    'sec_type': ['orange', 'gold', '#32b499', '#1e90ff'],
+    'domain': ['orange', 'gold', '#32b499', '#1e90ff'],
     'trace': ["#fd7f6f", "#7eb0d5", "#b2e061", "#bd7ebe", "#ffb55a", "#ffee65", "#beb9db", "#fdcce5", "#8bd3c7"],
     'continuous': cc.glasbey_light,
 }
@@ -113,6 +130,7 @@ class CellView():
         self._add_theme_callbacks()
         self._file_content = None
         self._filename = None
+        self.available_domains = list(DOMAINS_TO_COLORS.keys())
 
 
     def set_theme(self, theme_name):
