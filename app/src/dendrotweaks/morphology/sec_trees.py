@@ -2,11 +2,11 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-from typing import Callable
+from typing import Callable, List
 from neuron import h
 
 from dendrotweaks.morphology.trees import Node, Tree
-
+from dataclasses import dataclass, field
 from bisect import bisect_left
 
 class Section(Node):
@@ -250,10 +250,37 @@ class Section(Node):
 
     # GEOMETRIC METHODS
 
-    def distance_to_root(self, relative_position: float = 0):
-        if relative_position < 0 or relative_position > 1:
+    def distance_to_root(self, relative_position: float = 0) -> float:
+        """
+        Calculate the distance from the section to the root at a given relative position.
+
+        Parameters
+        ----------
+        relative_position : float
+            The position along the section's normalized length [0, 1].
+
+        Returns
+        -------
+        float
+            The distance from the section to the root.
+
+        Important
+        ---------
+        Assumes that we always attach the 0 end of the child.
+        """
+        if not (0 <= relative_position <= 1):
             raise ValueError('Relative position must be between 0 and 1.')
-        return self.pts3d[0].distance_to_root + relative_position * self.length
+
+        
+        if self.parent:
+            origin = self.pts3d[0]
+            dist_to_sec_origin = relative_position * self.length
+        else:
+            origin = [pt for pt in self.pts3d if not pt.parent][0]
+            origin_idx = self.pts3d.index(origin) 
+            dist_to_sec_origin = 0
+
+        return origin.distance_to_root + dist_to_sec_origin
 
     # PLOTTING METHODS
 
@@ -326,32 +353,32 @@ class Section(Node):
         ax.set_ylim(0, max(self.radii) + 0.1 * max(self.radii))
 
 
-# @dataclass
-# class Domain():
-#     name: str
-#     sections: List[Section]
-#     mechanisms: List[str] = field(default_factory=lambda: ['Independent'])
+@dataclass
+class Domain():
+    name: str
+    sections: List[Section]
+    mechanisms: List[str] = field(default_factory=lambda: ['Independent'])
+
+    def to_dict(self):
+        return {'mechanisms': self.mechanisms,
+                'sections': [sec.idx for sec in self.sections]}
 
 
 class SectionTree(Tree):
     def __init__(self, sections: list[Section]) -> None:
         super().__init__(sections)
-        
-    @property
-    def domains_to_sections(self):
-        domains_to_sections = {}
-        for sec in self.sections:
-            domains_to_sections.setdefault(sec.domain, []).append(sec)
-        return domains_to_sections
+        self.domains = self._init_domains()
 
-    # def _create_domains(self):
-    # """
-    # Create the domains in the tree.
-    # """
-    # for sec in self.sections:
-    #     if sec.domain not in self.domains:
-    #         self.domains[sec.domain] = Domain(sec.domain)
-    #     self.domains[sec.domain].sections.append(sec)
+    def _init_domains(self):
+        """
+        Create the domains in the tree.
+        """
+        domains = {}
+        for sec in self.sections:
+            if sec.domain not in domains:
+                domains[sec.domain] = Domain(sec.domain, [])
+            domains[sec.domain].sections.append(sec)
+        return domains
 
     @property
     def sections(self):

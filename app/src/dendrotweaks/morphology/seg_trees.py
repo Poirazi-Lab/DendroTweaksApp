@@ -1,5 +1,5 @@
 from dendrotweaks.morphology.trees import Node, Tree
-
+import numpy as np
 
 class Segment(Node):
 
@@ -47,11 +47,16 @@ class Segment(Node):
         return self._section.distance_to_root(self.x)
 
     def set_param_value(self, param_name, value):
-        setattr(self._ref, param_name, value)
+        if hasattr(self._ref, param_name):
+            setattr(self._ref, param_name, value)
 
     def get_param_value(self, param_name):
-        return getattr(self, param_name, 
-                        getattr(self._ref, param_name, 0))
+        if hasattr(self, param_name):
+            return getattr(self, param_name)
+        elif hasattr(self._ref, param_name):
+            return getattr(self._ref, param_name)
+        else:
+            return np.nan
 
 class SegmentTree(Tree):
 

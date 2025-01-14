@@ -41,15 +41,15 @@ class SWCNode(Node):
 
     @property
     def distance_to_parent(self):
-        if not self.parent:
-            return 0
-        return np.sqrt((self.x - self.parent.x)**2 + (self.y - self.parent.y)**2 + (self.z - self.parent.z)**2)
+        if self.parent:
+            return np.sqrt((self.x - self.parent.x)**2 + (self.y - self.parent.y)**2 + (self.z - self.parent.z)**2)
+        return 0
 
     @property
     def distance_to_root(self):
-        if not self.parent:
-            return 0
-        return self.parent.distance_to_root + self.distance_to_parent
+        if self.parent:
+            return self.parent.distance_to_root + self.distance_to_parent
+        return 0
 
     @property
     def df(self):

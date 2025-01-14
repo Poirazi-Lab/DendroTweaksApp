@@ -246,10 +246,9 @@ hover = HoverTool(callback=graph_hover_callback, tooltips=[("ID", "@index"),
                                                            ("Domain", "@domain"), 
                                                            ("Area", "@area"), 
                                                            ("Diam", "@diam"), 
-                                                           ("Dist", "@dist"), 
+                                                           ("Dist", "@distance"), 
                                                            ("cm", "@cm"),
                                                            ("Ra", "@Ra"), 
-                                                        #    ('g leak', '@gbar_leak{0.000000}'), 
                                                         #    ('g na', '@gbar_na{0.000000}'), 
                                                         #    ('g kv', '@gbar_kv{0.000000}'), 
                                                            ("Recordings", "@recordings"), 
@@ -262,7 +261,8 @@ hover = HoverTool(callback=graph_hover_callback, tooltips=[("ID", "@index"),
 view.figures['graph'].add_tools(hover)
 
 # Add select widget
-view.widgets.selectors['mechanism'] = Select(title='Mechanism:')
+view.widgets.selectors['mechanism'] = Select(title='Mechanism:', 
+                                              width=150)
 
 view.widgets.selectors['graph_param'] = Select(title="Parameter:", 
                                               width=150,
@@ -280,27 +280,21 @@ view.widgets.sliders['time_slice'].on_change('value_throttled', p.update_time_sl
 view.widgets.selectors['graph_param'].on_change('value', p.select_graph_param_callback)
 
 
-def update_high(attr, old, new):
-    param = view.widgets.selectors['graph_param'].value
-    if param == 'domain':
-        pass
-    else:
-        graph_renderer = view.figures['graph'].renderers[0]
-        palette = graph_renderer.node_renderer.glyph.fill_color.transform.palette
-        new_color_mapper = LinearColorMapper(palette=palette, low=0, high=new)
-        param = graph_renderer.node_renderer.glyph.fill_color.field
-        graph_renderer.node_renderer.glyph.fill_color = {'field': param, 'transform': new_color_mapper}
-        graph_renderer.node_renderer.selection_glyph.fill_color = {'field': param, 'transform': new_color_mapper}
-        graph_renderer.node_renderer.nonselection_glyph.fill_color = {'field': param, 'transform': new_color_mapper}
-        view.figures['graph'].renderers[0] = graph_renderer
 
-view.widgets.sliders['graph_param_high'].on_change('value', update_high)
+
+view.widgets.sliders['graph_param_high'].on_change('value_throttled', p.colormap_max_callback)
+
+view.widgets.buttons['update_graph'] = Button(label='Update', button_type='primary', width=100)
+
+view.widgets.buttons['update_graph'].on_event(ButtonClick, p.update_graph_callback)
 
 panel_graph = column(view.figures['graph'], 
                     row(
                         [view.widgets.selectors['graph_param'], 
                          view.widgets.sliders['graph_param_high'],
-                        view.widgets.sliders['time_slice'],]
+                        view.widgets.sliders['time_slice'],
+                        view.widgets.buttons['update_graph']
+                        ]
                          ), 
                     name='panel_graph',
                     width_policy='fit',
@@ -578,14 +572,14 @@ view.widgets.selectors['domain'] = Select(options=[],
                                             title='Select domain',
                                             width=100)
 
-view.widgets.selectors['domain'].on_change('value', p.select_domain_callback)
+view.widgets.selectors['domain'].on_change('value', p.select_domain_segments_callback)
 
 view.widgets.selectors['set_domain'] = Select(title='Set domain',
                                         options=view.available_domains,
                                         value='soma',
                                         width=150)
 
-view.widgets.selectors['set_domain'].on_change('value', p.set_domain_callback)
+view.widgets.selectors['set_domain'].on_change('value', p.define_domain_callback)
 
 domain_panel = column([
     view.widgets.selectors['domain'],
@@ -635,7 +629,8 @@ widgets_section_vars = column([
 def create_domain_panel():
 
     view.widgets.multichoice['mechanisms'] = MultiChoice(title='Inserted mechanisms', 
-                                                        options=[], 
+                                                        options=['Leak'], 
+                                                        value=[],
                                                         width=300)
 
     view.widgets.multichoice['mechanisms'].on_change('value', p.update_group_mechanisms_callback)
@@ -659,20 +654,20 @@ def create_add_group_panel():
                                                 options=[],
                                                 width=300)
 
-    view.widgets.multichoice['domain'].on_change('value', p.select_by_condition_callback)
+    view.widgets.multichoice['domain'].on_change('value', p.select_group_segments_callback)
 
     view.widgets.selectors['select_by'] = Select(options=['dist', 'diam'],
                                             value='dist',
                                             title='Select by',
                                             width=100)
 
-    view.widgets.selectors['select_by'].on_change('value', p.select_by_condition_callback)                                            
+    view.widgets.selectors['select_by'].on_change('value', p.select_group_segments_callback)                                            
 
     view.widgets.spinners['condition_min'] = NumericInput(value=None, title='Min', width=75)
     view.widgets.spinners['condition_max'] = NumericInput(value=None, title='Max', width=75)
 
-    view.widgets.spinners['condition_min'].on_change('value', p.select_by_condition_callback)
-    view.widgets.spinners['condition_max'].on_change('value', p.select_by_condition_callback)
+    view.widgets.spinners['condition_min'].on_change('value', p.select_group_segments_callback)
+    view.widgets.spinners['condition_max'].on_change('value', p.select_group_segments_callback)
 
 
     view.widgets.text['group_name'] = TextInput(value='', 
@@ -785,8 +780,8 @@ def create_select_distribution_panel():
 
     view.widgets.selectors['distribution_type'] = Select(
         title='Distribution type',
-        value='uniform',
-        options=['uniform', 'linear', 'exponential', 'sigmoid', 'gaussian', 'step'],
+        value='constant',
+        options=['constant', 'linear', 'exponential', 'sigmoid', 'gaussian', 'step'],
         width=150,
         visible=False
     )
@@ -822,15 +817,15 @@ def create_select_distribution_panel():
 def create_distribution_tab():
 
     view.widgets.selectors['mechanism'] = Select(title='Mechanism',
-                                                options=[],
-                                                value = None
+                                                options=['Independent'],
+                                                value = 'Independent',
                                                 )
 
     view.widgets.selectors['mechanism'].on_change('value', p.select_mechanism_callback)
 
     view.widgets.buttons['standardize'] = Button(label='Standardize',
                                                 button_type='primary',
-                                                disabled=False,
+                                                disabled=True,
                                                 visible=True,
                                                 width=100,
                                                 styles={"padding-top":"20px"}
@@ -839,8 +834,8 @@ def create_distribution_tab():
     view.widgets.buttons['standardize'].on_event(ButtonClick, p.standardize_callback)
 
     view.widgets.selectors['param'] = Select(title='Parameter',
-                                            options=[],
-                                            value=None,
+                                            options=['cm'],
+                                            value='cm',
                                             width=150)
 
     view.widgets.selectors['param'].description = 'Select a parameter defined as a RANGE variable in the MOD file.'
@@ -1002,10 +997,11 @@ def switch_tab_callback(attr, old, new):
         logger.debug(f'Switching to Groups tab')
         view.widgets.selectors['graph_param'].options = {**view.params}
         view.widgets.selectors['graph_param'].value = 'domain'
-        view.widgets.selectors['domain'].options = p.model.domains
-        domain_name = p.model.domains[0] if p.model.domains else None
+        available_domains = list(p.model.domains.keys())
+        view.widgets.selectors['domain'].options = available_domains
+        domain_name = available_domains[0] if available_domains else None
         view.widgets.selectors['domain'].value = domain_name
-        view.widgets.multichoice['domain'].options = p.model.domains
+        view.widgets.multichoice['domain'].options = available_domains
         view.widgets.multichoice['domain'].value = []
         options = list(p.model.groups.keys())
         view.widgets.selectors['group'].options = options
@@ -1110,6 +1106,9 @@ view.widgets.buttons['export_model'].on_event(ButtonClick, p.export_model_callba
 view.widgets.buttons['export_swc'] = Button(label='Export morphology', button_type='primary')
 view.widgets.buttons['export_swc'].on_event(ButtonClick, p.to_swc_callback)
 
+view.widgets.text['model_version'] = TextInput(value=p.model.name, title='Model version', placeholder='Enter model name', width=242)
+view.widgets.text['model_version'].on_change('value_input', p.update_model_version_callback)
+
 # File import
 view.widgets.file_input['all'] = FileInput(accept='.swc, .asc, .mod', name='file', visible=True, width=242, disabled=False)
 view.widgets.file_input['all'].on_change('filename', p.import_file_callback)
@@ -1127,6 +1126,7 @@ tab_io = TabPanel(title='Input/Output',
                     view.widgets.buttons['set_segmentation'],
                     Div(text='<hr style="width:18.5em; margin-top:3em">'), 
                     view.widgets.file_input['all'],
+                    view.widgets.text['model_version'],
                     view.widgets.buttons['export_swc'],
                     view.widgets.buttons['export_model'],
                     Div(text='<hr style="width:18.5em; margin-top:3em">')

@@ -74,6 +74,7 @@ class IOMixin():
 
         self.view.widgets.buttons['load_swc'].disabled = True
         self.view.widgets.buttons['load_model'].disabled = True
+        self.view.widgets.text['model_version'].value = self.model.name
 
 
     @log
@@ -127,12 +128,14 @@ class IOMixin():
         """
         Configures the widgets after the cell is loaded.
         """
-        domains_to_sec_ids = {domain: [str(sec.idx) for sec in sections] for domain, sections in self.model.sec_tree.domains_to_sections.items()}
+        domains_to_sec_ids = {domain.name: [str(sec.idx) for sec in domain.sections] 
+                             for domain in self.model.domains.values()}
         self.view.widgets.selectors['section'].options = domains_to_sec_ids
 
         with remove_callbacks(self.view.widgets.selectors['domain']):
-            self.view.widgets.selectors['domain'].options = self.model.domains
-            self.view.widgets.selectors['domain'].value = self.model.domains[0]
+            available_domains = list(self.model.domains.keys())
+            self.view.widgets.selectors['domain'].options = available_domains
+            self.view.widgets.selectors['domain'].value = available_domains[0]
 
         self.view.widgets.buttons['child'].disabled = False
         self.view.widgets.buttons['parent'].disabled = True

@@ -123,3 +123,14 @@ class SegmentGroup:
         ]
         filters_str = ", ".join(filter(None, filters))
         return f'SegmentGroup("{self.name}", domains={self.domains}' + (f", {filters_str}" if filters_str else "") + ')'
+
+    def to_dict(self) -> Dict:
+        result = {
+            'name': self.name,
+            'domains': self.domains,
+            'min_dist': self.min_dist,
+            'max_dist': self.max_dist,
+            'min_diam': self.min_diam,
+            'max_diam': self.max_diam,
+        }
+        return {k: v for k, v in result.items() if v is not None}

@@ -4,7 +4,7 @@ import warnings
 import json
 
 from dendrotweaks.morphology.swc_trees import SWCTree
-from dendrotweaks.morphology.sec_trees import Section, SectionTree
+from dendrotweaks.morphology.sec_trees import Section, SectionTree, Domain
 from dendrotweaks.morphology.seg_trees import Segment, SegmentTree
 from dendrotweaks.simulators import NEURONSimulator
 from dendrotweaks.membrane.groups import SectionGroup, SegmentGroup
@@ -23,7 +23,7 @@ from collections import OrderedDict, defaultdict
 
 from dendrotweaks.path_manager import PathManager
 
-from dataclasses import dataclass
+
 
 import pandas as pd
 
@@ -59,6 +59,7 @@ class Model():
 
         # Metadata
         self._name = name
+        self.version = ''
         self.path_manager = PathManager(path_to_data, model_name=name)
         self.simulator_name = simulator_name
 
@@ -73,7 +74,6 @@ class Model():
 
         # Mechanisms
         self.mechanisms = {}
-        self.domains_to_mechanisms = {}
 
         # Parameters
         self.params = {
@@ -119,7 +119,7 @@ class Model():
 
     @property
     def domains(self):
-        return list({sec.domain for sec in self.sec_tree.sections})
+        return self.sec_tree.domains
 
     @property
     def recordings(self):
@@ -173,6 +173,7 @@ class Model():
     #     return {**self.distributed_params, **self.global_params}
 
 
+
     @property
     def params_to_mechs(self):
         params_to_mechs = {}
@@ -220,7 +221,8 @@ class Model():
         )
         print(info_str)
 
-    def params_to_dataframe(self):
+    @property
+    def df_params(self):
         data = []
         for mech_name, params in self.mechs_to_params.items():
             for param in params:
@@ -258,15 +260,10 @@ class Model():
 
         self.swc_tree = swc_tree
         self.sec_tree = sec_tree
-        self.domains_to_mechanisms = {
-            sec.domain: ['Independent'] 
-            for sec in sec_tree.sections
-        }
+
 
         self.create_and_reference_sections_in_simulator()
         self.set_segmentation(d_lambda=0.1)
-        self.add_group('all', self.domains)
-
 
 
     def create_and_reference_sections_in_simulator(self):
@@ -317,7 +314,13 @@ class Model():
             sec._ref.nseg = nseg
 
         self.seg_tree = self.tree_factory.create_seg_tree(self.sec_tree)
+        self._add_default_segment_groups()
 
+
+    def _add_default_segment_groups(self):
+        self.add_group('all', list(self.domains.keys()))
+        for domain in self.domains:
+            self.add_group(domain, [domain])
 
     # ========================================================================
     # MECHANISMS
@@ -349,7 +352,7 @@ class Model():
 
     def add_mechanism(self, mechanism_name: str, 
                       python_template_name: str = 'default',
-                      **kwargs) -> None:
+                      ) -> None:
         """
         Create a Mechanism object from the MOD file (or LeakChannel).
 
@@ -372,13 +375,6 @@ class Model():
         
         print(f'Mechanism {mech.name} added to model.')
 
-    def _update_equilibrium_potentials(self, ion: str) -> None:
-        if ion == 'na' and not self.params.get('ena'):
-            self.params['ena'] = {'all': Distribution('constant', value=50)}
-        elif ion == 'k' and not self.params.get('ek'):
-            self.params['ek'] = {'all': Distribution('constant', value=-77)}
-        elif ion == 'ca' and not self.params.get('eca'):
-            self.params['eca'] = {'all': Distribution('constant', value=140)}
 
     def load_mechanisms(self, dir_name: str = 'mod', recompile=True) -> None:
         """
@@ -420,25 +416,48 @@ class Model():
     # DOMAINS
     # ========================================================================
 
-    def set_domain(self, domain_name, sections=None):
+    def define_domain(self, domain_name: str, sections: list[Section]):
         """
-        Create a domain from a filter function.
-
-        Parameters
-        ----------
-        domain_name : str
-            The name of the domain.
-        filter_function : Callable
-            The filter function to use.
+        Add a new domain to the tree and ensure partitioning of sections.
         """
-        if sections is None:
-            sections = self.sec_tree.sections
-        if isinstance(sections, Callable):
-            sections = self.get_sections(sections)
+        if domain_name not in self.domains:
+            self.domains[domain_name] = Domain(domain_name, [])
+        
         for sec in sections:
-            sec.domain = domain_name
-        self.domains_to_mechanisms[domain_name] = ['Independent']
-            
+            if sec.domain in self.domains:
+                self._remove_section_from_current_domain(sec)
+            self._add_section_to_new_domain(sec, domain_name)
+        
+        if self.groups.get('all'):
+            self.groups['all'].domains.append(domain_name)
+        self.add_group(domain_name, [domain_name])
+
+    def _remove_section_from_current_domain(self, sec):
+        
+        domain = self.domains[sec.domain]
+
+        for mech_name in domain.mechanisms:
+            if mech_name == 'Independent': 
+                continue
+            sec.uninsert_mechanism(mech_name)
+            if not self._is_mechanism_in_any_domain(mech_name):
+                self._remove_mechanism_params(mech_name)
+        
+        domain.sections.remove(sec)
+        if not domain.sections:
+            self.domains.pop(sec.domain)
+
+    def _is_mechanism_in_any_domain(self, mech_name):
+        return any(mech_name in domain.mechanisms for domain in self.domains.values())
+
+    def _remove_mechanism_params(self, mech_name):
+        for param_name in self.mechanisms[mech_name].range_params_with_suffix:
+            self.params.pop(param_name, None)
+
+    def _add_section_to_new_domain(self, sec, domain_name):
+        sec.domain = domain_name
+        if sec not in self.domains[domain_name].sections:
+            self.domains[domain_name].sections.append(sec)
 
     # -----------------------------------------------------------------------
     # INSERT / UNINSERT MECHANISMS
@@ -463,45 +482,34 @@ class Model():
         for sec in self.sec_tree.sections:
             if sec.domain == domain_name:
                 sec.insert_mechanism(mech.name)
-        self.domains_to_mechanisms[domain_name].append(mech.name)
+        self.domains[domain_name].mechanisms.append(mech.name)
 
         if getattr(mech, 'ion', None) is not None:
             self._update_equilibrium_potentials(mech.ion)
 
 
-    def _find_nonoverlapping_nodes(self, mechanism_name, target_group):
-        """
-        Find the IDs of nodes in the target group where only the target group
-        applies the given mechanism. Nodes shared with other groups that
-        also apply the mechanism are excluded.
-
-        Notes
-        -----
-        The ids are further used to uninsert the mechanism from the nodes, while
-        keeping other groups that have the same mechanism inserted untouched.
-        """
-        nonoverlapping_nodes = set(target_group.nodes)
-    
-        for group in self.groups.values():
-            if group is not target_group and mechanism_name in group.mechanisms:
-                nonoverlapping_nodes.difference_update(group.nodes)
-    
-        return [node.idx for node in nonoverlapping_nodes]
+    def _update_equilibrium_potentials(self, ion: str) -> None:
+        if ion == 'na' and not self.params.get('ena'):
+            self.params['ena'] = {'all': Distribution('constant', value=50)}
+        elif ion == 'k' and not self.params.get('ek'):
+            self.params['ek'] = {'all': Distribution('constant', value=-77)}
+        elif ion == 'ca' and not self.params.get('eca'):
+            self.params['eca'] = {'all': Distribution('constant', value=140)}
 
 
     def uninsert_mechanism(self, mechanism_name: str, 
-                            group_name: str):
+                            domain_name: str):
         """
+        Uninsert a mechanism from all sections in a domain
         """
         mechanism = self.mechanisms[mechanism_name]
 
-        group = self.groups[group_name]
-        group.mechanisms.remove(mechanism.name)
+        for sec in self.sec_tree.sections:
+            if sec.domain == domain_name:
+                sec.uninsert_mechanism(mechanism.name)
+        self.domains[domain_name].mechanisms.remove(mechanism.name)
 
-        # TODO: Remove params if no group uses the mechanism
-
-        for section in group.sections:
-            section.uninsert_mechanism(mechanism.name)
+        # TODO: Remove equilibrium potentials if no mechanisms use them
 
 
     # ========================================================================
@@ -558,8 +566,12 @@ class Model():
 
     def set_param(self, param_name: str,
                         group_name: str = 'all',
-                        distr_type: str = 'uniform',
+                        distr_type: str = 'constant',
                         **distr_params):
+
+        if param_name in ['temperature', 'v_init']:
+            setattr(self.simulator, param_name, distr_params['value'])
+            return
 
         self.set_distribution(param_name, group_name, distr_type, **distr_params)
         self.distribute(param_name)
@@ -567,7 +579,7 @@ class Model():
 
     def set_distribution(self, param_name: str,
                          group_name: None,
-                         distr_type: str = 'uniform',
+                         distr_type: str = 'constant',
                          **distr_params):
         
         distribution = Distribution(distr_type, **distr_params)
@@ -704,25 +716,24 @@ class Model():
         return {
             'metadata': {
                 'name': self.name,
-                'archives': self._loaded_archives,
             },
             'simulation': {
                 'd_lambda': self._d_lambda,
                 **self.simulator.to_dict(),
             },
             'domains': {
-                sec.idx: sec.domain for sec in self.sec_tree.sections
+                domain_name: domain.to_dict()
+                for domain_name, domain in self.domains.items()
             },
             'groups': [
                 group.to_dict() for group in self._groups
             ],
-            'global_params': self.global_params,
-            'distributed_params': {
+            'params': {
                 param_name: {
                     group_name: distribution.to_dict()
                     for group_name, distribution in distributions.items()
                 }
-                for param_name, distributions in self.distributed_params.items()
+                for param_name, distributions in self.params.items()
             },
             'stimuli': {
                 'iclamps': [
@@ -742,12 +753,13 @@ class Model():
         }
             
     def export_data(self):
-        path_to_json = self.path_manager.get_file_path('json', self.name, extension='json')
-        path_to_groups_csv = self.path_manager.get_file_path('csv', self.name + '_groups', extension='csv')
-        path_to_stimuli_csv = self.path_manager.get_file_path('csv', self.name + '_stimuli', extension='csv')
+        name = f'{self.name}_{self.version}'
+        path_to_json = self.path_manager.get_file_path('json', name, extension='json')
+        # path_to_groups_csv = self.path_manager.get_file_path('csv', self.name + '_groups', extension='csv')
+        path_to_stimuli_csv = self.path_manager.get_file_path('csv', name + '_stimuli', extension='csv')
 
         self.to_json(path_to_json, indent=4)
-        self.groups_to_csv(path_to_groups_csv)
+        # self.groups_to_csv(path_to_groups_csv)
         self.stimuli_to_csv(path_to_stimuli_csv)
 
 
@@ -825,22 +837,22 @@ class Model():
 
         return df
 
-    def groups_to_csv(self, path_to_csv=None):
+    # def groups_to_csv(self, path_to_csv=None):
 
-        groups_data = {
-            'sec_idx': [sec.idx for sec in self.sec_tree.sections]
-        }
+    #     groups_data = {
+    #         'sec_idx': [sec.idx for sec in self.sec_tree.sections]
+    #     }
 
-        for group_name, group in self.groups.items():
-            groups_data[group_name] = [
-            int(sec.idx in [s.idx for s in group.sections]) for sec in self.sec_tree.sections
-            ]
+    #     for group_name, group in self.groups.items():
+    #         groups_data[group_name] = [
+    #         int(sec.idx in [s.idx for s in group.sections]) for sec in self.sec_tree.sections
+    #         ]
 
-        df = pd.DataFrame(groups_data)
-        if path_to_csv:
-            df.to_csv(path_to_csv, index=False)
+    #     df = pd.DataFrame(groups_data)
+    #     if path_to_csv:
+    #         df.to_csv(path_to_csv, index=False)
 
-        return df
+    #     return df
 
 
     def to_swc(self, file_name):
@@ -861,7 +873,7 @@ class Model():
         ...
 
 
-    def load_data(self):
+    def load_data(self, recompile=True):
         """
         Load a model from a JSON file.
 
@@ -872,13 +884,13 @@ class Model():
         """
 
         path_to_json = self.path_manager.get_file_path('json', self.name, extension='json')
-        path_to_groups_csv = self.path_manager.get_file_path('csv', self.name + '_groups', extension='csv')
+        # path_to_groups_csv = self.path_manager.get_file_path('csv', self.name + '_groups', extension='csv')
         path_to_stimuli_csv = self.path_manager.get_file_path('csv', self.name + '_stimuli', extension='csv')
 
         with open(path_to_json, 'r') as f:
             data = json.load(f)
 
-        df_groups = pd.read_csv(path_to_groups_csv)
+        # df_groups = pd.read_csv(path_to_groups_csv)
         df_stimuli = pd.read_csv(path_to_stimuli_csv)
 
         self.name = data['metadata']['name']
@@ -892,42 +904,32 @@ class Model():
             setattr(self.sec_tree.sections[int(sec_idx)], 'domain', domain)
 
         self.add_default_mechanisms()
-        self.add_mechanisms('mod', recompile=True)
+        self.add_mechanisms('mod', recompile=recompile)
 
-        for group_name in df_groups.columns[1:]:
-            sections = [sec for sec in self.sec_tree.sections if df_groups[group_name][sec.idx]]
-            self.add_group(group_name, sections)
+        for group_params in data['groups']:
+            self.add_group(**group_params)
 
-        for group in data['groups']:
-            for mech_name in group['mechanisms']:
+        for domain, mechanisms in data['domains_to_mechanisms'].items():
+            for mech_name in mechanisms:
                 if mech_name == 'Independent':
                     continue
-                self.insert_mechanism(mech_name, group['name'])
+                self.insert_mechanism(mech_name, domain)
         
-        self.distributed_params = {
+        self.params = {
             param_name: {
                 group_name: Distribution.from_dict(distribution)
                 for group_name, distribution in distributions.items()
             }
-            for param_name, distributions in data['distributed_params'].items()
+            for param_name, distributions in data['params'].items()
         }
-        self.global_params = {k:v for k,v in data['global_params'].items()}
 
         for param_name in ['cm', 'Ra']:
-            if param_name in self.distributed_params:
-                self.distribute(param_name)
-            else:
-                self.set_global_param(param_name, self.global_params[param_name])
+            self.distribute(param_name)
 
         self.set_segmentation(data['simulation']['d_lambda'])
 
-        for param_name in self.distributed_params:
+        for param_name in self.params:
             self.distribute(param_name)
-        for param_name, value in self.global_params.items():
-            try:
-                self.set_global_param(param_name, value)
-            except:
-                print(f'Could not set global parameter {param_name} to {value}.')
 
         df_recs = df_stimuli[df_stimuli['type'] == 'recording']
         for i, row in df_recs.iterrows():

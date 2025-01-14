@@ -21,6 +21,8 @@ from neuron import h
 
 from logger import logger
 
+from bokeh.palettes import Spectral11
+
 # DOMAIN_TO_COLOR = {'soma': '#E69F00', 'axon': '#F0E442', 'dend': '#019E73', 'apic': '#0072B2'}
 
 
@@ -212,6 +214,18 @@ class GraphMixin():
     # --------------------------------------------------------------------------------------------
     # UPDATE PARAMS
     # --------------------------------------------------------------------------------------------
+
+    def select_graph_param_callback(self, attr, old, new):
+        """
+        Callback for the selectors['graph_param'] widget.
+        Toggles the panel with widgets for the selected parameter.
+        """
+        param_name = new
+        self._update_graph_param(param_name, update_colors=True)
+
+    def update_graph_callback(self, event):
+        param_name = self.view.widgets.selectors['graph_param'].value
+        self._update_graph_param(param_name, update_colors=True)
     
     @log
     def _update_graph_param(self, param_name, update_colors=True):
@@ -239,20 +253,20 @@ class GraphMixin():
 
         # RECORDINGS
         if param_name == 'recordings':
-            return str(seg.idx) if self.model.recordings.get(seg) is not None else 'None'
+            return str(seg.idx) if self.model.recordings.get(seg) is not None else np.nan
 
         elif param_name == 'voltage':
             self.model.simulator.recordings[seg].to_python() if param_name == 'voltage' else 0,
 
         # STIMULI
         elif param_name == 'iclamps':
-            return 1 if self.model.iclamps.get(seg) is not None else 0
+            return 1 if self.model.iclamps.get(seg) is not None else np.nan
 
         elif param_name in ['AMPA', 'NMDA', 'GABAa', 'AMPA_NMDA']:
             relevant_populations = self.model.populations[param_name]
             return sum(pop.n_per_seg[seg] 
                        for pop in relevant_populations.values()
-                       if seg in pop.segments) if relevant_populations else 0
+                       if seg in pop.segments) if relevant_populations else np.nan
 
         elif param_name == 'weights':
             if self.model.synapses.get(seg) is not None:
@@ -291,71 +305,96 @@ class GraphMixin():
     @log
     def _update_graph_colors(self, param):
 
-        # param = self.view.widgets.selectors['graph_param'].value
+        # GET VIEW
         graph_renderer = self.view.figures['graph'].renderers[0]
         self.view.widgets.sliders['time_slice'].visible = False
+        self.view.widgets.sliders['graph_param_high'].visible = False
 
         if param == 'domain': 
             color_mapper = CategoricalColorMapper(
                 palette=self.view.theme.palettes['domain'], 
-                factors=self.view.available_domains)
-            graph_renderer.node_renderer.glyph.fill_color = {'field': param, 'transform': color_mapper}
+                factors=self.view.available_domains
+            )
             self.view.widgets.sliders['graph_param_high'].visible = False
         elif param == 'recordings':
-            factors = ['None'] + [str(seg.idx) for seg in self.recorded_segments] + \
-                 [str(seg.idx) for seg in self.model.simulator.recordings.keys() if seg not in self.recorded_segments]
-            # color_mapper = CategoricalColorMapper(palette=[self.view.theme.graph_fill] + self.view.theme.palettes['trace'], factors=factors)
-            color_mapper = CategoricalColorMapper(palette=[self.view.theme.graph_fill] + cc.glasbey_cool[:len(self.recorded_segments)], factors=factors)
-            graph_renderer.node_renderer.glyph.fill_color = {'field': param, 'transform': color_mapper}
+            recorded_seg_ids = [str(seg.idx) for seg in self.recorded_segments]
+            not_recorded_seg_ids = [str(seg.idx) for seg in self.model.simulator.recordings.keys() if seg not in self.recorded_segments]
+            factors = recorded_seg_ids + not_recorded_seg_ids
+            color_mapper = CategoricalColorMapper(
+                palette=cc.glasbey_cool[:len(recorded_seg_ids)], 
+                factors=factors,
+                nan_color=self.view.theme.graph_fill
+            )
             self.view.widgets.sliders['graph_param_high'].visible = False
         elif param == 'voltage':
             color_mapper = LinearColorMapper(palette=cc.bmy, low=-70, high=40)
-            graph_renderer.node_renderer.glyph.fill_color = {'field': param, 'transform': color_mapper}
             self.view.widgets.sliders['time_slice'].visible = True
         else:
             if param == 'iclamps':
-                color_mapper = LinearColorMapper(palette=[self.view.theme.graph_fill, 'red'], low=0, high=1)
+                color_mapper = LinearColorMapper(palette=['red'], high=1, nan_color=self.view.theme.graph_fill)
             elif param == 'AMPA':
-                color_mapper = LinearColorMapper(palette=[self.view.theme.graph_fill] + cc.kr[50:-50], low=0)
+                color_mapper = LinearColorMapper(palette=cc.kr[50:-50], low=0, nan_color=self.view.theme.graph_fill)
             elif param == 'GABAa':
-                color_mapper = LinearColorMapper(palette=[self.view.theme.graph_fill] + cc.kb[50:-50], low=0)
+                color_mapper = LinearColorMapper(palette=cc.kb[50:-50], low=0, nan_color=self.view.theme.graph_fill)
             elif param == 'NMDA':
-                color_mapper = LinearColorMapper(palette=[self.view.theme.graph_fill] + cc.kg[50:-50], low=0)
+                color_mapper = LinearColorMapper(palette=cc.kg[50:-50], low=0, nan_color=self.view.theme.graph_fill)
             elif param == 'AMPA_NMDA':
-                color_mapper = LinearColorMapper(palette=[self.view.theme.graph_fill] + cc.fire[50:-50], low=0)
+                color_mapper = LinearColorMapper(palette=cc.fire[50:-50], low=0, nan_color=self.view.theme.graph_fill)
             elif param == 'weights':
                 low = min(graph_renderer.node_renderer.data_source.data[param])
                 high = max(graph_renderer.node_renderer.data_source.data[param])
                 v = max(abs(low), abs(high))
                 color_mapper = LinearColorMapper(palette=cc.bjy, low=-v, high=v)
             else:
-                # color_mapper = LinearColorMapper(palette=cc.rainbow4, low=0)  #rainbow4
-                color_mapper = LinearColorMapper(palette=cc.rainbow4, low=0)  #rainbow4
+                values = [v for v in graph_renderer.node_renderer.data_source.data[param]
+                          if v is not np.nan]
+                null_color = ['gray'] if sum(values) == 0 else []
+                low, high = min(values), max(values)
+                if low >= 0: low = 0
+                if high <= 0: high = 0
+                val = max(abs(low), abs(high))
+                color_mapper = LinearColorMapper(
+                    palette=self.view.theme.palettes['params'] + null_color,
+                    low=-val, 
+                    high=val, 
+                    nan_color=self.view.theme.graph_fill
+                    )  #rainbow4
 
-            graph_renderer.node_renderer.glyph.fill_color = {'field': param, 'transform': color_mapper}
+                self._update_colormap_max_widget(values)
 
-            # Update the slider
-            self.view.widgets.sliders['graph_param_high'].visible = True
-            max_val = max(graph_renderer.node_renderer.data_source.data[param])
-
-            self.view.widgets.sliders['graph_param_high'].end = max_val
-            self.view.widgets.sliders['graph_param_high'].step = max_val / 100
-            self.view.widgets.sliders['graph_param_high'].value = max_val
+        # APPLY COLOR MAPPER
         graph_renderer.node_renderer.glyph.fill_color = {'field': param, 'transform': color_mapper}
         graph_renderer.node_renderer.selection_glyph.fill_color = {'field': param, 'transform': color_mapper}
         graph_renderer.node_renderer.nonselection_glyph.fill_color = {'field': param, 'transform': color_mapper}
+        self.view.figures['graph'].renderers[0] = graph_renderer
 
         self.view.figures['graph'].title.text = f'Seg graph: {param}'
 
-        if all(value == 0 for value in graph_renderer.node_renderer.data_source.data[param]):
-            logger.warning(f'All values of {param} are 0')
-            graph_renderer.node_renderer.glyph.fill_color = self.view.theme.graph_fill #'#0d0887'  #'#440154'
-            graph_renderer.node_renderer.selection_glyph.fill_color = self.view.theme.graph_fill #'#0d0887'  #'#440154'
-            graph_renderer.node_renderer.nonselection_glyph.fill_color = self.view.theme.graph_fill #'#0d0887'  #'#440154'
 
+    def _update_colormap_max_widget(self, values):
+
+        self.view.widgets.sliders['graph_param_high'].visible = True
+        max_val = max(
+            value for value in values
+            if value is not None
+        )
+        self.view.widgets.sliders['graph_param_high'].end = max_val
+        self.view.widgets.sliders['graph_param_high'].step = max_val / 100
+        self.view.widgets.sliders['graph_param_high'].value = max_val
+    
+    def colormap_max_callback(self, attr, old, new):
+        param_name = self.view.widgets.selectors['graph_param'].value
+        if param_name == 'domain':
+            return
+        graph_renderer = self.view.figures['graph'].renderers[0]
+        palette = graph_renderer.node_renderer.glyph.fill_color.transform.palette
+        new_color_mapper = LinearColorMapper(palette=palette, low=-new, high=new)
+        param_name = graph_renderer.node_renderer.glyph.fill_color.field
+        graph_renderer.node_renderer.glyph.fill_color = {'field': param_name, 'transform': new_color_mapper}
+        graph_renderer.node_renderer.selection_glyph.fill_color = {'field': param_name, 'transform': new_color_mapper}
+        graph_renderer.node_renderer.nonselection_glyph.fill_color = {'field': param_name, 'transform': new_color_mapper}
         self.view.figures['graph'].renderers[0] = graph_renderer
 
-    
     @log
     @timeit
     def update_time_slice_callback(self, attr, old, new):

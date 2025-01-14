@@ -91,7 +91,10 @@ class SectionMixin():
             elif param_name == 'voltage':
                 yp = [0 for seg in selected_sec]
             else:
-                yp = [getattr(seg._ref, param_name) for seg in selected_sec]
+                if hasattr(selected_sec, param_name):
+                    yp = [getattr(seg, param_name) for seg in selected_sec]
+                else:
+                    yp = [0 for seg in selected_sec]
             
             x = selected_sec.seg_centers
             
