@@ -1,6 +1,5 @@
 from typing import List, Union, Callable
 import os
-import warnings
 import json
 
 from dendrotweaks.morphology.swc_trees import SWCTree
@@ -26,6 +25,13 @@ from dendrotweaks.path_manager import PathManager
 
 
 import pandas as pd
+
+import warnings
+
+def custom_warning_formatter(message, category, filename, lineno, file=None, line=None):
+    return f"{category.__name__}: {message} ({os.path.basename(filename)}, line {lineno})\n"
+
+warnings.formatwarning = custom_warning_formatter
 
 INDEPENDENT_PARAMS = {
     'cm': 1, # uF/cm2
@@ -416,48 +422,133 @@ class Model():
     # DOMAINS
     # ========================================================================
 
-    def define_domain(self, domain_name: str, sections: list[Section]):
+
+    def define_domain(self, domain_name: str, sections):
         """
-        Add a new domain to the tree and ensure partitioning of sections.
+        Adds a new domain to the tree and ensures correct partitioning of
+        the section tree graph.
+
+        Parameters
+        ----------
+        domain_name : str
+            The name of the domain.
+        sections : list[Section] or Callable
+            The sections to include in the domain. If a callable is provided,
+            it should be a filter function applied to the list of all sections.
         """
+        if isinstance(sections, Callable):
+            sections = self.get_sections(sections)
+
+        if all(sec.domain == domain_name for sec in sections):
+            warnings.warn(f'All sections are already in domain {domain_name}.')
+            return
+
+        self._remove_selected_sections_from_existing_domains(sections)
+
         if domain_name not in self.domains:
-            self.domains[domain_name] = Domain(domain_name, [])
+            self._create_domain(domain_name, sections)
+        else:
+            self._extend_domain(domain_name, sections)
+
+    def remove_selected_sections_from_existing_domains(self, sections):
+        """
+        """
+        for domain in self.domains.values():
+            
+            overlapping_sections = [sec for sec in sections 
+                                    if sec in domain]
+
+            for sec in overlapping_sections:
+                if sec.domain == domain.name:
+                    continue
+                domain.remove_section(sec)
+
+            if domain.is_empty():
+                self.remove_empty_domain(domain.name)
+
+    def remove_empty_domain(self, domain_name):
+        """
+        """
+        domain = self.domains.pop(domain_name)
+        self._remove_params_of_uninserted_mechanisms(domain)
+        self._remove_empty_groups()
+
+    def _remove_params_of_uninserted_mechanisms(self, domain):
+        uninserted_mechanisms = [mech for mech in domain.inserted_mechanisms.values()
+                                if not mech.is_inserted()]
+        for mech in uninserted_mechanisms:
+            warnings.warn(f'Mechanism {mech.name} is not inserted in any domain and will be removed.')
+            self._remove_mechanism_params(mech)
+
+    def _remove_empty_groups(self):
+        empty_groups = [group for group in self._groups 
+                        if not any(sec in group 
+                        for sec in self.sec_tree.sections)]
+        for group in empty_groups:
+            warnings.warn(f'Group {group.name} is empty and will be removed.')
+            self.remove_group(group.name)
+        
+
+    def _create_domain(self, domain_name, sections):
+        """
+        Creates a new domain with the given sections.
+        """
+        self.domains[domain_name] = Domain(domain_name)
+
+        domain = self.domains[domain_name]
         
         for sec in sections:
-            if sec.domain in self.domains:
-                self._remove_section_from_current_domain(sec)
-            self._add_section_to_new_domain(sec, domain_name)
+            # self._remove_section_from_old_domain(sec)
+            domain.add_section(sec)
+
+        self._add_domain_groups(domain.name)
+        # self._remove_empty_groups()
+
+    def _extend_domain(self, domain_name, sections):
+        """
+        Extends an existing domain with new sections.
+        """
+
+        domain = self.domains[domain_name]
+
+        for sec in sections:
+            if sec.domain == domain.name:
+                continue
+            # self._remove_section_from_old_domain(sec)
+            domain.add_section(sec)
+
+        # self._remove_empty_groups()
         
+
+    # def _remove_section_from_old_domain(self, sec):
+        
+    #     old_domain = self.domains[sec.domain]
+    #     old_domain.remove_section(sec)
+
+    #     for mech in old_domain.inserted_mechanisms.values():
+    #         if not mech.is_inserted():
+    #             self._remove_mechanism_params(mech)
+        
+    #     if old_domain.is_empty():
+    #         # 1. Remove domain from the list of domains
+    #         self.domains.pop(old_domain.name)
+    #         # 2. Remove domain from all mechanisms
+    #         for mech in self.mechanisms.values():
+    #             if mech.is_inserted() and old_domain.name in mech._domains:
+    #                 mech._domains.remove(old_domain.name)
+    #         warnings.warn(f'Domain {old_domain.name} removed from model.')
+
+
+    def _add_domain_groups(self, domain_name):
+        """
+        Manage groups when a domain is added.
+        """
+        # Add new domain to `all` group
         if self.groups.get('all'):
             self.groups['all'].domains.append(domain_name)
+        # Create a new group for the domain
         self.add_group(domain_name, [domain_name])
 
-    def _remove_section_from_current_domain(self, sec):
-        
-        domain = self.domains[sec.domain]
-
-        for mech_name in domain.mechanisms:
-            if mech_name == 'Independent': 
-                continue
-            sec.uninsert_mechanism(mech_name)
-            if not self._is_mechanism_in_any_domain(mech_name):
-                self._remove_mechanism_params(mech_name)
-        
-        domain.sections.remove(sec)
-        if not domain.sections:
-            self.domains.pop(sec.domain)
-
-    def _is_mechanism_in_any_domain(self, mech_name):
-        return any(mech_name in domain.mechanisms for domain in self.domains.values())
-
-    def _remove_mechanism_params(self, mech_name):
-        for param_name in self.mechanisms[mech_name].range_params_with_suffix:
-            self.params.pop(param_name, None)
-
-    def _add_section_to_new_domain(self, sec, domain_name):
-        sec.domain = domain_name
-        if sec not in self.domains[domain_name].sections:
-            self.domains[domain_name].sections.append(sec)
 
     # -----------------------------------------------------------------------
     # INSERT / UNINSERT MECHANISMS
@@ -470,25 +561,28 @@ class Model():
         Insert a mechanism into all sections in a domain.
         """
         mech = self.mechanisms[mechanism_name]
+        domain = self.domains[domain_name]
 
-        self.params.update({
-            param_name: {
-                'all': Distribution('constant', value=value)
-                }
-            for param_name, value in mech.range_params_with_suffix.items()
-            }
-            )
+        domain.insert_mechanism(mech)
+        self._add_mechanism_params(mech)
+        
 
-        for sec in self.sec_tree.sections:
-            if sec.domain == domain_name:
-                sec.insert_mechanism(mech.name)
-        self.domains[domain_name].mechanisms.append(mech.name)
+    def _add_mechanism_params(self, mech):
+        """
+        Update the parameters when a mechanism is inserted.
+        By default each parameter is set to a constant value
+        through the entire cell.
+        """
+        for param_name, value in mech.range_params_with_suffix.items():
+            self.params[param_name] = {'all': Distribution('constant', value=value)}
+        
+        if hasattr(mech, 'ion') and mech.ion in ['na', 'k', 'ca']:
+            self._add_equilibrium_potentials_on_mech_insert(mech.ion)
 
-        if getattr(mech, 'ion', None) is not None:
-            self._update_equilibrium_potentials(mech.ion)
 
-
-    def _update_equilibrium_potentials(self, ion: str) -> None:
+    def _add_equilibrium_potentials_on_mech_insert(self, ion: str) -> None:
+        """
+        """
         if ion == 'na' and not self.params.get('ena'):
             self.params['ena'] = {'all': Distribution('constant', value=50)}
         elif ion == 'k' and not self.params.get('ek'):
@@ -502,15 +596,35 @@ class Model():
         """
         Uninsert a mechanism from all sections in a domain
         """
-        mechanism = self.mechanisms[mechanism_name]
+        mech = self.mechanisms[mechanism_name]
+        domain = self.domains[domain_name]
 
-        for sec in self.sec_tree.sections:
-            if sec.domain == domain_name:
-                sec.uninsert_mechanism(mechanism.name)
-        self.domains[domain_name].mechanisms.remove(mechanism.name)
+        domain.uninsert_mechanism(mech)
 
-        # TODO: Remove equilibrium potentials if no mechanisms use them
+        self._remove_params_of_uninserted_mechanisms(domain)
 
+    
+    def _remove_mechanism_params(self, mech):
+        warnings.warn(f'Mechanism {mech.name} is not inserted in any domain. Removing its parameters.')
+        for param_name in mech.range_params_with_suffix:
+            self.params.pop(param_name, None)
+
+        if hasattr(mech, 'ion') and mech.ion in ['na', 'k', 'ca']:
+            self._remove_equilibrium_potentials_on_mech_uninsert(mech.ion)
+
+
+    def _remove_equilibrium_potentials_on_mech_uninsert(self, ion: str) -> None:
+        """
+        """
+        for mech_name, mech in self.mechanisms.items():
+            if mech.ion == mech.ion: return
+
+        if ion == 'na':
+            self.params.pop('ena', None)
+        elif ion == 'k':
+            self.params.pop('ek', None)
+        elif ion == 'ca':
+            self.params.pop('eca', None)
 
     # ========================================================================
     # SET PARAMETERS
@@ -537,10 +651,12 @@ class Model():
         
 
     def remove_group(self, group_name):
-        self._groups = [group for group in self._groups if group.name != group_name]
-        for param_name in self.params:
-            if self.params.get(param_name):
-                self.params[param_name].pop(group_name, None)
+        # Remove group from the list of groups
+        self._groups = [group for group in self._groups 
+                        if group.name != group_name]
+        # Remove distributions that refer to this group
+        for param_name, groups_to_distrs in self.params.items():
+            groups_to_distrs.pop(group_name, None)
 
 
     def move_group_down(self, name):
@@ -753,7 +869,7 @@ class Model():
         }
             
     def export_data(self):
-        name = f'{self.name}_{self.version}'
+        name = self.name + '_' + self.version.replace(' ', ' ') if self.version else self.name
         path_to_json = self.path_manager.get_file_path('json', name, extension='json')
         # path_to_groups_csv = self.path_manager.get_file_path('csv', self.name + '_groups', extension='csv')
         path_to_stimuli_csv = self.path_manager.get_file_path('csv', name + '_stimuli', extension='csv')

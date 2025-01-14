@@ -10,6 +10,7 @@ class Mechanism():
         self.name = name
         self.params = {}
         self.range_params = {}
+        self._domains = set()
 
     @property
     def params_with_suffix(self):
@@ -24,6 +25,9 @@ class Mechanism():
             'name': self.name,
             'params': self.params
         }
+
+    def is_inserted(self):
+        return bool(self._domains)
 
     def __repr__(self):
         return f"<Mechnaism({self.name})>"
@@ -262,6 +266,6 @@ class StandardIonChannel(IonChannel):
 class LeakChannel(Mechanism):
 
     def __init__(self):
-        self.name = 'Leak'
+        super().__init__('Leak')
         self.params = {'gbar': 0.0, 'e': -70}
         self.range_params = {'gbar': 0.0, 'e': -70}
