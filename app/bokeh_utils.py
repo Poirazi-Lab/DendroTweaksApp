@@ -7,7 +7,7 @@ class AdjustableSpinner():
 
         step = self.calculate_step(value) if step is None else step
 
-        self.spinner = Spinner(title=title, low=-1e5, high=1e5, step=step, value=value, width=200)
+        self.spinner = Spinner(title=title, low=-1e5, high=1e5, step=step, value=value, width=200, format='0[.][##########]')
         self.ninput = NumericInput(title='Step', value=step, width=70, mode='float')
 
         # self.ninput.js_link('value', self.spinner, 'step')

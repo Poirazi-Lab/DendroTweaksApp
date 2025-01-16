@@ -1,6 +1,6 @@
 from typing import Callable, Dict
-import numpy as np
-
+from numpy import  ndarray, full_like
+from numpy import exp, sin
 # Define simple functions and store them alongside their defaults in FUNCTIONS
 def constant(position, value=0):
     """
@@ -8,18 +8,18 @@ def constant(position, value=0):
 
     Parameters
     ----------
-    position : float or np.ndarray
+    position : float or numpy.ndarray
         The position at which to evaluate the function.
     value : float
         The constant value to return.
 
     Returns
     -------
-    float or np.ndarray
+    float or numpy.ndarray
         The value of the constant function at the given position.
     """
-    if isinstance(position, np.ndarray):
-        return np.full_like(position, value)
+    if isinstance(position, ndarray):
+        return full_like(position, value)
     else:
         return value
 
@@ -30,18 +30,18 @@ def uniform(position, value=0):
 
     Parameters
     ----------
-    position : float or np.ndarray
+    position : float or numpy.ndarray
         The position at which to evaluate the function.
     value : float
         The constant value to return.
 
     Returns
     -------
-    float or np.ndarray
+    float or numpy.ndarray
         The value of the constant function at the given position.
     """
-    if isinstance(position, np.ndarray):
-        return np.full_like(position, value)
+    if isinstance(position, ndarray):
+        return full_like(position, value)
     else:
         return value
 
@@ -52,7 +52,7 @@ def linear(position, slope=1, intercept=0):
 
     Parameters
     ----------
-    position : float or np.ndarray
+    position : float or numpy.ndarray
         The position at which to evaluate the function.
     slope : float
         The slope of the linear function.
@@ -61,11 +61,93 @@ def linear(position, slope=1, intercept=0):
 
     Returns
     -------
-    float or np.ndarray
+    float or numpy.ndarray
         The value of the linear function at the given position.
     """
     return slope * position + intercept
 
+def exponential(distance: float, vertical_shift:float = 0, scale_factor: float =1, growth_rate: float=1, horizontal_shift: float = 0) -> float:
+    """
+    Exponential distribution function.
+
+    Args:
+        distance (float): The distance parameter.
+        vertical_shift (float): The vertical shift parameter.
+        scale_factor (float): The scale factor parameter.
+        growth_rate (float): The growth rate parameter.
+        horizontal_shift (float): The horizontal shift parameter.
+
+    Returns:
+        The result of the exponential equation: vertical_shift + scale_factor * exp(growth_rate * (distance - horizontal_shift)).
+    """
+    return vertical_shift + scale_factor * exp(growth_rate * (distance - horizontal_shift))
+
+def sigmoid(distance: float, vertical_shift=0, scale_factor=1, growth_rate=1, horizontal_shift=0) -> float:
+    """
+    Sigmoid distribution function.
+
+    Args:
+        distance (float): The distance parameter.
+        vertical_shift (float): The vertical shift parameter.
+        scale_factor (float): The scale factor parameter.
+        growth_rate (float): The growth rate parameter.
+        horizontal_shift (float): The horizontal shift parameter.
+
+    Returns:
+        The result of the sigmoid equation: vertical_shift + scale_factor / (1 + exp(-growth_rate * (distance - horizontal_shift))).
+    """
+    return vertical_shift + scale_factor / (1 + exp(-growth_rate*(distance - horizontal_shift)))
+
+
+def sinusoidal(distance: float, amplitude: float, frequency: float, phase: float) -> float:
+    """
+    Sinusoidal distribution function.
+
+    Args:
+        distance (float): The distance parameter.
+        amplitude (float): The amplitude parameter.
+        frequency (float): The frequency parameter.
+        phase (float): The phase parameter.
+
+    Returns:
+        The result of the sinusoidal equation: amplitude * sin(frequency * distance + phase).
+    """
+    return amplitude * sin(frequency * distance + phase)
+
+def gaussian(distance: float, amplitude: float, mean: float, std: float) -> float:
+    """
+    Gaussian distribution function.
+
+    Args:
+        distance (float): The distance parameter.
+        amplitude (float): The amplitude parameter.
+        mean (float): The mean parameter.
+        std (float): The standard deviation parameter.
+
+    Returns:
+        The result of the gaussian equation: amplitude * exp(-((distance - mean) ** 2) / (2 * std ** 2)).
+    """
+    return amplitude * exp(-((distance - mean) ** 2) / (2 * std ** 2))
+
+
+def step(distance: float, max_value: float,  min_value: float, start: float, end: float) -> float:
+    """
+    Step distribution function.
+
+    Args:
+        distance (float): The distance parameter.
+        min_value (float): The minimum value parameter.
+        max_value (float): The maximum value parameter.
+        start (float): The start parameter.
+        end (float): The end parameter.
+
+    Returns:
+        The result of the step equation: min_value if distance < start, max_value if distance > end, and a linear interpolation between min_value and max_value if start <= distance <= end.
+    """
+    if start < distance < end:
+        return max_value
+    else:
+        return min_value
 
 # aka ParametrizedFunction
 class Distribution:
@@ -97,7 +179,12 @@ class Distribution:
     FUNCTIONS = {
         'constant': {'func': constant, 'defaults': {'value': 0}},
         'uniform': {'func': uniform, 'defaults': {'value': 0}},
-        'linear': {'func': linear, 'defaults': {'slope': 1, 'intercept': 0}}
+        'linear': {'func': linear, 'defaults': {'slope': 1, 'intercept': 0}},
+        'exponential': {'func': exponential, 'defaults': {'vertical_shift': 0, 'scale_factor': 1, 'growth_rate': 1, 'horizontal_shift': 0}},
+        'sigmoid': {'func': sigmoid, 'defaults': {'vertical_shift': 0, 'scale_factor': 1, 'growth_rate': 1, 'horizontal_shift': 0}},
+        'sinusoidal': {'func': sinusoidal, 'defaults': {'amplitude': 1, 'frequency': 1, 'phase': 0}},
+        'gaussian': {'func': gaussian, 'defaults': {'amplitude': 1, 'mean': 0, 'std': 1}},
+        'step': {'func': step, 'defaults': {'max_value': 1, 'min_value': 0, 'start': 0, 'end': 1}}
     }
 
     @staticmethod
@@ -152,12 +239,12 @@ class Distribution:
 
         Parameters
         ----------
-        position : float or np.ndarray
+        position : float or numpy.ndarray
             The position at which to evaluate the function.
 
         Returns
         -------
-        float or np.ndarray
+        float or numpy.ndarray
             The value of the function at the given position.
         """
         return self.function(position, **self.parameters)

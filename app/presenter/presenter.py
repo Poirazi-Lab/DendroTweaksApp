@@ -68,7 +68,7 @@ class Presenter(IOMixin, NavigationMixin,
 
     @property
     def selected_group_name(self):
-        return self.view.widgets.selectors['group'].value
+        return self.view.widgets.selectors['assigned_group'].value
 
     def update_model_version_callback(self, attr, old, new):
         self.model.version = new
@@ -94,6 +94,7 @@ class Presenter(IOMixin, NavigationMixin,
         self._create_cell_renderer()
         self.view.widgets.selectors['domain'].options = list(self.model.domains.keys())
         self.view.widgets.selectors['domain'].value = domain_name
+        self.view.widgets.multichoice['domains'].options = list(self.model.domains.keys())
 
     # =================================================================
     # GROUPS TAB
@@ -109,30 +110,19 @@ class Presenter(IOMixin, NavigationMixin,
         """
         # GET VIEW
         domain_name = new
+        self._select_domain_segs_in_graph(domain_names=[domain_name])
+
+    @log
+    def _select_domain_segs_in_graph(self, domain_names):
+        """
+        Selects the segments in the graph that belong to the domain.
+        """
         # GET MODEL
-        sections = self.model.get_sections(lambda sec : sec.domain == domain_name)
+        sections = self.model.get_sections(lambda sec : sec.domain in domain_names)
         seg_ids = [seg.idx for sec in sections for seg in sec.segments]
         # SET VIEW
         self.view.figures['graph'].renderers[0].node_renderer.data_source.selected.indices = seg_ids
-        if self.view.widgets.tabs['section'].active == 1:
-            self._update_inserted_mechnaisms_widget(domain_name)
         
-    @log
-    def _update_inserted_mechnaisms_widget(self, domain_name):
-        """
-        Updates the multichoice['mechanisms'] widget on group selection.
-        """
-        # GET MODEL
-        avaliable_mechs = list(self.model.mechanisms.keys())
-        inserted_mechs = [
-            mech_name for mech_name in self.model.domains[domain_name].mechanisms
-            if mech_name != 'Independent'
-        ]
-        # SET VIEW
-        with remove_callbacks(self.view.widgets.multichoice['mechanisms']):
-            self.view.widgets.multichoice['mechanisms'].options = avaliable_mechs
-            self.view.widgets.multichoice['mechanisms'].value = inserted_mechs
-
 
     # -----------------------------------------------------------------
     # ADD / REMOVE GROUPS
@@ -141,11 +131,11 @@ class Presenter(IOMixin, NavigationMixin,
 
     def select_group_segments_callback(self, attr, old, new):
         """
-        Selects segments by the condition specified in multichoice['domain'],
+        Selects segments by the condition specified in multichoice['group_domains'],
         the selectors['select_by'], ['condition_min'], ['condition_max'].
         """
         # GET VIEW
-        domains = self.view.widgets.multichoice['domain'].value
+        domains = self.view.widgets.multichoice['group_domains'].value
         select_by = self.view.widgets.selectors['select_by'].value
         min_val = self.view.widgets.spinners['condition_min'].value
         max_val = self.view.widgets.spinners['condition_max'].value
@@ -171,7 +161,7 @@ class Presenter(IOMixin, NavigationMixin,
 
         # GET VIEW
         group_name = self.view.widgets.text['group_name'].value
-        domains = self.view.widgets.multichoice['domain'].value
+        domains = self.view.widgets.multichoice['group_domains'].value
         select_by = self.view.widgets.selectors['select_by'].value
         if select_by == 'dist':
             min_dist = self.view.widgets.spinners['condition_min'].value
@@ -189,17 +179,17 @@ class Presenter(IOMixin, NavigationMixin,
                              min_diam, max_diam)
 
         # SET VIEW
-        self._set_group_filter_widgets()
+        self._reset_group_filter_widgets()
         self._set_group_selector_widget(group_name)
         
 
-    def _set_group_filter_widgets(self):
+    def _reset_group_filter_widgets(self):
         with remove_callbacks(self.view.widgets.text['group_name']):
             self.view.widgets.text['group_name'].value = ''
         with remove_callbacks(self.view.widgets.selectors['select_by']):
             self.view.widgets.selectors['select_by'].value = 'dist'
-        with remove_callbacks(self.view.widgets.multichoice['domain']):
-            self.view.widgets.multichoice['domain'].value = []
+        with remove_callbacks(self.view.widgets.multichoice['group_domains']):
+            self.view.widgets.multichoice['group_domains'].value = []
         with remove_callbacks(self.view.widgets.spinners['condition_min']):
             self.view.widgets.spinners['condition_min'].value = None
         with remove_callbacks(self.view.widgets.spinners['condition_max']):
@@ -214,69 +204,16 @@ class Presenter(IOMixin, NavigationMixin,
         self.view.widgets.selectors['group'].options = options
         self.view.widgets.selectors['group'].value = group_name or (options[-1] if options else None)
 
-
-    def remove_group_callback(self, event):
-        """
-        Callback for the buttons['remove_group'] widget.
-        """
-        # GET VIEW
-        group_name = self.view.widgets.selectors['group'].value
-        # SET MODEL
-        self.model.remove_group(group_name)
-        # SET VIEW
-        self._set_group_selector_widget()
-
-
     # -----------------------------------------------------------------
-    # SELECT GROUP / INSERT MECHANISMS
+    # SELECT / REMOVE GROUP
     # -----------------------------------------------------------------    
 
 
-    def select_group_callback(self, attr, old, new):
+    def select_group_segs_callback(self, attr, old, new):
+        
         group_name = new
-        self._select_group(group_name)
-
-
-    @log
-    def _select_group(self, group_name=None):
-        """
-        Selects the group sections and updates the widgets.
-        """
-        # GET VIEW
-        group_name = group_name or self.selected_group_name
-        param_name = self.selected_param_name
-
-        # 
         self._select_group_segs_in_graph(group_name)
 
-        # SET VIEW
-        if self.view.widgets.tabs['section'].active == 2:
-            self._toggle_group_panel(param_name, group_name)
-            
-                
-    def _toggle_group_panel(self, param_name, group_name):
-        # GET MODEL
-        groups_to_distrs = self.model.params[param_name]
-
-        # SET VIEW
-        if groups_to_distrs.get(group_name):
-            # 1. Hide the button
-            self.view.widgets.buttons['add_distribution'].visible = False
-            # 2. Show the selector
-            self.view.widgets.selectors['distribution_type'].visible = True
-            with remove_callbacks(self.view.widgets.selectors['distribution_type']):
-                self.view.widgets.selectors['distribution_type'].value = groups_to_distrs[group_name].function_name
-            # 3. Show the panel with sliders
-            self.view.DOM_elements['distribution_widgets_panel'].visible = True            
-            self._toggle_param_widgets(param_name)
-        else:
-            # 1. Hide the selector
-            self.view.widgets.selectors['distribution_type'].visible = False
-            # 2. Hide the panel with sliders
-            self.view.DOM_elements['distribution_widgets_panel'].visible = False
-            # 3. Show the button
-            self.view.widgets.buttons['add_distribution'].visible = True
-            
 
     @log
     def _select_group_segs_in_graph(self, group_name):
@@ -293,63 +230,83 @@ class Presenter(IOMixin, NavigationMixin,
         self.view.figures['graph'].renderers[0].node_renderer.data_source.selected.indices = seg_ids
 
 
-    
-    # MECHANISMS ------------------------------------------------------
+    def remove_group_callback(self, event):
+        """
+        Callback for the buttons['remove_group'] widget.
+        """
+        # GET VIEW
+        group_name = self.view.widgets.selectors['group'].value
+        # SET MODEL
+        self.model.remove_group(group_name)
+        # SET VIEW
+        self._set_group_selector_widget()
 
     
+    # =================================================================
+    # MECHANISMS TAB
+    # =================================================================
+
+    # -----------------------------------------------------------------
+    # INSERT MECHANISMS TO DOMAINS
+    # -----------------------------------------------------------------
+
+    def select_mechanism_to_insert_callback(self, attr, old, new):
+        """
+        Callback for the multiselect['mechanisms'] widget.
+        """
+        self._select_mechanism_to_insert()
+
+
     @log
-    def update_group_mechanisms_callback(self, attr, old, new):
+    def _select_mechanism_to_insert(self):
+
+        mech_name = self.view.widgets.selectors['mechanism_to_insert'].value
+        mech = self.model.mechanisms[mech_name]
+        
+        available_domains = list(self.model.domains.keys())
+        mech_domains = list(mech.domains.keys())
+        with remove_callbacks(self.view.widgets.multichoice['domains']):
+            self.view.widgets.multichoice['domains'].options = available_domains
+            self.view.widgets.multichoice['domains'].value = mech_domains
+
+        self._select_domain_segs_in_graph(domain_names=mech_domains)
+
+
+    @log
+    def insert_mechanism_callback(self, attr, old, new):
         """
         Callback for the multiselect['mechanisms'] widget.
         Adds or removes mechanisms from the selected group based on the multiselect widget.
         """
 
-        domain_name = self.view.widgets.selectors['domain'].value
+        mech_name = self.view.widgets.selectors['mechanism_to_insert'].value
+        domains_to_add = list(set(new).difference(set(old)))
+        domains_to_remove = list(set(old).difference(set(new)))
 
-        mechs_to_add = list(set(new).difference(set(old)))
-        mechs_to_remove = list(set(old).difference(set(new)))
+        if domains_to_remove:
+            logger.debug(f'Domains from which to remove: {domains_to_remove}')
+            domain_name = domains_to_remove[0]
+            self.model.uninsert_mechanism(mech_name, domain_name)
+            # TODO: update the list of inserted mechanisms (Params tab)
+        if domains_to_add:
+            logger.debug(f'Domains to which to add: {domains_to_add}')
+            domain_name = domains_to_add[0]
+            self.model.insert_mechanism(mech_name, domain_name)
 
-        if mechs_to_remove:
-            logger.debug(f'Mech to remove: {mechs_to_remove}')
-            mech_name = mechs_to_remove[0]
-            self.uninsert_mech(mech_name, domain_name)
-        if mechs_to_add:
-            logger.debug(f'Mech to add: {mechs_to_add}')
-            mech_name = mechs_to_add[0]
-            self.insert_mech(mech_name, domain_name)
-    
-
-    def insert_mech(self, mech_name, domain_name):
-        """
-        Inserts the mechanisms to the groups.
-        """
-        self.model.insert_mechanism(mech_name, domain_name)
-        self._update_mechanism_selector_widget(domain_name)
+        self._select_domain_segs_in_graph(domain_names=new)
+        self._update_mechanism_selector_widget()
 
 
-    def uninsert_mech(self, mech_name, domain_name):
-        """
-        Uninserts the mechanisms from the groups.
-        """
-        self.model.uninsert_mechanism(mech_name, domain_name)
-        self._update_mechanism_selector_widget(domain_name)
-
-
-    def _update_mechanism_selector_widget(self, domain_name):
+    def _update_mechanism_selector_widget(self):
         """
         Updates the selectors['mechanism'] widget options when a mechanism is added or removed.
         """
-        return
-        
+        available_mechs = list(self.model.mechs_to_params.keys()) # both inserted and with range params
         with remove_callbacks(self.view.widgets.selectors['mechanism']):
-            self.view.widgets.selectors['mechanism'].options = self.model.domains_to_mechanisms[domain_name]
-            mech_name = group.mechanisms[0] if group.mechanisms else None
-            self.view.widgets.selectors['mechanism'].value = mech_name
-            
-        logger.debug(f'Updated options for mechanism selector: {group.mechanisms}')
-        logger.debug(f'Selected mechanism: {mech_name}')
+            self.view.widgets.selectors['mechanism'].options = available_mechs
+            self.view.widgets.selectors['mechanism'].value = available_mechs[-1] if available_mechs else None
 
-    
+
     # =================================================================
     # PARAMETERS TAB
     # =================================================================
@@ -360,49 +317,54 @@ class Presenter(IOMixin, NavigationMixin,
 
     def select_mechanism_callback(self, attr, old, new):
         """
-        Callback for the multiselect['mechanisms'] widget.
+        Callback for the selectors['mechanism'] widget.
         """
-        self._select_mechanism(mech_name=new)
+        mech_name = new
+        self._select_mechanism(mech_name)
+
 
     @log
     def _select_mechanism(self, mech_name):
+        logger.debug(f'Selected mechanism: {mech_name}')
 
-        avaliable_params = self.model.mechs_to_params[mech_name]
-        param_name = avaliable_params[0]
+        self._update_param_selector_widget(mech_name)
+        self._toggle_kinetic_plots(mech_name)
 
-        logger.debug(f'Selected mechanism {mech_name} with params {avaliable_params}, selected param {param_name}')
-        
-        self.view.widgets.selectors['param'].options = avaliable_params
-        self.view.widgets.selectors['param'].value = param_name
-
-        self.toggle_kinetic_plots(mech_name)
 
     @log
-    def toggle_kinetic_plots(self, mech_name):
+    def _update_param_selector_widget(self, mech_name):
+
+        available_params = self.model.mechs_to_params.get(mech_name, [])
+        param_name = available_params[0]
+        with remove_callbacks(self.view.widgets.selectors['param']):
+            self.view.widgets.selectors['param'].options = available_params
+            self.view.widgets.selectors['param'].value = param_name
+        self._select_param(param_name)
+    
+    @log
+    def _toggle_kinetic_plots(self, mech_name):
 
         if mech_name in ['Independent', 'Leak']:
-            self.view.widgets.buttons['standardize'].disabled = True
+            self.view.widgets.buttons['standardize'].visible = False
             self.view.figures['inf_log'].visible = False
             self.view.figures['inf'].visible = False
             self.view.figures['tau_log'].visible = False
             self.view.figures['tau'].visible = False
             return
 
+        # 2. Get the mechanism
         mech = self.model.mechanisms[mech_name]
-
         logger.debug(f'Toggling kinetic plots for {mech.name}')
 
+        # 3. Enable/ disable the standardize button
         if isinstance(mech, StandardIonChannel):
             ch_type = 'fit'
-            self.view.widgets.buttons['standardize'].disabled = True
+            self.view.widgets.buttons['standardize'].visible = False
         else:
             ch_type = 'orig'
-            self.view.widgets.buttons['standardize'].disabled = False
+            self.view.widgets.buttons['standardize'].visible = True
 
-        data = mech.get_data()
-        logger.debug(f'Updating kinetic plots for {mech.name} with data: {data}')
-        xs = data.pop('x').tolist()
-
+        # 4. Adjust the x-axis scale based on the independent variable
         if mech.independent_var_name == 'v':
             self.view.figures['inf_log'].visible = False
             self.view.figures['inf'].visible = True
@@ -413,6 +375,11 @@ class Presenter(IOMixin, NavigationMixin,
             self.view.figures['inf_log'].visible = True
             self.view.figures['tau'].visible = False
             self.view.figures['tau_log'].visible = True
+
+        # 5. Get the data for the mechanism
+        data = mech.get_data()
+        logger.debug(f'Updating kinetic plots for {mech.name} with data: {data}')
+        xs = data.pop('x').tolist()
 
         inf_values = []
         inf_labels = []
@@ -428,6 +395,7 @@ class Presenter(IOMixin, NavigationMixin,
         color_inf = [Bokeh[8][2*i+1] for i in range(len(inf_labels))]
         color_tau = [Bokeh[8][2*i+1] for i in range(len(tau_labels))]
 
+        # 6. Update the figures
         self.view.sources[f'inf_{ch_type}'].data = {
             'xs': [xs] * len(inf_values), 
             'ys': inf_values, 
@@ -447,8 +415,6 @@ class Presenter(IOMixin, NavigationMixin,
 
         self.view.sources['inf_fit'].data = {'xs': [], 'ys': [], 'label': [], 'color': []}
         self.view.sources['tau_fit'].data = {'xs': [], 'ys': [], 'label': [], 'color': []}
-
-
     
     # -----------------------------------------------------------------
     # PARAMETERS
@@ -462,53 +428,123 @@ class Presenter(IOMixin, NavigationMixin,
         param_name = new
         self._select_param(param_name)
 
-
+    @log
     def _select_param(self, param_name):
         """
         Selects the parameter and updates the widgets.
-        """        
-        self._toggle_param_panel(param_name)
-        # self._update_distribution_plot(param_name)
+        """
+        logger.debug(f'Selected param: {param_name}')
 
-        self.view.widgets.selectors['graph_param'].value = param_name
+        self._toggle_param_panel()
+
+        with remove_callbacks(self.view.widgets.selectors['graph_param']):
+            self.view.widgets.selectors['graph_param'].value = param_name
+        self._update_graph_param(param_name)
 
 
     @log
-    def _toggle_param_panel(self, param_name):
+    def _toggle_param_panel(self):
         """
-        Toggles a panel with widgets for a distributed parameter.
         """
-        # GET VIEW
+        
         mech_name = self.selected_mech_name
-        filtered_options = [
+
+        # Such groups that span the domain where the mechanism is inserted
+        available_groups = [
             group_name for group_name, group in self.model.groups.items()
-            if any(mech_name in self.model.domains[domain_name].mechanisms for domain_name in group.domains)
+            if any(mech_name in self.model.domains[domain_name].mechanisms 
+                   for domain_name in group.domains)
         ]
 
-        old = self.view.widgets.selectors['group'].value
-        new = old if old in filtered_options else (filtered_options[0] if filtered_options else None)
+        logger.debug(f'Avaliable groups: {available_groups}')
 
-        # SET VIEW
-        self.view.widgets.selectors['group'].options = filtered_options
-        self.view.widgets.selectors['group'].value = new
-        if old == new:
-            self._select_group(new)
+        if available_groups:
+            self.view.DOM_elements['param_panel'].visible = True
+            group_name = available_groups[0]
+            # SET VIEW
+            with remove_callbacks(self.view.widgets.selectors['group']):
+                self.view.widgets.selectors['assigned_group'].options = available_groups
+                self.view.widgets.selectors['assigned_group'].value = group_name
+            self._select_group(group_name)
+        else: 
+            self.view.DOM_elements['param_panel'].visible = False
+            
+
+    @log
+    def select_group_callback(self, attr, old, new):
+        group_name = new
+        self._select_group(group_name)
 
 
     @log
-    def _toggle_param_widgets(self, param_name):
+    def _select_group(self, group_name):
+        """
+        Selects the group sections and updates the widgets.
+        """
+        # GET VIEW
+        logger.debug(f'Selected group: {group_name}')
+
+        # SET VIEW
+        param_name = self.selected_param_name
+        self._toggle_group_panel(param_name, group_name)
+
+        if group_name:
+            self._select_group_segs_in_graph(group_name)
+            
+    @log
+    def _toggle_group_panel(self, param_name, group_name):
+        # GET MODEL
+        groups_to_distrs = self.model.params[param_name]
+
+        # SET VIEW
+        if groups_to_distrs.get(group_name):
+            # 1. Replace Add with Remove button
+            self.view.widgets.buttons['add_distribution'].visible = False
+            self.view.widgets.buttons['remove_distribution'].visible = True
+            
+            # 2. Show the group panel
+            self.view.DOM_elements['group_panel'].visible = True
+
+            # 3. Update the distribution type selector
+            with remove_callbacks(self.view.widgets.selectors['distribution_type']):
+                self.view.widgets.selectors['distribution_type'].value = groups_to_distrs[group_name].function_name
+        else:
+            # 1. Replace Remove with Add button
+            self.view.widgets.buttons['remove_distribution'].visible = False
+            self.view.widgets.buttons['add_distribution'].visible = True
+            # 2. Show the group panel
+            self.view.DOM_elements['group_panel'].visible = False
+
+        self._toggle_distribution_widgets(param_name)
+        self._update_distribution_plot()
+
+    @log
+    def _toggle_distribution_widgets(self, param_name):
         """
         Toggles the widgets for the distribution parameters.
         """
         group_name = self.selected_group_name
 
+        group_has_distribution = bool(self.model.params[param_name].get(group_name))
+
+        self.view.DOM_elements['distribution_widgets_panel'].visible = group_has_distribution
+
+        if not group_has_distribution:
+            self.view.DOM_elements['distribution_widgets_panel'].children = []
+            return
+            
         def make_slider_callback(slider_title):
             def slider_callback(attr, old, new):
                 logger.debug(f'Group name: {group_name}, param name: {param_name}, slider title: {slider_title}, new value: {new}')
                 self.model.params[param_name][group_name].update_parameters(**{slider_title: new})
                 self.model.distribute(param_name)
+                mech_name = self.selected_mech_name
+                if mech_name not in ['Independent', 'Leak']:
+                    mech = self.model.mechanisms[mech_name]
+                    mech.params[param_name.replace(f'_{mech.name}', '')] = round(new, 10) # TODO: actually should take the seg value, but which seg
+                    self._toggle_kinetic_plots(mech.name)
                 self._update_graph_param(param_name)
-                # self._update_distribution_plot(param_name)
+                self._update_distribution_plot()
             return slider_callback
 
         sliders = []
@@ -532,10 +568,20 @@ class Presenter(IOMixin, NavigationMixin,
 
         self.model.set_param(param_name, group_name)
 
-        self._toggle_param_widgets(param_name)
-        self.view.widgets.buttons['add_distribution'].visible = False
-        self.view.widgets.selectors['distribution_type'].visible = True
-        self.view.DOM_elements['distribution_widgets_panel'].visible = True
+        self._select_group(group_name)
+
+    def remove_distribution_callback(self, event):
+
+        param_name = self.selected_param_name
+        group_name = self.selected_group_name
+
+        self.model.remove_distribution(param_name, group_name)
+
+        self.view.widgets.buttons['remove_distribution'].visible = False
+        self.view.widgets.buttons['add_distribution'].visible = True
+        self.view.figures['distribution'].visible = False
+        self.view.widgets.selectors['distribution_type'].visible = False
+        self.view.DOM_elements['distribution_widgets_panel'].visible = False
         self._update_graph_param(param_name, update_colors=True)
 
     def update_distribution_type_callback(self, attr, old, new):
@@ -548,22 +594,20 @@ class Presenter(IOMixin, NavigationMixin,
         self.model.set_param(param_name, 
                              group_name,
                              distr_type=function_name)
-        self._toggle_param_widgets(param_name)
-        # self._update_distribution_plot(param_name)
+        self._toggle_distribution_widgets(param_name)
+        self._update_distribution_plot()
 
     
-    def _update_distribution_plot(self, param_name):
+    def _update_distribution_plot(self):
         """
         Updates the distribution plot with the selected parameter.
         """
-
-        SEC_TYPE_TO_IDX = {'soma': 0, 'axon': 1, 'dend': 2, 'apic': 3}
-
+        param_name = self.selected_param_name
         selected_segs = self.selected_segs
 
         data = {'x': [seg.distance_to_root for seg in selected_segs],
                 'y': [seg.get_param_value(param_name) for seg in selected_segs],
-                'color': [self.view.theme.palettes['domain'][SEC_TYPE_TO_IDX[seg._section.domain]] for seg in selected_segs], 
+                'color': [self.view.theme.domains_to_colors[seg.domain] for seg in selected_segs],
                 'label': [str(seg.idx) for seg in selected_segs]}
 
         self.view.sources['distribution'].data = data
@@ -961,6 +1005,48 @@ class Presenter(IOMixin, NavigationMixin,
     # MISC
     # =================================================================
 
+    def switch_tab_callback(self, attr, old, new):
+    
+        if self.model.sec_tree is None:
+            return
+        if new == 0:
+            logger.debug('Switching to Morphology tab')
+            self.view.widgets.selectors['graph_param'].options = {**self.view.params}
+            self.view.widgets.selectors['graph_param'].value = 'domain'
+            self.view.widgets.selectors['section'].value = '0'
+        elif new == 1:
+            logger.debug(f'Switching to Mechanisms tab')
+            self.view.widgets.selectors['graph_param'].options = {**self.view.params}
+            self.view.widgets.selectors['graph_param'].value = 'domain'
+        elif new == 2:
+            logger.debug(f'Switching to Groups tab')
+            self.view.widgets.selectors['graph_param'].options = {**self.view.params}
+            self.view.widgets.selectors['graph_param'].value = 'domain'
+            self.view.widgets.multichoice['group_domains'].options = list(self.model.domains.keys())
+            self.view.widgets.multichoice['group_domains'].value = []
+        elif new == 3:
+            logger.debug('Switching to Parameters tab')
+
+            self.view.widgets.selectors['graph_param'].options = {**self.view.params, **self.model.mechs_to_params}
+
+            with remove_callbacks(self.view.widgets.selectors['mechanism']):
+                self.view.widgets.selectors['mechanism'].options = list(self.model.mechs_to_params.keys())
+                self.view.widgets.selectors['mechanism'].value = 'Independent'
+            self._select_mechanism('Independent')
+        elif new == 4:
+            logger.debug('Switching to Recordings tab')
+            self.view.widgets.selectors['graph_param'].options = {**self.view.params}
+            self.view.widgets.selectors['graph_param'].value = 'recordings'
+            self.view.widgets.selectors['section'].value = '0'
+        elif new == 5:
+            logger.debug('Switching to Stimuli tab')
+            self.view.widgets.selectors['graph_param'].options = {**self.view.params}
+            self.view.widgets.selectors['graph_param'].value = 'iclamps'
+            self.view.widgets.selectors['section'].value = '0'
+            
+
+            
+        self.view.DOM_elements['section_plots'].visible = True if new in [0] else False
 
     def console_callback(self, attr, old, new):
 

@@ -88,6 +88,7 @@ n_half = n_colors // 2  # Half the colors from each colormap
 
 colors_combined = np.vstack([
     custom_palette1(np.linspace(0, 1, n_half)),
+    np.array([[0.5, 0.5, 0.5, 1]]),  # Insert gray in the middle
     custom_palette2(np.linspace(0, 1, n_half))
 ])
 
@@ -351,7 +352,7 @@ custom_palette = ['#7fbfcd',
  '#f5a556',
  '#f5a656']
 
-# insert gray in the middle of palette
+# # insert gray in the middle of palette
 L = len(custom_palette)
 custom_palette = custom_palette[:L//2] + ['gray'] + custom_palette[L//2:]
 
@@ -363,7 +364,7 @@ dark_palettes = {
 }
 
 light_palettes = {
-    'domain': ['orange', 'gold', '#32b499', '#1e90ff'],
+    'domain': ['orange', 'gold', '#32b499', '#1e90ff', "#ffb55a", "#ffee65", "#beb9db", "#fdcce5", "#8bd3c7"],
     'trace': ["#fd7f6f", "#7eb0d5", "#b2e061", "#bd7ebe", "#ffb55a", "#ffee65", "#beb9db", "#fdcce5", "#8bd3c7"],
     'continuous': cc.glasbey_light,
     'params': custom_palette,
@@ -378,6 +379,7 @@ class Theme:
         self.background_fill_color = background_fill_color
         self.palettes = palettes
         self.frozen = frozen
+        self.domains_to_colors = DOMAINS_TO_COLORS
 
 THEMES = {
     'dark_minimal': Theme('dark_minimal', '#f064ae', 'white', '#15191C', '#20262B', 'white', dark_palettes),

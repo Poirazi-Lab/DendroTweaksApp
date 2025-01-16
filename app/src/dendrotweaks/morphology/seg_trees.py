@@ -43,6 +43,10 @@ class Segment(Node):
         return self._section.subtree_size
 
     @property
+    def Ra(self):
+        return self._section.Ra
+
+    @property
     def distance_to_root(self):
         return self._section.distance_to_root(self.x)
 

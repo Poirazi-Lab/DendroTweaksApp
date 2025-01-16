@@ -204,11 +204,13 @@ widgets_navigation =    column([
                         ])
 
 
-panel_section = column(view.figures['section_diam'], 
-                       view.figures['section_param'], 
-                       widgets_navigation, name='panel_section',
-                       width=270, height=350,
-                       sizing_mode='fixed')
+view.DOM_elements['section_plots'] = column(
+    view.figures['section_diam'], 
+    view.figures['section_param'], 
+    widgets_navigation, name='panel_section',
+    width=270, height=350,
+    sizing_mode='fixed'
+)
 
 
 
@@ -260,9 +262,7 @@ hover = HoverTool(callback=graph_hover_callback, tooltips=[("ID", "@index"),
                                                            ("cai", "@cai")])
 view.figures['graph'].add_tools(hover)
 
-# Add select widget
-view.widgets.selectors['mechanism'] = Select(title='Mechanism:', 
-                                              width=150)
+# Add select widget                                                        
 
 view.widgets.selectors['graph_param'] = Select(title="Parameter:", 
                                               width=150,
@@ -271,7 +271,7 @@ view.widgets.selectors['graph_param'] = Select(title="Parameter:",
                                               )
 
 view.widgets.sliders['graph_param_high'] = Slider(start=0, end=1, value=1, 
-                                                 step=0.01, title="Colormap max", width=100, visible=True)
+                                                 step=0.01, title="Colormap max", width=100, visible=True, format="0.00000", show_value=False)
 view.widgets.sliders['time_slice'] = Spinner(title="Time slice", low=0, high=1000, step=0.1, value=100, width=100, visible=False)
 
 view.widgets.sliders['time_slice'].on_change('value_throttled', p.update_time_slice_callback)
@@ -300,7 +300,7 @@ panel_graph = column(view.figures['graph'],
                     width_policy='fit',
                     sizing_mode='scale_width',)
 
-panel_graph = row(panel_section, panel_graph, name='panel_graph', width=800, height=560)
+panel_graph = row(view.DOM_elements['section_plots'], panel_graph, name='panel_graph', width=800, height=560)
 
 curdoc().add_root(panel_graph)
 
@@ -650,26 +650,6 @@ def create_domain_panel():
 def create_add_group_panel():
 
 
-    view.widgets.multichoice['domain'] = MultiChoice(title='Domain',
-                                                options=[],
-                                                width=300)
-
-    view.widgets.multichoice['domain'].on_change('value', p.select_group_segments_callback)
-
-    view.widgets.selectors['select_by'] = Select(options=['dist', 'diam'],
-                                            value='dist',
-                                            title='Select by',
-                                            width=100)
-
-    view.widgets.selectors['select_by'].on_change('value', p.select_group_segments_callback)                                            
-
-    view.widgets.spinners['condition_min'] = NumericInput(value=None, title='Min', width=75)
-    view.widgets.spinners['condition_max'] = NumericInput(value=None, title='Max', width=75)
-
-    view.widgets.spinners['condition_min'].on_change('value', p.select_group_segments_callback)
-    view.widgets.spinners['condition_max'].on_change('value', p.select_group_segments_callback)
-
-
     view.widgets.text['group_name'] = TextInput(value='', 
                                                 title='Group name', 
                                                 placeholder='New group name',
@@ -692,32 +672,44 @@ def create_add_group_panel():
                                                
     view.widgets.buttons['add_group'].on_event(ButtonClick, p.add_group_callback)
 
+    view.widgets.multichoice['group_domains'] = MultiChoice(title='Domain',
+                                                options=[],
+                                                width=300)
 
-    select_panel = column([
-        view.widgets.multichoice['domain'],
+    view.widgets.multichoice['group_domains'].on_change('value', p.select_group_segments_callback)
+
+    view.widgets.selectors['select_by'] = Select(options=['dist', 'diam'],
+                                            value='dist',
+                                            title='Select by',
+                                            width=100)
+
+    view.widgets.selectors['select_by'].on_change('value', p.select_group_segments_callback)                                            
+
+    view.widgets.spinners['condition_min'] = NumericInput(value=None, title='Min', width=75, mode='float')
+    view.widgets.spinners['condition_max'] = NumericInput(value=None, title='Max', width=75, mode='float')
+
+    view.widgets.spinners['condition_min'].on_change('value', p.select_group_segments_callback)
+    view.widgets.spinners['condition_max'].on_change('value', p.select_group_segments_callback)
+
+
+
+    add_group_panel = column([
+        row([view.widgets.text['group_name'],
+             view.widgets.buttons['add_group'],
+             ]),
+        view.widgets.multichoice['group_domains'],
         row([
             view.widgets.selectors['select_by'],
             view.widgets.spinners['condition_min'],
             view.widgets.spinners['condition_max'],
         ])
-    ])
-
-    add_panel = column([
-        row([view.widgets.text['group_name'],
-             view.widgets.buttons['add_group'],
-             ])])
-
-
-
-    add_group_panel = column([
-        select_panel, 
-        add_panel])
+        ])
 
     return add_group_panel
 
 
 
-def create_remove_group_panel():
+def create_select_group_panel():
 
     view.widgets.selectors['group'] = Select(title='Groups',
                                          options=[], 
@@ -725,7 +717,7 @@ def create_remove_group_panel():
                                          width=150,
                                          )
 
-    view.widgets.selectors['group'].on_change('value', p.select_group_callback)                                         
+    view.widgets.selectors['group'].on_change('value', p.select_group_segs_callback)
 
     view.widgets.buttons['remove_group'] = Button(label='Remove group',
                                                     button_type='danger',
@@ -736,23 +728,21 @@ def create_remove_group_panel():
 
     view.widgets.buttons['remove_group'].on_event(ButtonClick, p.remove_group_callback)
 
-    remove_group_panel = row([view.widgets.selectors['group'],
-                        view.widgets.buttons['remove_group'],
-                        ])
 
-                         
-    return remove_group_panel
+    return row([view.widgets.selectors['group'],
+            view.widgets.buttons['remove_group'],
+        ])
 
 
 
 def create_groups_tab():
 
     panels = column([
-        create_domain_panel(),
-        Div(text='<hr style="width:30em; margin-top:3em">'),
+        # create_domain_panel(),
+        # Div(text='<hr style="width:30em; margin-top:3em">'),
         create_add_group_panel(),
         Div(text='<hr style="width:30em; margin-top:3em">'), 
-        create_remove_group_panel(),
+        create_select_group_panel(),
         ])
 
     groups_tab = TabPanel(title='Groups', 
@@ -760,33 +750,42 @@ def create_groups_tab():
     
     return groups_tab
 
+# =================================================================
+# MECHANISMS TAB
+# =================================================================
+
+def create_mechanisms_tab():
+
+    view.widgets.selectors['mechanism_to_insert'] = Select(
+        title='Mechanism',
+        options=['Leak'],
+        value = 'Leak',
+    )
+
+    view.widgets.selectors['mechanism_to_insert'].on_change('value', p.select_mechanism_to_insert_callback)
+
+    view.widgets.multichoice['domains'] = MultiChoice(title='Domains:',
+                                                              options=[],
+                                                              value=[],
+                                                              visible=True,
+                                                              width=300)
+
+    view.widgets.multichoice['domains'].on_change('value', p.insert_mechanism_callback)
+
+    insert_panel = column([
+        view.widgets.selectors['mechanism_to_insert'],
+        view.widgets.multichoice['domains'],
+    ])
+
+    return TabPanel(title='Mechanisms',
+                    child=insert_panel)
 
 # =================================================================
 # PARAMETERS TAB
 # =================================================================
 
 
-def create_select_distribution_panel():
-
-    view.widgets.buttons['add_distribution'] = Button(label='Add distribution',
-                                                    button_type='primary',
-                                                    disabled=False,
-                                                    visible=True,
-                                                    width=150,
-                                                    styles={"padding-top":"20px"}
-                                                    )
-
-    view.widgets.buttons['add_distribution'].on_event(ButtonClick, p.add_distribution_callback)
-
-    view.widgets.selectors['distribution_type'] = Select(
-        title='Distribution type',
-        value='constant',
-        options=['constant', 'linear', 'exponential', 'sigmoid', 'gaussian', 'step'],
-        width=150,
-        visible=False
-    )
-
-    view.widgets.selectors['distribution_type'].on_change('value', p.update_distribution_type_callback)
+def create_distribution_plot():
 
     view.figures['distribution'] = figure(width=400,
                                           height=150,
@@ -805,37 +804,93 @@ def create_select_distribution_panel():
     vspan = Span(location=0, dimension='height', line_color='white', line_width=1)
     view.figures['distribution'].add_layout(vspan)
 
-    view.DOM_elements['select_distribution_panel'] = column([
+
+def create_group_panel():
+
+    view.widgets.selectors['distribution_type'] = Select(
+        title='Distribution type',
+        value='constant',
+        options=['constant', 'linear', 'exponential', 'sigmoid', 'sinusoidal', 'gaussian', 'step'],
+        width=150,
+        visible=True
+    )
+
+    view.widgets.selectors['distribution_type'].on_change('value', p.update_distribution_type_callback)
+
+
+    create_distribution_plot()
+    view.DOM_elements['distribution_widgets_panel'] = column(width=300)
+
+    return column([
+        view.widgets.selectors['distribution_type'],
+        view.DOM_elements['distribution_widgets_panel'],
+        view.figures['distribution'],
+    ], visible=False)
+
+def create_param_panel():
+
+
+    view.widgets.selectors['assigned_group'] = Select(title='Groups',
+                                         options=[], 
+                                         value=None,
+                                         width=150,
+                                         )
+
+    view.widgets.selectors['assigned_group'].on_change('value', p.select_group_callback)
+
+
+    view.widgets.buttons['add_distribution'] = Button(label='Add distribution',
+                                                    button_type='primary',
+                                                    disabled=False,
+                                                    visible=True,
+                                                    width=150,
+                                                    styles={"padding-top":"20px"}
+                                                    )
+
+    view.widgets.buttons['add_distribution'].on_event(ButtonClick, p.add_distribution_callback)
+
+    view.widgets.buttons['remove_distribution'] = Button(label='Remove distribution',
+                                                    button_type='danger',   
+                                                    disabled=False,
+                                                    visible=False,
+                                                    width=150,
+                                                    styles={"padding-top":"20px"}
+                                                    )
+
+    view.widgets.buttons['remove_distribution'].on_event(ButtonClick, p.remove_distribution_callback)
+
+    view.DOM_elements['group_panel'] = create_group_panel()
+
+    return column([
         row([
-            view.widgets.selectors['group'],
+            view.widgets.selectors['assigned_group'],
             view.widgets.buttons['add_distribution'],
-            view.widgets.selectors['distribution_type']
-        ])
-        # view.figures['distribution'],
-    ])
+            view.widgets.buttons['remove_distribution'],
+        ]),
+        view.DOM_elements['group_panel'],
+    ], visible=False)
 
 def create_distribution_tab():
 
     view.widgets.selectors['mechanism'] = Select(title='Mechanism',
-                                                options=['Independent'],
-                                                value = 'Independent',
+                                                options=[],
+                                                value = None,
                                                 )
 
     view.widgets.selectors['mechanism'].on_change('value', p.select_mechanism_callback)
 
     view.widgets.buttons['standardize'] = Button(label='Standardize',
                                                 button_type='primary',
-                                                disabled=True,
-                                                visible=True,
+                                                visible=False,
                                                 width=100,
                                                 styles={"padding-top":"20px"}
                                                 )
 
     view.widgets.buttons['standardize'].on_event(ButtonClick, p.standardize_callback)
-
+    
     view.widgets.selectors['param'] = Select(title='Parameter',
-                                            options=['cm'],
-                                            value='cm',
+                                            options=[],
+                                            value=None,
                                             width=150)
 
     view.widgets.selectors['param'].description = 'Select a parameter defined as a RANGE variable in the MOD file.'
@@ -845,19 +900,20 @@ def create_distribution_tab():
 
 
     selection_panel = column([
-        row([view.widgets.selectors['mechanism'],
-        view.widgets.buttons['standardize']]),
+        row([
+            view.widgets.selectors['mechanism'],
+            view.widgets.buttons['standardize']
+        ]),
         view.widgets.selectors['param'],
     ])
 
-    create_select_distribution_panel()
-    view.DOM_elements['distribution_widgets_panel'] = column(width=300)
+
+    view.DOM_elements['param_panel'] = create_param_panel()
+    
 
     distibution_panel = column([
         selection_panel,
-        Div(text='<hr style="width:30em; margin-top:3em">'),
-        view.DOM_elements['select_distribution_panel'],
-        view.DOM_elements['distribution_widgets_panel']
+        view.DOM_elements['param_panel'],
     ])
 
     distribution_tab = TabPanel(title='Parameters', 
@@ -979,65 +1035,13 @@ tab_stimuli = TabPanel(title='Stimuli',
                        child=widgets_stimuli)
 
 view.widgets.tabs['section'] = Tabs(tabs=[tab_section_vars, 
-                                          create_groups_tab(), 
+                                          create_mechanisms_tab(),
+                                          create_groups_tab(),
                                           create_distribution_tab(),
                                           tab_recordings,
                                           tab_stimuli])
 
-def switch_tab_callback(attr, old, new):
-    
-    if p.model.sec_tree is None:
-        return
-    if new == 0:
-        logger.debug('Switching to Morphology tab')
-        view.widgets.selectors['graph_param'].options = {**view.params}
-        view.widgets.selectors['graph_param'].value = 'domain'
-        view.widgets.selectors['section'].value = '0'
-    elif new == 1:
-        logger.debug(f'Switching to Groups tab')
-        view.widgets.selectors['graph_param'].options = {**view.params}
-        view.widgets.selectors['graph_param'].value = 'domain'
-        available_domains = list(p.model.domains.keys())
-        view.widgets.selectors['domain'].options = available_domains
-        domain_name = available_domains[0] if available_domains else None
-        view.widgets.selectors['domain'].value = domain_name
-        view.widgets.multichoice['domain'].options = available_domains
-        view.widgets.multichoice['domain'].value = []
-        options = list(p.model.groups.keys())
-        view.widgets.selectors['group'].options = options
-        view.widgets.selectors['group'].value = options[0] if options else None
-    elif new == 2:
-        logger.debug('Switching to Parameters tab')
-        view.widgets.selectors['graph_param'].options = {**view.params, **p.model.mechs_to_params}
-        view.widgets.selectors['mechanism'].options = list(p.model.mechs_to_params.keys())
-        if view.widgets.selectors['mechanism'].value == 'Independent':
-            p._select_mechanism('Independent')
-            p._select_param('cm')
-        else:
-            view.widgets.selectors['mechanism'].value = 'Independent'
-        logger.debug(f"Selected {view.widgets.selectors['mechanism'].value}")
-    elif new == 3:
-        logger.debug('Switching to Recordings tab')
-        view.widgets.selectors['graph_param'].options = {**view.params}
-        view.widgets.selectors['graph_param'].value = 'recordings'
-        view.widgets.selectors['section'].value = '0'
-    elif new == 4:
-        logger.debug('Switching to Stimuli tab')
-        view.widgets.selectors['graph_param'].options = {**view.params}
-        view.widgets.selectors['graph_param'].value = 'iclamps'
-        view.widgets.selectors['section'].value = '0'
-        
-    if new == 2:
-        view.figures['inf'].visible = True
-        view.figures['tau'].visible = True
-    else:
-        view.figures['inf'].visible = False
-        view.figures['tau'].visible = False
-        
-    panel_section.visible = True if new in [0] else False
-
-
-view.widgets.tabs['section'].on_change('active', switch_tab_callback)
+view.widgets.tabs['section'].on_change('active', p.switch_tab_callback)
 
 
 view.widgets.selectors['channel'] = Select(title='Channel', options=[], visible=False)
@@ -1093,12 +1097,6 @@ view.widgets.buttons['load_model'] = Button(label='Load model', button_type='pri
 view.widgets.buttons['load_model'].on_event(ButtonClick, p.load_model_callback)
 
 
-# Segmentation
-view.widgets.sliders['d_lambda'] = Slider(start=0, end=0.2, value=0.1, step=0.01, title="d_lambda", width=242)
-
-view.widgets.buttons['set_segmentation'] = Button(label='Build segments', button_type='primary', disabled=False, width=242)
-view.widgets.buttons['set_segmentation'].on_event(ButtonClick, p.build_seg_tree_callback)
-
 # Export model
 view.widgets.buttons['export_model'] = Button(label='Export model', button_type='primary', disabled=False, width=242)
 view.widgets.buttons['export_model'].on_event(ButtonClick, p.export_model_callback)
@@ -1122,9 +1120,6 @@ tab_io = TabPanel(title='Input/Output',
                     view.widgets.buttons['load_mod']]),
                     view.widgets.buttons['load_model'],
                     Div(text='<hr style="width:18.5em; margin-top:3em">'), 
-                    view.widgets.sliders['d_lambda'],
-                    view.widgets.buttons['set_segmentation'],
-                    Div(text='<hr style="width:18.5em; margin-top:3em">'), 
                     view.widgets.file_input['all'],
                     view.widgets.text['model_version'],
                     view.widgets.buttons['export_swc'],
@@ -1136,6 +1131,12 @@ tab_io = TabPanel(title='Input/Output',
 # ------------------------------------------------------------------------------------
 ## Simulation tab                                
 # ------------------------------------------------------------------------------------
+
+# Segmentation
+view.widgets.sliders['d_lambda'] = Slider(start=0, end=0.2, value=0.1, step=0.01, title="d_lambda", width=242)
+
+view.widgets.buttons['set_segmentation'] = Button(label='Set segmentation', button_type='primary', disabled=False, width=242)
+view.widgets.buttons['set_segmentation'].on_event(ButtonClick, p.build_seg_tree_callback)
 
 view.widgets.sliders['duration'] = Slider(value=300, start=100, end=1000, step=100, title='Duration, ms', width=200, format='0[.]0')
 view.widgets.sliders['duration'].js_link('value', view.widgets.sliders['iclamp_duration'], 'end')
@@ -1158,16 +1159,21 @@ def enable_run_button(attr, old, new):
     view.widgets.buttons['run'].disabled = new
 view.widgets.switches['real_time'].on_change('active', enable_run_button)
 
-tab_sim = TabPanel(title='Simulation',
-                    child=column(view.widgets.sliders['duration'],
-                                  view.widgets.sliders['dt'],
-                                  view.widgets.sliders['celsius'],
-                                  view.widgets.sliders['v_init'],
-                                  row(view.widgets.switches['real_time'], Div(text='Real-time update')),
-                                  view.widgets.buttons['run'],
-                                  view.DOM_elements['runtime'],
-                                  )
-                    )
+tab_sim = TabPanel(
+    title='Simulation',
+    child=column(
+        view.widgets.sliders['d_lambda'],
+        view.widgets.buttons['set_segmentation'],
+        Div(text='<hr style="width:18.5em; margin-top:3em">'), 
+        view.widgets.sliders['duration'],
+        view.widgets.sliders['dt'],
+        view.widgets.sliders['celsius'],
+        view.widgets.sliders['v_init'],
+        row(view.widgets.switches['real_time'], Div(text='Real-time update')),
+        view.widgets.buttons['run'],
+        view.DOM_elements['runtime'],
+        )
+)
 
 # ------------------------------------------------------------------------------------
 ## Validation tab

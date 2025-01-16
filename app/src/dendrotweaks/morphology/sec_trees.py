@@ -400,7 +400,7 @@ class Domain:
         self.inserted_mechanisms[mechanism.name] = mechanism
         for sec in self.sections:
             sec.insert_mechanism(mechanism.name)
-        mechanism._domains.add(self)
+        mechanism.domains[self.name] = self
 
 
     def uninsert_mechanism(self, mechanism):
@@ -412,13 +412,13 @@ class Domain:
         mechanism : Mechanism
             The mechanism to be uninserted from the domain.
         """
-        if mechanism not in self.inserted_mechanisms:
+        if mechanism.name not in self.inserted_mechanisms:
             warnings.warn(f'Mechanism {mechanism} not inserted in domain {self.name}.')
             return
-        self.inserted_mechanisms.pop(mechanism)
+        self.inserted_mechanisms.pop(mechanism.name)
         for sec in self.sections:
-            sec.uninsert_mechanism(mechanism)
-        mechanism._domains.remove(self)
+            sec.uninsert_mechanism(mechanism.name)
+        mechanism.domains.pop(self.name)
 
 
     def add_section(self, sec: Section):
@@ -438,7 +438,7 @@ class Domain:
         sec.domain = self.name
         for mech_name in self.inserted_mechanisms:
             sec.insert_mechanism(mech_name)
-        self._sections.add(sec)
+        self._sections.append(sec)
 
 
     def remove_section(self, sec):

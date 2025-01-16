@@ -98,6 +98,15 @@ class Node():
             return []
         return [child for child in self.parent.children if child is not self]
 
+    @property
+    def nearest_neighbours(self):
+        """
+        Gets the nearest neighbours of the node.
+
+        Returns:
+            list: A list of nodes that share the same parent or children as the node.
+        """
+        return [self.parent] + self.children
 
 class Tree:
     """

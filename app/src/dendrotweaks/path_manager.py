@@ -42,7 +42,10 @@ class PathManager:
         Returns:
         - List[str]: A list of model file names.
         """
-        return os.listdir(self.path_to_data)
+        DIRS_TO_IGNORE = ['Default', 'Templates']
+        return [f for f in os.listdir(self.path_to_data)
+                if os.path.isdir(os.path.join(self.path_to_data, f))
+                and f not in DIRS_TO_IGNORE]
 
     def get_path(self, file_type: str) -> str:
         """

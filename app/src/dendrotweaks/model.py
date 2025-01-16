@@ -125,7 +125,7 @@ class Model():
 
     @property
     def domains(self):
-        return self.sec_tree.domains
+        return self.sec_tree.domains if self.sec_tree else {}
 
     @property
     def recordings(self):
@@ -324,9 +324,17 @@ class Model():
 
 
     def _add_default_segment_groups(self):
+        DOMAIN_TO_GROUP = {
+            'soma': 'somatic',
+            'axon': 'axonal',
+            'dend': 'dendritic',
+            'apic': 'apical',
+        }
+
         self.add_group('all', list(self.domains.keys()))
-        for domain in self.domains:
-            self.add_group(domain, [domain])
+        for domain_name in self.domains:
+            group_name = DOMAIN_TO_GROUP.get(domain_name, domain_name)
+            self.add_group(group_name, [domain_name])
 
     # ========================================================================
     # MECHANISMS
@@ -434,109 +442,92 @@ class Model():
             The name of the domain.
         sections : list[Section] or Callable
             The sections to include in the domain. If a callable is provided,
-            it should be a filter function applied to the list of all sections.
+            it should be a filter function applied to the list of all sections
+            of the cell.
         """
         if isinstance(sections, Callable):
             sections = self.get_sections(sections)
-
-        if all(sec.domain == domain_name for sec in sections):
-            warnings.warn(f'All sections are already in domain {domain_name}.')
-            return
-
-        self._remove_selected_sections_from_existing_domains(sections)
-
+            
         if domain_name not in self.domains:
             self._create_domain(domain_name, sections)
         else:
             self._extend_domain(domain_name, sections)
-
-    def remove_selected_sections_from_existing_domains(self, sections):
-        """
-        """
-        for domain in self.domains.values():
-            
-            overlapping_sections = [sec for sec in sections 
-                                    if sec in domain]
-
-            for sec in overlapping_sections:
-                if sec.domain == domain.name:
-                    continue
-                domain.remove_section(sec)
-
-            if domain.is_empty():
-                self.remove_empty_domain(domain.name)
-
-    def remove_empty_domain(self, domain_name):
-        """
-        """
-        domain = self.domains.pop(domain_name)
-        self._remove_params_of_uninserted_mechanisms(domain)
-        self._remove_empty_groups()
-
-    def _remove_params_of_uninserted_mechanisms(self, domain):
-        uninserted_mechanisms = [mech for mech in domain.inserted_mechanisms.values()
-                                if not mech.is_inserted()]
-        for mech in uninserted_mechanisms:
-            warnings.warn(f'Mechanism {mech.name} is not inserted in any domain and will be removed.')
-            self._remove_mechanism_params(mech)
-
-    def _remove_empty_groups(self):
-        empty_groups = [group for group in self._groups 
-                        if not any(sec in group 
-                        for sec in self.sec_tree.sections)]
-        for group in empty_groups:
-            warnings.warn(f'Group {group.name} is empty and will be removed.')
-            self.remove_group(group.name)
         
 
     def _create_domain(self, domain_name, sections):
         """
         Creates a new domain with the given sections.
         """
-        self.domains[domain_name] = Domain(domain_name)
-
-        domain = self.domains[domain_name]
-        
+        print(f'Creating domain {domain_name}...')
+        # 1 Create a new domain
+        domain = Domain(domain_name)
+        # 2 Remove sections from existing domains
+        self.remove_selected_sections_from_existing_domains(sections)
+        # 3 Add sections to new domain
         for sec in sections:
-            # self._remove_section_from_old_domain(sec)
             domain.add_section(sec)
-
+        # 4 Add domain groups
         self._add_domain_groups(domain.name)
-        # self._remove_empty_groups()
+        # 5 Add domain to the domain dictionary
+        self.domains[domain_name] = domain
 
     def _extend_domain(self, domain_name, sections):
         """
         Extends an existing domain with new sections.
         """
-
-        domain = self.domains[domain_name]
-
-        for sec in sections:
-            if sec.domain == domain.name:
-                continue
-            # self._remove_section_from_old_domain(sec)
+        print(f'Extending domain {domain_name}...')
+        # 1 Get the domain
+        domain = self.domains.get(domain_name)
+        # 2 Remove sections from existing domains, 
+        # but only if they are not already in the target domain
+        sections_not_in_domain = [sec for sec in sections if sec.domain != domain_name]
+        if not sections_not_in_domain:
+            warnings.warn(f'All sections are already in domain {domain_name}.')
+            return
+        self.remove_selected_sections_from_existing_domains(sections_not_in_domain)
+        # 3 Add sections to domain
+        for sec in sections_not_in_domain:
             domain.add_section(sec)
 
-        # self._remove_empty_groups()
-        
 
-    # def _remove_section_from_old_domain(self, sec):
-        
-    #     old_domain = self.domains[sec.domain]
-    #     old_domain.remove_section(sec)
+    def remove_selected_sections_from_existing_domains(self, sections):
+        """
+        """
+        for domain in list(self.domains.values()):
+           
+            overlapping_sections = [sec for sec in sections 
+                                    if sec in domain]
 
-    #     for mech in old_domain.inserted_mechanisms.values():
-    #         if not mech.is_inserted():
-    #             self._remove_mechanism_params(mech)
-        
-    #     if old_domain.is_empty():
-    #         # 1. Remove domain from the list of domains
-    #         self.domains.pop(old_domain.name)
-    #         # 2. Remove domain from all mechanisms
-    #         for mech in self.mechanisms.values():
-    #             if mech.is_inserted() and old_domain.name in mech._domains:
-    #                 mech._domains.remove(old_domain.name)
-    #         warnings.warn(f'Domain {old_domain.name} removed from model.')
+            for sec in overlapping_sections:
+                domain.remove_section(sec)
+
+            if domain.is_empty():
+                self.remove_empty_domain(domain.name)
+
+
+    def remove_empty_domain(self, domain_name):
+        """
+        """
+        warnings.warn(f'Domain {domain_name} is empty and will be removed.')
+        domain = self.domains.pop(domain_name)
+        self._remove_params_of_uninserted_mechanisms()
+        self._remove_empty_groups()
+        self.groups['all'].domains.remove(domain_name)
+
+
+    def _remove_params_of_uninserted_mechanisms(self):
+        for mech in self.mechanisms.values():
+            if not mech.is_inserted():
+                warnings.warn(f'Mechanism {mech.name} is not inserted in any domain and will be removed.')
+                self._remove_mechanism_params(mech)
+
+
+    def _remove_empty_groups(self):
+        empty_groups = [group for group in self._groups 
+                        if not any(sec in group 
+                        for sec in self.sec_tree.sections)]
+        for group in empty_groups:
+            self.remove_group(group.name)
 
 
     def _add_domain_groups(self, domain_name):
@@ -565,6 +556,10 @@ class Model():
 
         domain.insert_mechanism(mech)
         self._add_mechanism_params(mech)
+
+        # TODO: Redistribute parameters if any group contains this domain
+        for param_name in self.params:
+            self.distribute(param_name)
         
 
     def _add_mechanism_params(self, mech):
@@ -601,13 +596,14 @@ class Model():
 
         domain.uninsert_mechanism(mech)
 
-        self._remove_params_of_uninserted_mechanisms(domain)
+        if not mech.is_inserted():
+            self._remove_mechanism_params(mech)
 
     
     def _remove_mechanism_params(self, mech):
         warnings.warn(f'Mechanism {mech.name} is not inserted in any domain. Removing its parameters.')
-        for param_name in mech.range_params_with_suffix:
-            self.params.pop(param_name, None)
+        for param_name in self.mechs_to_params.get(mech.name, []):
+            self.params.pop(param_name)
 
         if hasattr(mech, 'ion') and mech.ion in ['na', 'k', 'ca']:
             self._remove_equilibrium_potentials_on_mech_uninsert(mech.ion)
@@ -729,12 +725,16 @@ class Model():
                 value = distribution(seg._section(0.5).distance_to_root)
                 seg._section._ref.Ra = value
 
-    def set_section_param(self, param_name, value, domains=None):
+    def remove_distribution(self, param_name, group_name):
+        self.params[param_name].pop(group_name, None)
+        self.distribute(param_name)
 
-        domains = domains or self.domains
-        for sec in self.sec_tree.sections:
-            if sec.domain in domains:
-                setattr(sec._ref, param_name, value)
+    # def set_section_param(self, param_name, value, domains=None):
+
+    #     domains = domains or self.domains
+    #     for sec in self.sec_tree.sections:
+    #         if sec.domain in domains:
+    #             setattr(sec._ref, param_name, value)
 
     # ========================================================================
     # STIMULI
@@ -1016,20 +1016,21 @@ class Model():
         swc_file_name = data['metadata']['name']
         self.from_swc(swc_file_name)
         self.create_and_reference_sections_in_simulator()
-        for sec_idx, domain in data['domains'].items():
-            setattr(self.sec_tree.sections[int(sec_idx)], 'domain', domain)
+        
 
         self.add_default_mechanisms()
         self.add_mechanisms('mod', recompile=recompile)
 
-        for group_params in data['groups']:
-            self.add_group(**group_params)
-
-        for domain, mechanisms in data['domains_to_mechanisms'].items():
-            for mech_name in mechanisms:
+        for domain, domain_data in data['domains'].items():
+            for sec_idx in domain_data['sections']:
+                setattr(self.sec_tree.sections[int(sec_idx)], 'domain', domain)
+            for mech_name in domain_data['mechanisms']:
                 if mech_name == 'Independent':
                     continue
                 self.insert_mechanism(mech_name, domain)
+
+        for group_params in data['groups']:
+            self.add_group(**group_params)
         
         self.params = {
             param_name: {

@@ -145,7 +145,7 @@ class SimulationMixin():
         self.model.simulator.dt = new
 
     def update_celsius_callback(self, attr, old, new):
-        self.model.simulator.celsius = new
+        self.model.simulator.temperature = new
 
     def update_v_init_callback(self, attr, old, new):
         self.model.simulator.v_init = new

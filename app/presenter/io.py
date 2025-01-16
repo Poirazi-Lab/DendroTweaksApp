@@ -105,6 +105,8 @@ class IOMixin():
         # MISC ---------------------------------------------------
         self._attach_download_js()
 
+        self.view.widgets.multichoice['domains'].options = list(self.model.domains.keys())
+
 
     @log
     def create_morpohlogy(self):
@@ -166,7 +168,7 @@ class IOMixin():
         self.model.add_mechanisms('mod', recompile=self.view.widgets.switches['recompile'].active)
         # TODO: Verify that the mod files are loaded successfully
 
-        self.view.widgets.multichoice['mechanisms'].options = list(self.model.mechanisms.keys())
+        self.view.widgets.selectors['mechanism_to_insert'].options = list(self.model.mechanisms.keys())
         logger.debug(f'Loaded mechanisms: {self.model.mechanisms.keys()}')
 
 
@@ -193,6 +195,13 @@ class IOMixin():
         logger.info(f'Total nseg: {len(self.model.seg_tree)}')
 
         self._create_graph_renderer()
+
+        with remove_callbacks(self.view.widgets.selectors['group']):
+            self.view.widgets.selectors['group'].options = list(self.model.groups.keys())
+            self.view.widgets.selectors['group'].value = 'all'
+
+        with remove_callbacks(self.view.widgets.selectors['graph_param']):
+            self.view.widgets.selectors['graph_param'].value = 'domain'
 
 
     # =========================================================================

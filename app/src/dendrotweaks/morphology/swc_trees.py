@@ -69,6 +69,8 @@ class SWCNode(Node):
             f"  Coordinates: ({self.x}, {self.y}, {self.z})\n"
             f"  Radius: {self.r}\n"
             f"  Parent: {self.parent_idx}\n"
+            f"  Children: {[child.idx for child in self.children]}\n"
+            f"  Siblings: {[sibling.idx for sibling in self.siblings]}\n"
             f"  Section: {self._section.idx if self._section else 'None'}"
         )
         print(info)
@@ -305,7 +307,7 @@ class SWCTree(Tree):
 
     def plot(self, ax=None, edges=True, 
              annotate=False, projection='XY', 
-             hightlight=None):
+             highlight=None):
 
         if ax is None:
             fig, ax = plt.subplots(figsize=(10, 10))
@@ -330,8 +332,8 @@ class SWCTree(Tree):
                 ax.annotate(f'{pt.idx}', (coords[projection[0]][pt.idx], coords[projection[1]][pt.idx]), fontsize=8)
 
         # Highlight the specified node
-        if hightlight:
-            for pt in hightlight:
+        if highlight:
+            for pt in highlight:
                 ax.plot(coords[projection[0]][pt.idx], coords[projection[1]][pt.idx], 'o', color='C3', markersize=5)
 
         ax.set_xlabel(projection[0])

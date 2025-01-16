@@ -1,7 +1,7 @@
 import pprint
 from typing import List
 
-ALLOWED_INDEPENDENT_VARS = ['v', 'cai']
+ALLOWED_INDEPENDENT_VARS = ['cai', 'v']
 
 # Assumptions:
 # - Kinetic variables include the state variable name and 
@@ -103,11 +103,15 @@ class AbstracSyntaxTree():
     def independent_var_name(self):
         """
         Returns the name of the independent variable.
+        Prefers 'cai' over 'v' if both are present.
         """
-        for var in self.assigned_vars:
-            if any(indep_var in var.lower() 
-                   for indep_var in ALLOWED_INDEPENDENT_VARS):
-                return var
+        independent_vars = [var for var in self.assigned_vars 
+                            if any(indep_var in var.lower() 
+                                   for indep_var in ALLOWED_INDEPENDENT_VARS)]
+        if 'cai' in independent_vars:
+            return 'cai'
+        elif 'v' in independent_vars:
+            return 'v'
         raise Exception('Independent variable not found')
 
     def is_voltage_dependent(self):

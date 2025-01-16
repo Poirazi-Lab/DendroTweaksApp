@@ -40,9 +40,8 @@ class NavigationMixin():
         self.update_iclamp_switch()
         self.update_record_switch()
 
-        # if self.view.widgets.tabs['section'].visible:
-        #     if self.view.widgets.tabs['section'].active == 1:
-        #         self.update_distribution_plot()
+        if self.view.widgets.tabs['section'].active == 3:
+            self._update_distribution_plot()
 
     @log
     def update_selected_sections(self, old, new):
