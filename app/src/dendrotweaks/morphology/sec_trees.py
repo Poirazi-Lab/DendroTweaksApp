@@ -148,20 +148,20 @@ class Section(Node):
 
     @property
     def distances(self):
-        dx = np.diff(self.xs)
-        dy = np.diff(self.ys)
-        dz = np.diff(self.zs)
+        # Convert points to a NumPy array of shape (n, 3)
+        coords = np.array([[pt.x, pt.y, pt.z] for pt in self.pts3d])
 
-        distances = np.sqrt(dx**2 + dy**2 + dz**2)
-        # distances = [np.sqrt((pt.x - pt.parent.x)**2 +
-        #                      (pt.y - pt.parent.y)**2 +
-        #                      (pt.z - pt.parent.z)**2)
-        #              for pt in self.pts3d if pt.parent]
-        distances = np.cumsum(distances)
+        # Calculate pairwise differences between consecutive points
+        deltas = np.diff(coords, axis=0)
 
-        distances = np.insert(distances, 0, 0)
-        return distances
-        # return distances - distances[0]
+        # Calculate Euclidean distances between consecutive points
+        segment_distances = np.sqrt(np.sum(deltas**2, axis=1))
+
+        # Calculate cumulative distances and prepend a zero
+        cumulative_distances = np.insert(np.cumsum(segment_distances), 0, 0)
+
+        return cumulative_distances
+
 
     @property
     def center(self):
@@ -260,6 +260,38 @@ class Section(Node):
 
     # GEOMETRIC METHODS
 
+    # def distance_to_root(self, relative_position: float = 0) -> float:
+    #     """
+    #     Calculate the distance from the section to the root at a given relative position.
+
+    #     Parameters
+    #     ----------
+    #     relative_position : float
+    #         The position along the section's normalized length [0, 1].
+
+    #     Returns
+    #     -------
+    #     float
+    #         The distance from the section to the root.
+
+    #     Important
+    #     ---------
+    #     Assumes that we always attach the 0 end of the child.
+    #     """
+    #     if not (0 <= relative_position <= 1):
+    #         raise ValueError('Relative position must be between 0 and 1.')
+
+        
+    #     if self.parent:
+    #         origin = self.pts3d[0]
+    #         dist_to_sec_origin = relative_position * self.length
+    #     else:
+    #         origin = [pt for pt in self.pts3d if not pt.parent][0]
+    #         origin_idx = self.pts3d.index(origin) 
+    #         dist_to_sec_origin = 0
+
+    #     return origin.distance_to_root + dist_to_sec_origin
+
     def distance_to_root(self, relative_position: float = 0) -> float:
         """
         Calculate the distance from the section to the root at a given relative position.
@@ -281,16 +313,14 @@ class Section(Node):
         if not (0 <= relative_position <= 1):
             raise ValueError('Relative position must be between 0 and 1.')
 
-        
+        dist_to_sec_origin = relative_position * self.length
         if self.parent:
-            origin = self.pts3d[0]
-            dist_to_sec_origin = relative_position * self.length
-        else:
-            origin = [pt for pt in self.pts3d if not pt.parent][0]
-            origin_idx = self.pts3d.index(origin) 
-            dist_to_sec_origin = 0
+            if self.parent.domain == self.domain:
+                return dist_to_sec_origin + self.parent.distance_to_root(1)
+            return dist_to_sec_origin 
+        return 0
+        # TODO: Is it correct to calculate distance to soma surface, not the center
 
-        return origin.distance_to_root + dist_to_sec_origin
 
     # PLOTTING METHODS
 
@@ -562,3 +592,27 @@ class SectionTree(Tree):
         ax.set_xlabel(projection[0])
         ax.set_ylabel(projection[1])
         ax.set_aspect('equal')
+
+    def plot_radii_distribution(self, ax=None, highlight=None):
+        if ax is None:
+            fig, ax = plt.subplots(figsize=(8, 3))
+
+        for sec in self.sections:
+            if highlight and sec.idx in highlight:
+                ax.plot(
+                    [pt.distance_to_root for pt in sec.pts3d], 
+                    sec.radii, 
+                    marker='.', 
+                    color='red', 
+                    zorder=2
+                )
+            else:
+                ax.plot(
+                    [pt.distance_to_root for pt in sec.pts3d], 
+                    sec.radii, 
+                    marker='.', 
+                    color='gray', 
+                    zorder=1
+                )
+        ax.set_xlabel('Distance from root')
+        ax.set_ylabel('Radius')

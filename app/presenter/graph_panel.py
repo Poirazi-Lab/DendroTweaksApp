@@ -50,6 +50,7 @@ class GraphMixin():
         for seg in self.model.seg_tree:
             radius = int(200/np.sqrt(total_nseg)) if seg._section.domain == 'soma' else int(150/np.sqrt(total_nseg))
             self.G.add_node(seg.idx, 
+                            x = round(seg.x, 3),
                             domain=seg._section.domain,
                             cm = seg._ref.cm,
                             Ra = seg._section._ref.Ra,
@@ -120,6 +121,9 @@ class GraphMixin():
 
 
     def _create_graph_renderer(self):
+
+        self.selected_secs = set()
+        self.selected_segs = []
         
         # REMOVE OLD GRAPH RENDERER
         self.view.figures['graph'].renderers = []

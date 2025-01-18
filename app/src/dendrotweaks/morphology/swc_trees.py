@@ -178,27 +178,29 @@ class SWCTree(Tree):
             # if soma has 1PS notation, create two new nodes
             # using the first node of the soma, its radius
             pt = self.soma_pts3d[0]
-            self._nodes.remove(pt)
 
-            r = pt.r
-            x = [pt.x] * 3
-            y = [pt.y, pt.y - r, pt.y + r]
-            z = [pt.z] * 3
-            r = [r] * 3
-            parent_idx = [-1, 1, 1]
+            pt_left = SWCNode(
+                idx=1,
+                type_idx=1,
+                x=pt.x - pt.r,
+                y=pt.y,
+                z=pt.z,
+                r=pt.r,
+                parent_idx=pt.idx)
 
-            new_nodes = [SWCNode(idx=i, 
-                                 type_idx=1, 
-                                 x=x[i], y=y[i], z=z[i], r=r[i], 
-                                 parent_idx=parent_idx[i]) for i in range(3)]
+            pt_right = SWCNode(
+                idx=2,
+                type_idx=1,
+                x=pt.x + pt.r,
+                y=pt.y,
+                z=pt.z,
+                r=pt.r,
+                parent_idx=pt.idx)
 
-            self._nodes = new_nodes + self._nodes
+            self._attach_subtree(pt_right, pt.idx)
+            self._attach_subtree(pt_left, pt.idx)
 
-            for node in new_nodes:
-                node._section = self.root._section
-
-            # Update the parent index of the root node
-            soma = Section(idx=0, parent_idx=-1, pts3d=new_nodes)
+            print('Soma converted to 3PS notation.')
             
         elif self.soma_notation =='contour':
             # if soma has contour notation, take the average
@@ -302,10 +304,27 @@ class SWCTree(Tree):
             pt.x, pt.y, pt.z = rotated_coords
 
 
+    # I/O METHODS
+
+    def to_swc(self, path_to_file):
+        """
+        Save the tree to an SWC file.
+        """
+        df = self.df.astype({
+            'idx': int,
+            'type_idx': int,
+            'x': float,
+            'y': float,
+            'z': float,
+            'r': float,
+            'parent_idx': int
+        })
+        df.to_csv(path_to_file, sep=' ', index=False, header=False)
+
 
     # PLOTTING METHODS
 
-    def plot(self, ax=None, edges=True, 
+    def plot(self, ax=None, nodes=True, edges=True, 
              annotate=False, projection='XY', 
              highlight=None):
 
@@ -324,7 +343,8 @@ class SWCTree(Tree):
                                'Z': [edge[0].z, edge[1].z]}
                 ax.plot(edge_coords[projection[0]], edge_coords[projection[1]], color='C1')
 
-        ax.plot(coords[projection[0]], coords[projection[1]], '.', color='C0', markersize=5)
+        if nodes:
+            ax.plot(coords[projection[0]], coords[projection[1]], '.', color='C0', markersize=5)
 
         # Annotate the node index
         if annotate and len(self.pts3d) < 50:

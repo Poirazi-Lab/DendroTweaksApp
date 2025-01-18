@@ -147,16 +147,24 @@ class Tree:
     @property
     def is_connected(self):
         """
-        Checks if all nodes are connected to the root.
+        Checks if all nodes in the tree are connected 
+        i.e. reachable from the root. 
+        
 
         Returns:
-            bool: True if all nodes are reachable from the root, False otherwise.
+            bool: True if the root node's subtree contains exactly the same nodes
+        as the entire tree. False otherwise.
         """
-        return len(self._nodes) == len(self.root.subtree)
+        nodes_set = set(self._nodes)
+        subtree_set = set(self.root.subtree)
+        return nodes_set == subtree_set
 
     @property
     def is_sorted(self):
-        return all([node.idx == i for i, node in enumerate(self._nodes)])
+        if not all([node.idx == i for i, node in enumerate(self._nodes)]):
+            return False
+        traversal_indices = [node.idx for node in self.traverse()]
+        return traversal_indices == sorted(traversal_indices)
 
     @property
     def bifurcations(self):
@@ -194,7 +202,7 @@ class Tree:
 
         if len(root_nodes) != 1:
             print('Root nodes:', root_nodes)
-            raise ValueError('Tree must have exactly one root node.')
+            raise ValueError(f'Tree must have exactly one root node. Found: {root_nodes}')
 
         return root_nodes[0]
 
@@ -291,7 +299,7 @@ class Tree:
 
     def _detach_node_from_parent(self, idx):
         """
-        Detach a node from the tree.
+        Detach a node from its parent.
 
         Parameters:
             idx (int): The index of the node to detach.
@@ -305,6 +313,11 @@ class Tree:
             node.parent = None
             node.parent_idx = -1
 
+    def _detach_subtree(self, node):
+        self._detach_node_from_parent(node.idx)
+        for n in node.subtree:
+            self._nodes.remove(n)
+
     def _attach_node_to_parent(self, node, parent_idx):
         """
         Attach a node to a parent in the tree.
@@ -316,7 +329,7 @@ class Tree:
         Raises:
             ValueError: If the node is already in the parent's subtree.
         """
-        parent = self._nodes[parent_idx]
+        parent = next(n for n in self._nodes if n.idx == parent_idx)
 
         if node in parent.subtree:
             raise ValueError('Cannot attach a node to its own subtree.')
@@ -327,6 +340,11 @@ class Tree:
         node.parent = parent
         node.parent_idx = parent.idx
         parent.children = sorted(parent.children + [node], key=lambda x: x.idx)
+
+    def _attach_subtree(self, node, parent_idx):
+        parent = next(n for n in self._nodes if n.idx == parent_idx)
+        self._attach_node_to_parent(node, parent_idx)
+        self._nodes.extend(node.subtree)
 
     def insert_node(self, idx, new_node):
         """
@@ -360,6 +378,20 @@ class Tree:
         self._nodes.insert(idx, new_node)
         # Attach the current node to the new node
         self._attach_node_to_parent(current_node, new_node.idx)
+
+    def reposition_subtree(self, node, new_parent_node, origin=None):
+        """
+        Note
+        ----
+        Treats differently the children of the root node.
+        """
+        parent = node.parent
+        if parent is None:
+            raise ValueError('Cannot reposition the root node.')
+        origin = origin or parent
+        self._detach_subtree(node)
+        shift_coordinates(node.subtree, origin=parent, target=new_parent_node)
+        self._attach_subtree(node, new_parent_node.idx)
 
     def remove_subtree(self, idx):
         """
@@ -412,3 +444,13 @@ class Tree:
         print('parent |   idx')
         print('-'*15)
         print_node(self.root)
+
+
+
+def shift_coordinates(points, origin, target):
+    origin_vector = (origin.x, origin.y, origin.z)
+    target_vector = (target.x, target.y, target.z)
+    for pt in points:
+        pt.x = pt.x - origin_vector[0] + target_vector[0]
+        pt.y = pt.y - origin_vector[1] + target_vector[1]
+        pt.z = pt.z - origin_vector[2] + target_vector[2]

@@ -50,6 +50,10 @@ class Segment(Node):
     def distance_to_root(self):
         return self._section.distance_to_root(self.x)
 
+    @property
+    def distance_to_parent_domain(self):
+        return self._section.distance_to_parent_domain(self.x)
+
     def set_param_value(self, param_name, value):
         if hasattr(self._ref, param_name):
             setattr(self._ref, param_name, value)
