@@ -53,30 +53,6 @@ class Section(Node):
             return self.segments[matching_segs.index(True)]
         raise ValueError('No segment found at location x.')
         
-        
-
-    # def __call__(self, x: float):
-    #     """
-    #     Return the Segment at a given position `x` in [0, 1].
-
-    #     Parameters
-    #     ----------
-    #     x : float
-    #         The position along the section's normalized length [0, 1].
-
-    #     Returns
-    #     -------
-    #     Segment
-    #         The custom Segment object corresponding to the location `x`.
-    #     """
-    #     if self._ref is None:
-    #         raise ValueError('Section is not referenced in NEURON.')
-    #     if not (0.0 <= x <= 1.0):
-    #         raise ValueError('Location x must be in the range [0, 1].')
-        
-    #     idx = bisect_left(self.seg_borders, x) - 1
-    #     return self.segments[max(0, idx)]
-
 
     def __iter__(self):
         """
@@ -148,20 +124,11 @@ class Section(Node):
 
     @property
     def distances(self):
-        # Convert points to a NumPy array of shape (n, 3)
         coords = np.array([[pt.x, pt.y, pt.z] for pt in self.pts3d])
-
-        # Calculate pairwise differences between consecutive points
         deltas = np.diff(coords, axis=0)
-
-        # Calculate Euclidean distances between consecutive points
-        segment_distances = np.sqrt(np.sum(deltas**2, axis=1))
-
-        # Calculate cumulative distances and prepend a zero
-        cumulative_distances = np.insert(np.cumsum(segment_distances), 0, 0)
-
-        return cumulative_distances
-
+        frusta_distances = np.sqrt(np.sum(deltas**2, axis=1))
+        cumulative_frusta_distances = np.insert(np.cumsum(frusta_distances), 0, 0)
+        return cumulative_frusta_distances
 
     @property
     def center(self):
@@ -186,7 +153,7 @@ class Section(Node):
         """
         Create a NEURON section.
         """
-        self._ref = h.Section(name=f'Sec_{self.idx}')
+        self._ref = h.Section() # name=f'Sec_{self.idx}'
         if self.parent is not None:
             # TODO: Attaching basal to soma 0
             if self.parent.parent is None: # if parent is soma
@@ -241,57 +208,6 @@ class Section(Node):
         return round(np.mean(seg_values), 16)
 
 
-    # def set_param_value(self, parameter_name, distribution_function):
-    #     """
-    #     Update the parameter of the section.
-    #     """
-    #     if not isinstance(distribution_function, Callable):
-    #         raise ValueError('Distribution function must be callable.')
-    #     if self.segments and all([hasattr(seg._ref, parameter_name) for seg in self.segments]):
-    #         # print(f'Setting {parameter_name} in segments')
-    #         for seg in self.segments:
-    #             seg.set_param_value(parameter_name, distribution_function)
-    #     elif hasattr(self._ref, parameter_name):
-    #         # print(f'Setting {parameter_name} in section')
-    #         setattr(self._ref, parameter_name,
-    #                 distribution_function(self.distance_to_root(0.5)))
-    #     else:
-    #         raise ValueError(f'Parameter {parameter_name} not found in section.')
-
-    # GEOMETRIC METHODS
-
-    # def distance_to_root(self, relative_position: float = 0) -> float:
-    #     """
-    #     Calculate the distance from the section to the root at a given relative position.
-
-    #     Parameters
-    #     ----------
-    #     relative_position : float
-    #         The position along the section's normalized length [0, 1].
-
-    #     Returns
-    #     -------
-    #     float
-    #         The distance from the section to the root.
-
-    #     Important
-    #     ---------
-    #     Assumes that we always attach the 0 end of the child.
-    #     """
-    #     if not (0 <= relative_position <= 1):
-    #         raise ValueError('Relative position must be between 0 and 1.')
-
-        
-    #     if self.parent:
-    #         origin = self.pts3d[0]
-    #         dist_to_sec_origin = relative_position * self.length
-    #     else:
-    #         origin = [pt for pt in self.pts3d if not pt.parent][0]
-    #         origin_idx = self.pts3d.index(origin) 
-    #         dist_to_sec_origin = 0
-
-    #     return origin.distance_to_root + dist_to_sec_origin
-
     def distance_to_root(self, relative_position: float = 0) -> float:
         """
         Calculate the distance from the section to the root at a given relative position.
@@ -320,6 +236,46 @@ class Section(Node):
             return dist_to_sec_origin 
         return 0
         # TODO: Is it correct to calculate distance to soma surface, not the center
+
+    
+    def detach_from_parent(self):
+        """
+        Detach the section from the parent.
+        """
+        # In SectionTree
+        super().detach_from_parent()
+        # In NEURON
+        if self._ref:
+            h.disconnect(sec=self._ref) #from parent
+        # In SWCTree
+        self.pts3d[0].detach_from_parent()
+        # In SegmentTree
+        if self.segments:
+            self.segments[0].detach_from_parent()
+
+    def attach_to_parent(self, parent):
+        """
+        Attaches the section to a parent section.
+        """
+        # In SectionTree
+        super().attach_to_parent(parent)
+        # In NEURON
+        if self._ref:
+            if self.parent is not None:
+                if self.parent.parent is None: # if parent is soma
+                    self._ref.connect(self.parent._ref(0.5))
+                else:
+                    self._ref.connect(self.parent._ref(1))
+                
+        # In SWCTree
+        if self.parent is not None:
+            if self.parent.parent is None: # if parent is soma
+                self.pts3d[0].attach_to_parent(self.parent.pts3d[1]) # attach to the middle of the parent
+            else:
+                self.pts3d[0].attach_to_parent(parent.pts3d[-1]) # attach to the end of the parent
+        # In SegmentTree
+        if self.segments:
+            self.segments[0].attach_to_parent(parent.segments[-1])
 
 
     # PLOTTING METHODS
@@ -500,6 +456,8 @@ class SectionTree(Tree):
     def __init__(self, sections: list[Section]) -> None:
         super().__init__(sections)
         self.domains = self._init_domains()
+        self._swc_tree = None
+        self._seg_tree = None
 
     def _init_domains(self):
         """
@@ -534,15 +492,51 @@ class SectionTree(Tree):
             sec.parent_idx = sec.parent.idx if sec.parent else -1
             count_sections += 1
 
-            for pt in sec.pts3d:
-                pt.idx = count_pts3d
-                pt.parent_idx = pt.parent.idx if pt.parent else -1
+            if sec.parent is None:
+                sec.pts3d[1].idx = count_pts3d
+                sec.pts3d[1].parent_idx = -1
                 count_pts3d += 1
+                sec.pts3d[0].idx = count_pts3d
+                sec.pts3d[0].parent_idx = sec.pts3d[0].parent.idx
+                count_pts3d += 1
+                sec.pts3d[2].idx = count_pts3d
+                sec.pts3d[2].parent_idx = sec.pts3d[2].parent.idx
+                count_pts3d += 1
+            else:
+                for pt in sec.pts3d:
+                    pt.idx = count_pts3d
+                    pt.parent_idx = pt.parent.idx
+                    count_pts3d += 1
 
             for seg in sec:
                 seg.idx = count_segments
                 seg.parent_idx = seg.parent.idx if seg.parent else -1
                 count_segments += 1
+
+    def sort(self):
+        super().sort()
+        self._swc_tree.sort()
+        if self._seg_tree:
+            self._seg_tree.sort()
+
+    def remove_subtree(self, section):
+        super().remove_subtree(section)
+        # Domains
+        for domain in self.domains.values():
+            for sec in section.subtree:
+                if sec in domain.sections:
+                    domain.remove_section(sec)
+        # Points
+        self._swc_tree.remove_subtree(section.pts3d[0])
+        # Segments
+        if self._seg_tree:
+            self._seg_tree.remove_subtree(section.segments[0])
+        # NEURON
+        if section._ref:
+            h.disconnect(sec=section._ref)
+            for sec in section.subtree:
+                h.delete_section(sec=sec._ref)
+                
 
     def plot_sections_as_matrix(self, ax=None):
         """

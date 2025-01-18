@@ -34,11 +34,21 @@ class Node():
         """
         self.idx = int(idx)
         self.parent_idx = int(parent_idx)
-        self.parent = None
+        self._parent = None
         self.children = []
 
     def __repr__(self):
         return f'•{self.idx}'
+
+    @property
+    def parent(self):
+        return self._parent
+
+    @parent.setter
+    def parent(self, parent):
+        self._parent = parent
+        self.parent_idx = parent.idx if parent else -1
+
 
     @property
     def topological_type(self) -> str:
@@ -107,6 +117,39 @@ class Node():
             list: A list of nodes that share the same parent or children as the node.
         """
         return [self.parent] + self.children
+
+    def attach_to_parent(self, parent):
+        """
+        Attach the node to a parent node.
+        
+        Warning
+        -------
+        This method should not be used directly when working with trees
+        as it doesn't add the node to the tree's list of nodes. 
+        Use the `Tree` class to insert nodes into the tree.
+
+        Args:
+            parent (Node): The parent node to attach the node to.
+        """
+        if parent in self.subtree:
+            raise ValueError('Attaching a node will create a loop in the tree.')
+        self.parent = parent
+        if self not in parent.children:
+            parent.children.append(self)
+        # parent.childrensorted(parent.children + [node], key=lambda x: x.idx)
+
+    def detach_from_parent(self):
+        """
+        Detach the node from its parent.
+
+        Examples
+        --------
+        for child in node.children: child.detach_from_parent()
+
+        """
+        if self.parent:
+            self.parent.children.remove(self)
+            self.parent = None
 
 class Tree:
     """
@@ -222,8 +265,7 @@ class Tree:
             if node is not self.root:
                 for parent_node in self._nodes:
                     if node.parent_idx == parent_node.idx:
-                        node.parent = parent_node
-                        parent_node.children.append(node)
+                        node.attach_to_parent(parent_node)
                         break
         
         if not self.is_connected:
@@ -297,87 +339,65 @@ class Tree:
 
     # INSERTION AND REMOVAL METHODS
 
-    def _detach_node_from_parent(self, idx):
+    def remove_node(self, node):
         """
-        Detach a node from its parent.
+        Removes a node from the tree.
 
-        Parameters:
-            idx (int): The index of the node to detach.
+        Args:
+            node (Node): The node to remove.
+
+        Raises:
+            ValueError: If the tree is not sorted.
         """
-        if not self.is_sorted:
-            raise ValueError('Tree must be sorted to detach a node.')
+        if node.parent is None:
+            raise ValueError('Cannot remove the root node.')
+        parent = node.parent
+        children = node.children[:]
+        for child in children:
+            child.detach_from_parent()
+            child.attach_to_parent(parent)
+        node.detach_from_parent()
+        self._nodes.remove(node)
 
-        node = self._nodes[idx]
-        if node.parent:
-            node.parent.children.remove(node)
-            node.parent = None
-            node.parent_idx = -1
 
-    def _detach_subtree(self, node):
-        self._detach_node_from_parent(node.idx)
+    def remove_subtree(self, node):
+        node.detach_from_parent()
         for n in node.subtree:
             self._nodes.remove(n)
 
-    def _attach_node_to_parent(self, node, parent_idx):
-        """
-        Attach a node to a parent in the tree.
 
-        Args:
-            node (Node): The node to attach.
-            parent_idx (int): The index of the node to attach the new node to.
-
-        Raises:
-            ValueError: If the node is already in the parent's subtree.
-        """
-        parent = next(n for n in self._nodes if n.idx == parent_idx)
-
-        if node in parent.subtree:
-            raise ValueError('Cannot attach a node to its own subtree.')
-
-        if node.parent:
-            node.parent.children.remove(node)
-
-        node.parent = parent
-        node.parent_idx = parent.idx
-        parent.children = sorted(parent.children + [node], key=lambda x: x.idx)
-
-    def _attach_subtree(self, node, parent_idx):
-        parent = next(n for n in self._nodes if n.idx == parent_idx)
-        self._attach_node_to_parent(node, parent_idx)
+    def add_subtree(self, node, parent):
+        node.attach_to_parent(parent)
         self._nodes.extend(node.subtree)
 
-    def insert_node(self, idx, new_node):
+
+    def insert_node_after(self, new_node, existing_node):
         """
-        Insert a node at a given index in the tree.
-
-        Args:
-            idx (int): The index to insert the new node.
-            new_node (Node): The node to insert.
-
-        Raises:
-            ValueError: If the node already exists in the tree.
-            ValueError: If the tree is not sorted.
+        Insert a node after a given node in the tree.
         """
         if new_node in self._nodes:
             raise ValueError('Node already exists in the tree.')
-        if not self.is_sorted:
-            raise ValueError('Tree must be sorted to insert a node.')
 
-        new_node.idx = idx
-        current_node = self._nodes[idx]
-        parent = current_node.parent
-        # Detach the current node from its parent
-        self._detach_node_from_parent(idx)
-        # Shift the indices of the following nodes by 1
-        for i, node in enumerate(self._nodes[idx:], start=idx+1):
-            node.idx = i
-            node.parent_idx = node.parent.idx if node.parent else -1
-        # Attach the new node to the parent of the current node
-        self._attach_node_to_parent(new_node, parent.idx)
-        # Insert the new node at the given index in the list of nodes
-        self._nodes.insert(idx, new_node)
-        # Attach the current node to the new node
-        self._attach_node_to_parent(current_node, new_node.idx)
+        for child in existing_node.children:
+            child.detach_from_parent()
+            child.attach_to_parent(new_node)
+        new_node.attach_to_parent(existing_node)
+
+        self._nodes.append(new_node)
+
+
+    def insert_node_before(self, new_node, existing_node):
+        """
+        Insert a node before a given node in the tree.
+        """
+        if new_node in self._nodes:
+            raise ValueError('Node already exists in the tree.')
+        new_node.attach_to_parent(existing_node.parent)
+        existing_node.detach_from_parent()
+        existing_node.attach_to_parent(new_node)
+        
+        self._nodes.append(new_node)
+
 
     def reposition_subtree(self, node, new_parent_node, origin=None):
         """
@@ -385,40 +405,18 @@ class Tree:
         ----
         Treats differently the children of the root node.
         """
-        parent = node.parent
-        if parent is None:
+        if node.parent is None:
             raise ValueError('Cannot reposition the root node.')
-        origin = origin or parent
-        self._detach_subtree(node)
-        shift_coordinates(node.subtree, origin=parent, target=new_parent_node)
-        self._attach_subtree(node, new_parent_node.idx)
+        origin = origin or node.parent
+        self.remove_subtree(node)
+        shift_coordinates(node.subtree, 
+                          origin=origin, 
+                          target=new_parent_node)
+        self.add_subtree(node, new_parent_node)
 
-    def remove_subtree(self, idx):
-        """
-        Remove a node and its subtree from the tree.
 
-        Args:
-            idx (int): The index of the node to remove.
-
-        Raises:
-            ValueError: If the tree is not sorted.
-        """
-        if not self.is_sorted:
-            raise ValueError('Tree must be sorted to remove a subtree.')
-
-        subtree_root = self._nodes[idx]
-        # Remove the node from its parent's children list
-        if subtree_root.parent:
-            subtree_root.parent.children.remove(subtree_root)
-        # Remove the node and its subtree from the tree
-        for node in subtree_root.subtree:
-            self._nodes.remove(node)
-        # Update the indices for the following nodes
-        for i, node in enumerate(self._nodes[idx:], start=idx):
-            node.idx = i
-            node.parent_idx = node.parent.idx if node.parent else -1
-        
     # VISUALIZATION METHODS
+
 
     def topology(self):
         """

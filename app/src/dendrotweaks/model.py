@@ -514,12 +514,19 @@ class Model():
         self._remove_empty_groups()
         self.groups['all'].domains.remove(domain_name)
 
+    def remove_empty_domains(self):
+        """
+        """
+        empty_domains = [domain for domain in self.domains.values() if domain.is_empty()]
+        for domain in empty_domains:
+            self.remove_empty_domain(domain.name)
 
     def _remove_params_of_uninserted_mechanisms(self):
-        for mech in self.mechanisms.values():
-            if not mech.is_inserted():
-                warnings.warn(f'Mechanism {mech.name} is not inserted in any domain and will be removed.')
-                self._remove_mechanism_params(mech)
+        uninserted_mechs = [mech for mech in self.mechanisms.values()
+                            if not mech.is_inserted()]
+        for mech in uninserted_mechs:
+            warnings.warn(f'Mechanism {mech.name} is not inserted in any domain and will be removed.')
+            self._remove_mechanism_params(mech)
 
 
     def _remove_empty_groups(self):

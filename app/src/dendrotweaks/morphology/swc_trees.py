@@ -163,51 +163,6 @@ class SWCTree(Tree):
             )
 
 
-
-    # COORDINATE TRANSFORMATION METHODS
-
-    def soma_to_3PS_notation(self):
-        """
-        Convert the soma to 3PS notation.
-        """
-        if self.soma_notation == '3PS':
-            print('Soma is already in 3PS notation.')
-            return
-
-        if self.soma_notation == '1PS':
-            # if soma has 1PS notation, create two new nodes
-            # using the first node of the soma, its radius
-            pt = self.soma_pts3d[0]
-
-            pt_left = SWCNode(
-                idx=1,
-                type_idx=1,
-                x=pt.x - pt.r,
-                y=pt.y,
-                z=pt.z,
-                r=pt.r,
-                parent_idx=pt.idx)
-
-            pt_right = SWCNode(
-                idx=2,
-                type_idx=1,
-                x=pt.x + pt.r,
-                y=pt.y,
-                z=pt.z,
-                r=pt.r,
-                parent_idx=pt.idx)
-
-            self._attach_subtree(pt_right, pt.idx)
-            self._attach_subtree(pt_left, pt.idx)
-
-            print('Soma converted to 3PS notation.')
-            
-        elif self.soma_notation =='contour':
-            # if soma has contour notation, take the average
-            # distance of the nodes from the center of the soma
-            # and use it as radius, create 3 new nodes
-            ...
-
     def shift_coordinates_to_soma_center(self):
         """
         Shift all coordinates so that the soma center is at the origin (0, 0, 0).
@@ -348,8 +303,12 @@ class SWCTree(Tree):
 
         # Annotate the node index
         if annotate and len(self.pts3d) < 50:
-            for pt in self.pts3d:
-                ax.annotate(f'{pt.idx}', (coords[projection[0]][pt.idx], coords[projection[1]][pt.idx]), fontsize=8)
+            for i, pt in enumerate(self.pts3d):
+                ax.annotate(
+                    f'{pt.idx}', 
+                    (coords[projection[0]][i], coords[projection[1]][i]), 
+                    fontsize=8
+                )
 
         # Highlight the specified node
         if highlight:
