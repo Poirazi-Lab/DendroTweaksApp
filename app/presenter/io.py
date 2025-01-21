@@ -89,6 +89,7 @@ class IOMixin():
 
         # LOAD MECHANISMS -----------------------------------------
         self.model.add_default_mechanisms()
+        self._update_mechs_to_insert_widget()
 
         # PARAMETERS ----------------------------------------------
         # self.model.set_section_param('cm', value=1)
@@ -130,7 +131,7 @@ class IOMixin():
         """
         Configures the widgets after the cell is loaded.
         """
-        domains_to_sec_ids = {domain.name: [str(sec.idx) for sec in domain.sections] 
+        domains_to_sec_ids = {domain.name: sorted([str(sec.idx) for sec in domain.sections], key=lambda x: int(x)) 
                              for domain in self.model.domains.values()}
         self.view.widgets.selectors['section'].options = domains_to_sec_ids
 
@@ -143,6 +144,11 @@ class IOMixin():
         self.view.widgets.buttons['parent'].disabled = True
         self.view.widgets.buttons['sibling'].disabled = True
 
+    def _update_mechs_to_insert_widget(self):
+        available_mechs = list(self.model.mechanisms.keys())
+        with remove_callbacks(self.view.widgets.selectors['mechanism_to_insert']):
+            self.view.widgets.selectors['mechanism_to_insert'].options = available_mechs
+            self.view.widgets.selectors['mechanism_to_insert'].value = available_mechs[0]
 
     # =========================================================================
     # MECHANISMS

@@ -16,6 +16,21 @@ def custom_warning_formatter(message, category, filename, lineno, file=None, lin
 
 warnings.formatwarning = custom_warning_formatter
 
+DOMAINS_TO_COLORS = {
+    'soma': '#E69F00',       
+    'apic': '#0072B2',       
+    'dend': '#019E73',       
+    'basal': '#31A354',      
+    'axon': '#F0E442',       
+    'trunk': '#56B4E9',
+    'tuft': '#A55194', #'#9467BD',
+    'oblique': '#8C564B',
+    'perisomatic': '#D55E00',
+    # 'custom': '#BDBD22',
+    'custom': '#D62728',
+    'custom2': '#E377C2',
+    'undefined': '#7F7F7F',
+}
 
 class Section(Node):
     """
@@ -238,27 +253,27 @@ class Section(Node):
         # TODO: Is it correct to calculate distance to soma surface, not the center
 
     
-    def detach_from_parent(self):
+    def disconnect_from_parent(self):
         """
         Detach the section from the parent.
         """
         # In SectionTree
-        super().detach_from_parent()
+        super().disconnect_from_parent()
         # In NEURON
         if self._ref:
             h.disconnect(sec=self._ref) #from parent
         # In SWCTree
-        self.pts3d[0].detach_from_parent()
+        self.pts3d[0].disconnect_from_parent()
         # In SegmentTree
         if self.segments:
-            self.segments[0].detach_from_parent()
+            self.segments[0].disconnect_from_parent()
 
-    def attach_to_parent(self, parent):
+    def connect_to_parent(self, parent):
         """
         Attaches the section to a parent section.
         """
         # In SectionTree
-        super().attach_to_parent(parent)
+        super().connect_to_parent(parent)
         # In NEURON
         if self._ref:
             if self.parent is not None:
@@ -270,12 +285,12 @@ class Section(Node):
         # In SWCTree
         if self.parent is not None:
             if self.parent.parent is None: # if parent is soma
-                self.pts3d[0].attach_to_parent(self.parent.pts3d[1]) # attach to the middle of the parent
+                self.pts3d[0].connect_to_parent(self.parent.pts3d[1]) # attach to the middle of the parent
             else:
-                self.pts3d[0].attach_to_parent(parent.pts3d[-1]) # attach to the end of the parent
+                self.pts3d[0].connect_to_parent(parent.pts3d[-1]) # attach to the end of the parent
         # In SegmentTree
         if self.segments:
-            self.segments[0].attach_to_parent(parent.segments[-1])
+            self.segments[0].connect_to_parent(parent.segments[-1])
 
 
     # PLOTTING METHODS
@@ -370,6 +385,16 @@ class Domain:
     def __contains__(self, section):
         return section in self.sections
 
+    def merge(self, other):
+        """
+        Merge the sections of the other domain into this domain.
+        """
+        self.inserted_mechanisms.update(other.inserted_mechanisms)
+        sections = self.sections + other.sections
+        self._sections = []
+        for sec in sections:
+            self.add_section(sec)
+
 
     def insert_mechanism(self, mechanism):
         """
@@ -456,6 +481,7 @@ class SectionTree(Tree):
     def __init__(self, sections: list[Section]) -> None:
         super().__init__(sections)
         self.domains = self._init_domains()
+        self.find_apic_subdomains()
         self._swc_tree = None
         self._seg_tree = None
 
@@ -470,6 +496,85 @@ class SectionTree(Tree):
             domains[sec.domain].add_section(sec)
         return domains
 
+
+    def find_apic_subdomains(self, tolerance=5):
+        """
+        Partition apical dendrite nodes into trunk, tuft, and oblique domains starting from the apical root.
+        """
+        # Find the apical root
+        apic_roots = [child for child in self.root.children if child.domain == 'apic']
+        if len(apic_roots) != 1:
+            raise ValueError(f'Tree must have exactly one apical root. Found {len(apic_roots)} apical roots.')
+        apic_root = apic_roots[0]
+
+        # Initialize domain lists
+        trunk_sections = [apic_root]
+        tuft_sections = []
+        oblique_sections = []
+
+        # Start from the apical root and iterate
+        stack = [apic_root]
+
+        while stack:
+            node = stack.pop()
+
+            # If the node is a leaf, skip further processing
+            if not node.children:
+                continue
+
+            # Binary tree: node.children has exactly 2 elements
+            left_child, right_child = node.children
+
+            # Compute subtree sizes
+            left_size = len(left_child.subtree)
+            right_size = len(right_child.subtree)
+
+            # Check if the sizes are approximately equal (within tolerance)
+            if abs(left_size - right_size) <= tolerance:
+                # Classify both children and their subtrees as tuft
+                tuft_sections.extend([left_child, right_child])
+                tuft_sections.extend(left_child.subtree[1:])  # Exclude the node itself
+                tuft_sections.extend(right_child.subtree[1:])  # Exclude the node itself
+            else:
+                # Determine which child belongs to the trunk and which to oblique
+                if left_size > right_size:
+                    trunk_sections.append(left_child)
+                    oblique_sections.append(right_child)
+                    oblique_sections.extend(right_child.subtree[1:])  # Include right_child's subtree
+                    stack.append(left_child)  # Continue exploring the trunk
+                else:
+                    trunk_sections.append(right_child)
+                    oblique_sections.append(left_child)
+                    oblique_sections.extend(left_child.subtree[1:])  # Include left_child's subtree
+                    stack.append(right_child)  # Continue exploring the trunk
+
+        self.domains.pop('apic')
+        basal_sections = self.domains.get('dend').sections if 'dend' in self.domains else []
+        for sec in self.sections:
+            if sec in trunk_sections:
+                sec.domain = 'trunk'
+            elif sec in tuft_sections:
+                sec.domain = 'tuft'
+            elif sec in oblique_sections:
+                sec.domain = 'oblique'
+            elif sec in basal_sections:
+                sec.domain = 'basal'
+
+        new_domains = {
+            'trunk': Domain('trunk', trunk_sections),
+            'tuft': Domain('tuft', tuft_sections),
+            'oblique': Domain('oblique', oblique_sections),
+            'basal': Domain('basal', basal_sections)
+        }
+        self.domains.update(new_domains)
+
+
+            
+
+
+            
+
+
     @property
     def sections(self):
         return self._nodes
@@ -477,6 +582,18 @@ class SectionTree(Tree):
     @property
     def soma(self):
         return self.root
+
+    @property
+    def sections_by_depth(self):
+        """
+        Return the sections grouped by depth.
+        """
+        sections_by_depth = {}
+        for sec in self.sections:
+            if sec.depth not in sections_by_depth:
+                sections_by_depth[sec.depth] = []
+            sections_by_depth[sec.depth].append(sec)
+        return sections_by_depth
 
     def sort(self):
         """
@@ -557,7 +674,7 @@ class SectionTree(Tree):
         ax.set_ylabel('Parent ID')
 
     def plot(self, ax=None, show_points=False, show_lines=True, 
-                      annotate=False, projection='XY'):
+                      annotate=False, projection='XY', domains=False):
         if ax is None:
             fig, ax = plt.subplots(figsize=(10, 10))
 
@@ -565,23 +682,25 @@ class SectionTree(Tree):
 
         for sec in self.sections:
             coords = {'X': [pt.x for pt in sec.pts3d],
-                  'Y': [pt.y for pt in sec.pts3d],
-                  'Z': [pt.z for pt in sec.pts3d]}
+                      'Y': [pt.y for pt in sec.pts3d],
+                      'Z': [pt.z for pt in sec.pts3d]}
             xs = coords[x_attr]
             ys = coords[y_attr]
+            
+            color = plt.cm.jet(1-sec.idx/len(self.sections))
+            if domains:
+                color = DOMAINS_TO_COLORS.get(sec.domain, color)
+            
             if show_points:
-                ax.plot(xs, ys, '.', color=plt.cm.jet(
-                    1-sec.idx/len(self.sections)), markersize=5)
+                ax.plot(xs, ys, '.', color=color, markersize=5)
             if show_lines:
-                ax.plot(xs, ys, color=plt.cm.jet(
-                    1-sec.idx/len(self.sections)))
+                ax.plot(xs, ys, color=color)
 
             # annotate the section index
             if annotate:
-                ax.annotate(f'{sec.idx}', (np.mean(
-                    xs), np.mean(ys)), fontsize=8)
+                ax.annotate(f'{sec.idx}', (np.mean(xs), np.mean(ys)), fontsize=8)
                 ax.annotate(f'{sec.idx}', (np.mean(xs), np.mean(ys)), fontsize=8,
-                        bbox=dict(facecolor='white', edgecolor='black', boxstyle='round,pad=0.3'))
+                            bbox=dict(facecolor='white', edgecolor='black', boxstyle='round,pad=0.3'))
 
         ax.set_xlabel(projection[0])
         ax.set_ylabel(projection[1])
@@ -610,3 +729,34 @@ class SectionTree(Tree):
                 )
         ax.set_xlabel('Distance from root')
         ax.set_ylabel('Radius')
+
+    def to_swc(self, path_to_file: str):
+        """
+        Save the SectionTree as an SWC file.
+        """
+        if not self.is_sorted or not self._swc_tree.is_sorted:
+            raise ValueError('The tree must be sorted before saving.')
+
+        data = {
+            'idx': [],
+            'type_idx': [],
+            'x': [],
+            'y': [],
+            'z': [],
+            'r': [],
+            'parent_idx': []
+        }
+
+        for sec in self.sections:
+            pts3d = sec.pts3d if sec.parent is None or sec.parent.parent is None else sec.pts3d[1:]
+            for pt in pts3d:
+                data['idx'].append(pt.idx)
+                data['type_idx'].append(pt.type_idx)
+                data['x'].append(pt.x)
+                data['y'].append(pt.y)
+                data['z'].append(pt.z)
+                data['r'].append(pt.r)
+                data['parent_idx'].append(pt.parent_idx)
+
+        df = pd.DataFrame(data)
+        df.to_csv(path_to_file, sep=' ', index=False, header=False)

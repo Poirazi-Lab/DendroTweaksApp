@@ -29,7 +29,7 @@ class NavigationMixin():
     def graph_lasso_callback(self, attr, old, new):
 
         # update selected segments
-        self.update_selected_sections(old, new)
+        self.update_selected_segments(old, new)
 
         # update cell selection
         self.update_cell_renderer_selection()
@@ -44,16 +44,17 @@ class NavigationMixin():
             self._update_distribution_plot()
 
     @log
-    def update_selected_sections(self, old, new):
+    def update_selected_segments(self, old, new):
         old_set = set(old)
         new_set = set(new)
         add_set = new_set - old_set
         remove_set = old_set - new_set
 
-
-        data = self.view.figures['graph'].renderers[0].node_renderer.data_source.data['index']
-        seg_ids_to_add = [data[i] for i in add_set]
-        seg_ids_to_remove = [data[i] for i in remove_set]
+        indices = self.view.figures['graph'].renderers[0].node_renderer.data_source.data['index']
+        seg_ids_to_add = [indices[i] for i in add_set]
+        logger.debug(f'Add set: {add_set}')
+        logger.debug(f'Seg ids to add: {seg_ids_to_add}')
+        seg_ids_to_remove = [indices[i] for i in remove_set]
 
         if seg_ids_to_remove:
             self.remove_segments(seg_ids_to_remove)
@@ -73,24 +74,36 @@ class NavigationMixin():
     @log
     def cell_tap_callback(self, attr, old, new):
         
+        logger.debug(f'Cell tap callback: {new}')
+        
         if new:
-            secs = [sec for sec in self.model.sec_tree if sec.idx in new]
+            # secs = [sec for sec in self.model.sec_tree if sec.idx in new]
+            secs = [self.model.sec_tree[sec_id] for sec_id in new]
+            logger.debug(f'Secs: {secs}')
             seg_ids = [seg.idx for sec in secs for seg in sec.segments]
         else: 
+            secs = []
             seg_ids = []
 
         self.select_seg_x(seg_ids)
 
         with remove_callbacks(self.view.widgets.selectors['section']):
-            self.view.widgets.selectors['section'].value = str(secs[0].idx) if new else ''
+            self.view.widgets.selectors['section'].value = str(secs[0].idx) if secs else ''
 
-
+    @log
     def select_seg_x(self, seg_ids):
         """
         When a segment is selected from a dropdown menu (as opposite to tap or lasso selection), 
         update the graph selection. Setting the selection will trigger the graph selection callback
         """
-        self.view.figures['graph'].renderers[0].node_renderer.data_source.selected.indices = seg_ids
+        # self.view.figures['graph'].renderers[0].node_renderer.data_source.selected.indices = seg_ids
+        indices = self.view.figures['graph'].renderers[0].node_renderer.data_source.data['index']
+        filtered_indices = [
+            i for i, index in enumerate(indices) 
+            if index in seg_ids]
+        logger.debug(f'Indices: {seg_ids}') 
+        logger.debug(f'Filtered indices: {filtered_indices}')
+        self.view.figures['graph'].renderers[0].node_renderer.data_source.selected.indices = filtered_indices
         
 
     def select_seg_x_callback(self, attr, old, new):
@@ -98,10 +111,10 @@ class NavigationMixin():
         seg_names = [self.view.widgets.selectors['section'].value + '(' + self.view.widgets.selectors['seg_x'].value + ')']
         self.select_seg_x(seg_names)
 
-
+    @log
     def select_section_callback(self, attr, old, new):
         
-        sec_name = self.view.widgets.selectors['section'].value        
+        sec_name = self.view.widgets.selectors['section'].value
         indices = [i for i, lbl in enumerate(self.labels) if lbl == sec_name]
         self.view.figures['cell'].renderers[0].data_source.selected.indices = indices
 

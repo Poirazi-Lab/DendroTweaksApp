@@ -21,6 +21,8 @@ SWC_TYPES = {
     7: 'glia',
 }
 
+from contextlib import contextmanager
+
 
 class SWCNode(Node):
 
@@ -79,6 +81,15 @@ class SWCNode(Node):
         new_node = SWCNode(self.idx, self.type_idx, self.x,
                             self.y, self.z, self.r, self.parent_idx)
         return new_node
+
+
+    def overlaps_with(self, other, **kwargs) -> bool:
+        return np.allclose(
+            [self.x, self.y, self.z], 
+            [other.x, other.y, other.z], 
+            **kwargs
+        )
+
 
 
 class SWCTree(Tree):
@@ -260,21 +271,68 @@ class SWCTree(Tree):
 
 
     # I/O METHODS
+    def remove_overlaps(self):
+        """
+        Removes overlapping nodes from the tree.
+        """
+        nodes_before = len(self.pts3d)
+
+        overlapping_nodes = [
+            pt for pt in self.traverse() 
+            if pt.parent is not None and pt.overlaps_with(pt.parent)
+        ]
+        for pt in overlapping_nodes:
+            self.remove_node(pt)
+
+        self._is_extended = False
+        nodes_after = len(self.pts3d)
+        print(f'Removed {nodes_before - nodes_after} overlapping nodes.')
+
+
+    def extend_sections(self):
+        """
+        Extends each section by adding a node in the beginning 
+        overlapping with the parent node for geometrical continuity.
+        """
+        
+        nodes_before = len(self.pts3d)
+
+        if self._is_extended:
+            print('Tree is already extended.')
+            return
+
+        bifurcations_excluding_root = [
+            b for b in self.bifurcations if b != self.root
+        ]
+
+        for pt in bifurcations_excluding_root:
+            children = pt.children[:]
+            for child in children:
+                if child.overlaps_with(pt):
+                    raise ValueError(f'Child {child} already overlaps with parent {pt}.')
+                new_node = pt.copy()
+                self.insert_node_before(new_node, child)
+
+        self._is_extended = True
+        nodes_after = len(self.pts3d)
+        print(f'Extended {nodes_after - nodes_before} nodes.')
+
 
     def to_swc(self, path_to_file):
         """
         Save the tree to an SWC file.
         """
-        df = self.df.astype({
-            'idx': int,
-            'type_idx': int,
-            'x': float,
-            'y': float,
-            'z': float,
-            'r': float,
-            'parent_idx': int
-        })
-        df.to_csv(path_to_file, sep=' ', index=False, header=False)
+        with remove_overlaps(self):
+            df = self.df.astype({
+                'idx': int,
+                'type_idx': int,
+                'x': float,
+                'y': float,
+                'z': float,
+                'r': float,
+                'parent_idx': int
+            })
+            df.to_csv(path_to_file, sep=' ', index=False, header=False)
 
 
     # PLOTTING METHODS
@@ -346,3 +404,26 @@ class SWCTree(Tree):
     #                         bbox=dict(facecolor='white', edgecolor='black', boxstyle='round,pad=0.3'))
 
     #     ax.set_aspect('equal')
+
+
+@contextmanager
+def remove_overlaps(swc_tree):
+    """
+    Context manager for temporarily removing overlaps in the given swc_tree.
+    Restores the swc_tree's original state when exiting the context.
+    """
+    # Store whether the swc_tree was already extended
+    was_extended = swc_tree._is_extended
+    
+    # Remove overlaps
+    swc_tree.remove_overlaps()
+    swc_tree.sort()
+    
+    try:
+        # Yield control to the context block
+        yield
+    finally:
+        # Restore the overlapping state if the swc_tree was extended
+        if was_extended:
+            swc_tree.extend_sections()
+            swc_tree.sort()

@@ -17,8 +17,7 @@ class TreeFactory():
         
         self.reader = SWCReader()
 
-    def create_swc_tree(self, source: Union[str, DataFrame], 
-                        standardize:bool = True) -> SWCTree:
+    def create_swc_tree(self, source: Union[str, DataFrame]) -> SWCTree:
         """
         Creates an SWC tree from either a file path or a DataFrame.
         
@@ -37,8 +36,11 @@ class TreeFactory():
             for _, row in df.iterrows()
         ]
         swc_tree =  SWCTree(nodes)
-        if standardize:
-            self._convert_to_3PS_notation(swc_tree)
+
+        swc_tree.remove_overlaps()
+        swc_tree.sort()
+        self._convert_to_3PS_notation(swc_tree)
+        swc_tree.sort()
         return swc_tree
 
     def _convert_to_3PS_notation(self, swc_tree):
@@ -82,7 +84,7 @@ class TreeFactory():
         print('Converted soma to 3PS notation.')
 
 
-    def create_sec_tree(self, swc_tree: SWCTree, extend: bool = True):
+    def create_sec_tree(self, swc_tree: SWCTree):
         """
         Creates a section tree from an SWC tree.
 
@@ -90,39 +92,21 @@ class TreeFactory():
         ----------
         swc_tree : SWCTree
             The SWC tree to be partitioned into a section tree.
-        extend : bool, optional
-            Whether to extend the sections by adding a copy of the last node from the parent
-            section to the beginning of the section. This ensures continuity between sections.
-            Default is True.
-
         Returns
         -------
         SectionTree
             The section tree created from the SWC tree.
         """
 
-        sections = self._create_sections(swc_tree, extend)
+        swc_tree.extend_sections()
+        swc_tree.sort()
+
+        sections = self._split_to_sections(swc_tree)
 
         sec_tree = SectionTree(sections)
         sec_tree._swc_tree = swc_tree
 
         return sec_tree
-
-
-    def _create_sections(self, swc_tree: SWCTree, extend: bool = True) -> List[Section]:
-
-        if extend and not swc_tree._is_extended:
-            nodes_before = len(swc_tree.pts3d)
-            self._extend_sections(swc_tree)
-            nodes_after = len(swc_tree.pts3d)
-            print(f'Extended {nodes_after - nodes_before} nodes.')
-            swc_tree.sort()
-        elif extend:
-            print('Sections are already extended.')
-
-        sections = self._split_to_sections(swc_tree)
-
-        return sections
 
 
     def _split_to_sections(self, swc_tree: SWCTree) -> List[Section]:
@@ -201,72 +185,6 @@ class TreeFactory():
             
 
         return sections
-
-    # def _extend_sections(self, sections: List[Section], 
-    #                      swc_tree: SWCTree) -> List[Section]:
-    #     """
-    #     Extends the sections by adding a copy of the last node from the parent section
-    #     to the beginning of the section. This ensures continuity between sections.
-
-    #     Warning
-    #     -------
-    #     Mutates the input sections and the SWC tree.
-
-    #     Notes
-    #     -----
-    #     - The method is implemented similarly to NEURON's approach to section extension.
-    #     - For '3PS' notation, instead of the last point, it copies the second point of 
-    #       the parent section (the root point).
-    #     """
-
-    #     soma = swc_tree.soma_pts3d[0]._section
-
-    #     for sec in sections:
-    #         if not sec.parent:
-    #             continue
-    #         first_node = sec.pts3d[0]
-    #         if sec.parent is soma:
-    #             if len(sec.pts3d) > 1:
-    #                 continue # do not extend the soma children in general
-    #             if swc_tree.soma_notation == '3PS':
-    #                 node_to_copy = sec.parent.pts3d[1]
-    #             else:
-    #                 node_to_copy = sec.parent.pts3d[-1]
-    #         node_to_copy = sec.parent.pts3d[-1]
-    #         # Compare coordinates to avoid duplication
-    #         if np.allclose([first_node.x, first_node.y, first_node.z], 
-    #                        [node_to_copy.x, node_to_copy.y, node_to_copy.z], 
-    #                        atol=1e-8):
-    #             continue
-    #         new_node = node_to_copy.copy()
-    #         # Copy SWC-specific attributes
-    #         new_node.type_idx = first_node.type_idx
-    #         new_node._section = first_node._section
-    #         # Insert the new node at the beginning of the section
-    #         swc_tree.insert_node(first_node.idx, new_node)
-    #         sec.pts3d.insert(0, new_node)
-
-    #     return sections
-
-
-    def _extend_sections(self, swc_tree: SWCTree):
-
-        bifurcations_without_root = [
-            b for b in swc_tree.bifurcations if b != swc_tree.root
-        ]
-
-        for pt in bifurcations_without_root:
-            children = pt.children[:]
-            for child in children:
-                # Compare coordinates to avoid duplication
-                if np.allclose([child.x, child.y, child.z], 
-                               [pt.x, pt.y, pt.z], 
-                               atol=1e-8):
-                    continue
-                new_node = pt.copy()
-                swc_tree.insert_node_before(new_node, child)
-
-        swc_tree._is_extended = True
 
 
     def create_seg_tree(self, sec_tree):

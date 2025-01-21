@@ -452,6 +452,8 @@ class Model():
             self._create_domain(domain_name, sections)
         else:
             self._extend_domain(domain_name, sections)
+
+        self.remove_empty()
         
 
     def _create_domain(self, domain_name, sections):
@@ -470,6 +472,7 @@ class Model():
         self._add_domain_groups(domain.name)
         # 5 Add domain to the domain dictionary
         self.domains[domain_name] = domain
+
 
     def _extend_domain(self, domain_name, sections):
         """
@@ -501,30 +504,35 @@ class Model():
             for sec in overlapping_sections:
                 domain.remove_section(sec)
 
-            if domain.is_empty():
-                self.remove_empty_domain(domain.name)
 
-
-    def remove_empty_domain(self, domain_name):
-        """
-        """
-        warnings.warn(f'Domain {domain_name} is empty and will be removed.')
-        domain = self.domains.pop(domain_name)
-        self._remove_params_of_uninserted_mechanisms()
+    def remove_empty(self):
+        self._remove_empty_domains()
+        self._remove_uninserted_mechanisms()
         self._remove_empty_groups()
-        self.groups['all'].domains.remove(domain_name)
 
-    def remove_empty_domains(self):
+
+    def _remove_empty_domains(self):
         """
         """
-        empty_domains = [domain for domain in self.domains.values() if domain.is_empty()]
+        empty_domains = [domain for domain in self.domains.values() 
+            if domain.is_empty()]
         for domain in empty_domains:
-            self.remove_empty_domain(domain.name)
+            for mech in domain.inserted_mechanisms.values():
+                mech.domains.pop(domain.name)
+            warnings.warn(f'Domain {domain.name} is empty and will be removed.')
+            self.domains.pop(domain.name)
+            self.groups['all'].domains.remove(domain.name)
 
-    def _remove_params_of_uninserted_mechanisms(self):
-        uninserted_mechs = [mech for mech in self.mechanisms.values()
+
+    def _remove_uninserted_mechanisms(self):
+        mech_names = list(self.mechs_to_params.keys())
+        mechs = [self.mechanisms[mech_name] for mech_name in mech_names
+             if mech_name != 'Independent']
+        uninserted_mechs = [mech for mech in mechs
                             if not mech.is_inserted()]
         for mech in uninserted_mechs:
+            for domain in mech.domains.values():
+                domain.inserted_mechanisms.pop(mech.name)
             warnings.warn(f'Mechanism {mech.name} is not inserted in any domain and will be removed.')
             self._remove_mechanism_params(mech)
 
@@ -534,6 +542,7 @@ class Model():
                         if not any(sec in group 
                         for sec in self.sec_tree.sections)]
         for group in empty_groups:
+            warnings.warn(f'Group {group.name} is empty and will be removed.')
             self.remove_group(group.name)
 
 
@@ -608,7 +617,6 @@ class Model():
 
     
     def _remove_mechanism_params(self, mech):
-        warnings.warn(f'Mechanism {mech.name} is not inserted in any domain. Removing its parameters.')
         for param_name in self.mechs_to_params.get(mech.name, []):
             self.params.pop(param_name)
 
@@ -620,7 +628,8 @@ class Model():
         """
         """
         for mech_name, mech in self.mechanisms.items():
-            if mech.ion == mech.ion: return
+            if hasattr(mech, 'ion'):
+                if mech.ion == mech.ion: return
 
         if ion == 'na':
             self.params.pop('ena', None)
@@ -813,10 +822,71 @@ class Model():
     def run(self, duration=300):
         self.simulator.run(duration)
 
-    # MISC
+    # ========================================================================
+    # MORPHOLOGY
+    # ========================================================================
 
-    def reduce_morphology():
+    def remove_subtree(self, sec):
+        self.sec_tree.remove_subtree(sec)
+        self.sec_tree.sort()
+        self.remove_empty()
+
+    def merge_domains(self, domain_names: List[str]):
+        """
+        Merge two domains into one.
+        """
+        domains = [self.domains[domain_name] for domain_name in domain_names]
+        for domain in domains[1:]:
+            domains[0].merge(domain)
+        self.remove_empty()
+
+
+    def reduce_subtree(self, root):
+        # Cannot remove domains
+        # Can remove groups
+
+        domain = self.get_domain(sec)
+        parent = sec.parent
+        domains_in_subtree = [self.domains[domain_name] 
+            for domain_name in set([sec.domain for sec in root.subtree])]
+
+        subtree_without_root = [sec for sec in root.subtree if sec is not root]
+
+        # Map original segment names to their parameters
         ...
+
+        # Temporarily remove active mechanisms
+        for mech_name in self.mechanisms:
+            for sec in root.subtree:
+                sec.uninsert_mechanism(mech_name)
+
+        # Disconnect
+        root.disconnect_from_parent()
+
+         # Calculate new properties of a reduced subtree
+        ...
+
+         # Map segment names to their new locations in the reduced cylinder
+        ...
+
+        # Set passive mechanisms for the reduced cylinder:
+        ...
+
+        # Reconnect
+        root.connect_to_parent(parent)
+
+        # Reinsert active mechanisms
+        
+
+        # Delete the original subtree
+        children = sec.children[:]
+        for child_sec in children:
+            self.remove_subtree(child_sec)
+
+        # Remove intermediate pts3d
+
+
+        
 
     def standardize_channel():
         ...
@@ -1024,17 +1094,24 @@ class Model():
         self.from_swc(swc_file_name)
         self.create_and_reference_sections_in_simulator()
         
-
+        print(f'DOMAINS: {self.domains}')
         self.add_default_mechanisms()
+        self.add_group('all', list(self.domains.keys()))
         self.add_mechanisms('mod', recompile=recompile)
+        print(f'GROUPS: {self.groups}')
 
-        for domain, domain_data in data['domains'].items():
-            for sec_idx in domain_data['sections']:
-                setattr(self.sec_tree.sections[int(sec_idx)], 'domain', domain)
+        self.sec_tree.domains = {}
+        for domain_name, domain_data in data['domains'].items():
+            sections = [self.sec_tree.sections[sec_idx] for sec_idx in domain_data['sections']]
+            domain = Domain(domain_name)
+            for sec in sections:
+                domain.add_section(sec)
+            self.domains[domain_name] = domain
             for mech_name in domain_data['mechanisms']:
-                if mech_name == 'Independent':
+                if mech_name == "Independent":
                     continue
-                self.insert_mechanism(mech_name, domain)
+                self.insert_mechanism(mech_name, domain_name)
+        self.remove_empty()
 
         for group_params in data['groups']:
             self.add_group(**group_params)

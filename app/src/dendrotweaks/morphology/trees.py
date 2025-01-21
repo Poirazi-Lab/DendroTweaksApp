@@ -118,7 +118,7 @@ class Node():
         """
         return [self.parent] + self.children
 
-    def attach_to_parent(self, parent):
+    def connect_to_parent(self, parent):
         """
         Attach the node to a parent node.
         
@@ -138,13 +138,13 @@ class Node():
             parent.children.append(self)
         # parent.childrensorted(parent.children + [node], key=lambda x: x.idx)
 
-    def detach_from_parent(self):
+    def disconnect_from_parent(self):
         """
         Detach the node from its parent.
 
         Examples
         --------
-        for child in node.children: child.detach_from_parent()
+        for child in node.children: child.disconnect_from_parent()
 
         """
         if self.parent:
@@ -265,7 +265,7 @@ class Tree:
             if node is not self.root:
                 for parent_node in self._nodes:
                     if node.parent_idx == parent_node.idx:
-                        node.attach_to_parent(parent_node)
+                        node.connect_to_parent(parent_node)
                         break
         
         if not self.is_connected:
@@ -354,20 +354,20 @@ class Tree:
         parent = node.parent
         children = node.children[:]
         for child in children:
-            child.detach_from_parent()
-            child.attach_to_parent(parent)
-        node.detach_from_parent()
+            child.disconnect_from_parent()
+            child.connect_to_parent(parent)
+        node.disconnect_from_parent()
         self._nodes.remove(node)
 
 
     def remove_subtree(self, node):
-        node.detach_from_parent()
+        node.disconnect_from_parent()
         for n in node.subtree:
             self._nodes.remove(n)
 
 
     def add_subtree(self, node, parent):
-        node.attach_to_parent(parent)
+        node.connect_to_parent(parent)
         self._nodes.extend(node.subtree)
 
 
@@ -379,9 +379,9 @@ class Tree:
             raise ValueError('Node already exists in the tree.')
 
         for child in existing_node.children:
-            child.detach_from_parent()
-            child.attach_to_parent(new_node)
-        new_node.attach_to_parent(existing_node)
+            child.disconnect_from_parent()
+            child.connect_to_parent(new_node)
+        new_node.connect_to_parent(existing_node)
 
         self._nodes.append(new_node)
 
@@ -392,9 +392,9 @@ class Tree:
         """
         if new_node in self._nodes:
             raise ValueError('Node already exists in the tree.')
-        new_node.attach_to_parent(existing_node.parent)
-        existing_node.detach_from_parent()
-        existing_node.attach_to_parent(new_node)
+        new_node.connect_to_parent(existing_node.parent)
+        existing_node.disconnect_from_parent()
+        existing_node.connect_to_parent(new_node)
         
         self._nodes.append(new_node)
 

@@ -118,8 +118,6 @@ class SectionMixin():
                     self.view.widgets.selectors['section'].value = str(self.selected_sec.idx)
             else:
                 self.view.widgets.selectors['section'].value = ''
-            
-        logger.debug('END\n')
 
     def update_seg_x_selector(self):
         with remove_callbacks(self.view.widgets.selectors['seg_x']):

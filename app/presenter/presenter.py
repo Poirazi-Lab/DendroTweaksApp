@@ -94,7 +94,26 @@ class Presenter(IOMixin, NavigationMixin,
         self._create_cell_renderer()
         self.view.widgets.selectors['domain'].options = list(self.model.domains.keys())
         self.view.widgets.selectors['domain'].value = domain_name
-        self.view.widgets.multichoice['domains'].options = list(self.model.domains.keys())
+        
+        self._update_multichoice_domain_widget()
+            
+        with remove_callbacks(self.view.widgets.selectors['group']):
+            self.view.widgets.selectors['group'].options = list(self.model.groups.keys())
+            self.view.widgets.selectors['group'].value = domain_name
+
+        domains_to_sec_ids = {domain.name: sorted([str(sec.idx) for sec in domain.sections], key=lambda x: int(x)) 
+                             for domain in self.model.domains.values()}
+        self.view.widgets.selectors['section'].options = domains_to_sec_ids
+
+    def _update_multichoice_domain_widget(self):
+        mech_name = self.view.widgets.selectors['mechanism_to_insert'].value
+        mech = self.model.mechanisms[mech_name]
+        available_domains = list(self.model.domains.keys())
+        mech_domains = list(mech.domains.keys())
+        logger.debug(f'Available domains: {available_domains}, mech domains: {mech_domains}')
+        with remove_callbacks(self.view.widgets.multichoice['domains']):
+            self.view.widgets.multichoice['domains'].options = list(self.model.domains.keys())
+            self.view.widgets.multichoice['domains'].value = mech_domains
 
     # =================================================================
     # GROUPS TAB
@@ -259,16 +278,10 @@ class Presenter(IOMixin, NavigationMixin,
 
     @log
     def _select_mechanism_to_insert(self):
-
-        mech_name = self.view.widgets.selectors['mechanism_to_insert'].value
-        mech = self.model.mechanisms[mech_name]
         
-        available_domains = list(self.model.domains.keys())
-        mech_domains = list(mech.domains.keys())
-        with remove_callbacks(self.view.widgets.multichoice['domains']):
-            self.view.widgets.multichoice['domains'].options = available_domains
-            self.view.widgets.multichoice['domains'].value = mech_domains
+        self._update_multichoice_domain_widget()
 
+        mech_domains = self.view.widgets.multichoice['domains'].value
         self._select_domain_segs_in_graph(domain_names=mech_domains)
 
 
@@ -906,99 +919,80 @@ class Presenter(IOMixin, NavigationMixin,
 
 
     def delete_subtree_callback(self, event):
-        sec = self.selected_sec
-        parent = sec.parentseg().sec
-        logger.debug(sec.parentseg())
-        segments_to_remove = [seg for sec in sec.subtree() for seg in sec]
-        # Remove the segments from channel groups
-        for ch in self.model.channels.values():
-            groups_to_remove = []
-            for group in ch.groups:
-                group.segments = [seg for seg in group.segments if seg not in segments_to_remove]
-                logger.debug(f'Group {group.name} has {len(group.segments)} segments')
-                if len(group.segments) == 0:
-                    groups_to_remove.append(group)
-            for group in groups_to_remove:
-                ch.remove_group(group)
-        # Remove the segments from capacitance the same way
-        groups_to_remove = []
-        for group in self.model.capacitance.groups:
-            group.segments = [seg for seg in group.segments if seg not in segments_to_remove]
-            if len(group.segments) == 0:
-                groups_to_remove.append(group)
-        for group in groups_to_remove:
-            self.model.capacitance.remove_group(group)
 
-        self.model.delete_subtree(sec)
+        if len(self.selected_secs) != 1:
+            return
+
+        sec = self.selected_secs.pop()
+
+        self.model.remove_subtree(sec)
+        
         self.selected_secs = set()
         self.selected_segs = []
-        self.points = self.get_pts3d()
-        if hasattr(self.model.cell, 'segments'):
-            del self.model.cell.segments
-        if hasattr(self.model.cell, 'sections'):
-            del self.model.cell.sections
+        
+        self._create_cell_renderer()
+        self._init_cell_widgets()
+        self._create_graph_renderer()
+        self.view.widgets.selectors['section'].value = None
 
-        self.create_cell_renderer()
-        self.create_graph_renderer()
-        self.add_lasso_callback()
-
-        self.view.widgets.selectors['section'].options=[''] + list(self.model.cell.sections.keys())
+        self.update_voltage()
         
 
     @log
     def reduce_subtree_callback(self, event):
-        sec = self.selected_sec
-        parent = sec.parentseg().sec
-        logger.debug(sec.parentseg())
-        segments_to_remove = [seg for sec in sec.subtree() for seg in sec]
-        # Remove the segments from channel groups
-        for ch in self.model.channels.values():
-            groups_to_remove = []
-            for group in ch.groups:
-                group.segments = [seg for seg in group.segments if seg not in segments_to_remove]
-                logger.debug(f'Group {group.name} has {len(group.segments)} segments')
-                if len(group.segments) == 0:
-                    groups_to_remove.append(group)
-            for group in groups_to_remove:
-                ch.remove_group(group)
-        # Remove the segments from capacitance the same way
-        groups_to_remove = []
-        for group in self.model.capacitance.groups:
-            group.segments = [seg for seg in group.segments if seg not in segments_to_remove]
-            if len(group.segments) == 0:
-                groups_to_remove.append(group)
-        for group in groups_to_remove:
-            self.model.capacitance.remove_group(group)
+        pass
+    #     sec = self.selected_sec
+    #     parent = sec.parentseg().sec
+    #     logger.debug(sec.parentseg())
+    #     segments_to_remove = [seg for sec in sec.subtree() for seg in sec]
+    #     # Remove the segments from channel groups
+    #     for ch in self.model.channels.values():
+    #         groups_to_remove = []
+    #         for group in ch.groups:
+    #             group.segments = [seg for seg in group.segments if seg not in segments_to_remove]
+    #             logger.debug(f'Group {group.name} has {len(group.segments)} segments')
+    #             if len(group.segments) == 0:
+    #                 groups_to_remove.append(group)
+    #         for group in groups_to_remove:
+    #             ch.remove_group(group)
+    #     # Remove the segments from capacitance the same way
+    #     groups_to_remove = []
+    #     for group in self.model.capacitance.groups:
+    #         group.segments = [seg for seg in group.segments if seg not in segments_to_remove]
+    #         if len(group.segments) == 0:
+    #             groups_to_remove.append(group)
+    #     for group in groups_to_remove:
+    #         self.model.capacitance.remove_group(group)
 
 
-        self.model.reduce_subtree(sec)
+    #     self.model.reduce_subtree(sec)
 
-        # Handle the out of group segments
-        out_of_group_segments = [seg for seg in sec]
-        for seg in out_of_group_segments:
-            # Create a group for each segment with a default constant distribution
-            for ch in self.model.channels.values():
-                ch.add_group([seg], f'gbar_{ch.suffix}', Distribution('constant', value=getattr(seg, f'gbar_{ch.suffix}')))
+    #     # Handle the out of group segments
+    #     out_of_group_segments = [seg for seg in sec]
+    #     for seg in out_of_group_segments:
+    #         # Create a group for each segment with a default constant distribution
+    #         for ch in self.model.channels.values():
+    #             ch.add_group([seg], f'gbar_{ch.suffix}', Distribution('constant', value=getattr(seg, f'gbar_{ch.suffix}')))
             
-        # Assumes that the capacitance is the same for all segments in the subtree
-        self.model.capacitance.add_group(out_of_group_segments, 'cm', Distribution('constant', value=out_of_group_segments[0].cm))
+    #     # Assumes that the capacitance is the same for all segments in the subtree
+    #     self.model.capacitance.add_group(out_of_group_segments, 'cm', Distribution('constant', value=out_of_group_segments[0].cm))
 
-        self.selected_secs = set()
-        self.selected_segs = []
-        self.points = self.get_pts3d()
-        if hasattr(self.model.cell, 'segments'):
-            del self.model.cell.segments
-        if hasattr(self.model.cell, 'sections'):
-            del self.model.cell.sections
+    #     self.selected_secs = set()
+    #     self.selected_segs = []
+    #     self.points = self.get_pts3d()
+    #     if hasattr(self.model.cell, 'segments'):
+    #         del self.model.cell.segments
+    #     if hasattr(self.model.cell, 'sections'):
+    #         del self.model.cell.sections
 
         # self.model.add_capacitance()        
 
-        self.create_cell_renderer()
-        self.create_graph_renderer()
-        self.add_lasso_callback()
+        # self.create_cell_renderer()
+        # self.create_graph_renderer()
+        # self.add_lasso_callback()
 
-        self.view.widgets.selectors['section'].options=[''] + list(self.model.cell.sections.keys())
-        logger.debug(f"Section selector value: {self.view.widgets.selectors['section'].value}")
+        # self.view.widgets.selectors['section'].options=[''] + list(self.model.cell.sections.keys())
+        # logger.debug(f"Section selector value: {self.view.widgets.selectors['section'].value}")
 
 
     # =================================================================
