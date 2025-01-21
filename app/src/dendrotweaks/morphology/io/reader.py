@@ -34,7 +34,7 @@ class SWCReader():
 
     @staticmethod
     def plot_raw_data(df, ax):
-        types_to_colors = {1: 'C1', 2: 'C3', 3: 'C2', 4: 'C0'}
+        types_to_colors = {1: 'C1', 2: 'C3', 3: 'C2', 4: 'C0', 31: 'green', 41: 'blue', 42: 'magenta', 43: 'brown'}
         for t in df['Type'].unique():
             color = types_to_colors.get(t, 'k')
             mask = df['Type'] == t

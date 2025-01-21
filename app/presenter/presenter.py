@@ -592,9 +592,7 @@ class Presenter(IOMixin, NavigationMixin,
 
         self.view.widgets.buttons['remove_distribution'].visible = False
         self.view.widgets.buttons['add_distribution'].visible = True
-        self.view.figures['distribution'].visible = False
-        self.view.widgets.selectors['distribution_type'].visible = False
-        self.view.DOM_elements['distribution_widgets_panel'].visible = False
+        self.view.DOM_elements['group_panel'].visible = False
         self._update_graph_param(param_name, update_colors=True)
 
     def update_distribution_type_callback(self, attr, old, new):

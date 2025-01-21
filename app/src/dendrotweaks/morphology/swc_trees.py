@@ -10,15 +10,39 @@ from dendrotweaks.morphology.trees import Node, Tree
 
 from dendrotweaks.utils import timeit
 
-SWC_TYPES = {
+ID_TO_DOMAIN = {
     0: 'undefined',
     1: 'soma',
     2: 'axon',
     3: 'dend',
+    31: 'basal',
     4: 'apic',
+    41: 'trunk',
+    42: 'tuft',
+    43: 'oblique',
     5: 'custom',
     6: 'neurite',
     7: 'glia',
+}
+
+DOMAIN_TO_ID = {
+    v: k for k, v in ID_TO_DOMAIN.items()
+}
+
+DOMAINS_TO_COLORS = {
+    'soma': '#E69F00',       
+    'apic': '#0072B2',       
+    'dend': '#019E73',       
+    'basal': '#31A354',      
+    'axon': '#F0E442',       
+    'trunk': '#56B4E9',
+    'tuft': '#A55194', #'#9467BD',
+    'oblique': '#8C564B',
+    'perisomatic': '#D55E00',
+    # 'custom': '#BDBD22',
+    'custom': '#D62728',
+    'custom2': '#E377C2',
+    'undefined': '#7F7F7F',
 }
 
 from contextlib import contextmanager
@@ -39,7 +63,11 @@ class SWCNode(Node):
     
     @property
     def domain(self):
-        return SWC_TYPES.get(self.type_idx, 'unknown')
+        return ID_TO_DOMAIN.get(self.type_idx, 'unknown')
+
+    @domain.setter
+    def domain(self, value):
+        self.type_idx = DOMAIN_TO_ID.get(value, 0)
 
     @property
     def distance_to_parent(self):
@@ -52,6 +80,15 @@ class SWCNode(Node):
         if self.parent:
             return self.parent.distance_to_root + self.distance_to_parent
         return 0
+
+    @property
+    def relative_distance(self):
+        if self.parent:
+            if self.parent.domain == self.domain:
+                return self.distance_to_parent + self.parent.relative_distance
+            return self.distance_to_parent
+        return 0
+
 
     @property
     def df(self):
@@ -67,7 +104,7 @@ class SWCNode(Node):
     def info(self):
         info = (
             f"Node {self.idx}:\n"
-            f"  Type: {SWC_TYPES.get(self.type_idx, 'unknown')}\n"
+            f"  Type: {ID_TO_DOMAIN.get(self.type_idx, 'unknown')}\n"
             f"  Coordinates: ({self.x}, {self.y}, {self.z})\n"
             f"  Radius: {self.r}\n"
             f"  Parent: {self.parent_idx}\n"
@@ -311,6 +348,7 @@ class SWCTree(Tree):
                 if child.overlaps_with(pt):
                     raise ValueError(f'Child {child} already overlaps with parent {pt}.')
                 new_node = pt.copy()
+                new_node.domain = child.domain
                 self.insert_node_before(new_node, child)
 
         self._is_extended = True
@@ -339,7 +377,7 @@ class SWCTree(Tree):
 
     def plot(self, ax=None, nodes=True, edges=True, 
              annotate=False, projection='XY', 
-             highlight=None):
+             highlight=None, domains=False):
 
         if ax is None:
             fig, ax = plt.subplots(figsize=(10, 10))
@@ -356,8 +394,10 @@ class SWCTree(Tree):
                                'Z': [edge[0].z, edge[1].z]}
                 ax.plot(edge_coords[projection[0]], edge_coords[projection[1]], color='C1')
 
+        colors = [DOMAINS_TO_COLORS.get(pt.domain, 'black') for pt in self.pts3d] if domains else 'C0'
+
         if nodes:
-            ax.plot(coords[projection[0]], coords[projection[1]], '.', color='C0', markersize=5)
+            ax.scatter(coords[projection[0]], coords[projection[1]], s=10, c=colors, marker='.', zorder=2)
 
         # Annotate the node index
         if annotate and len(self.pts3d) < 50:

@@ -42,7 +42,7 @@ def validate_tree(tree):
 def check_unique_ids(tree):
     node_ids = {node.idx for node in tree._nodes}
     if len(node_ids) != len(tree._nodes):
-        raise ValueError("Tree contains duplicate node ids.")
+        raise ValueError(f"Tree contains {len(tree._nodes) - len(node_ids)} duplicate node ids.")
 
 
 def check_unique_children(tree):
@@ -133,6 +133,16 @@ def validate_swc_tree(swc_tree):
         if pt.type_idx == 1]
     if bifurcations_within_soma:
         raise ValueError(f"Soma must be non-branching. Found bifurcations: {bifurcations_within_soma}")
+
+    if swc_tree._is_extended:
+        non_overlapping_children = [
+            (pt, child) for pt in bifurcations_without_root for child in pt.children
+            if not child.overlaps_with(pt)
+        ]
+        if non_overlapping_children:
+            issues_str = "\n".join([f"Child {child} does not overlap with parent {pt}" for pt, child in non_overlapping_children])
+            raise ValueError(f"Found non-overlapping children:\n{issues_str} for bifurcations")
+        
 
 
 # =============================================================================

@@ -48,51 +48,7 @@
                 8
             ]
         },
-        "tuft": {
-            "mechanisms": [
-                "Independent",
-                "Leak",
-                "Na",
-                "Kv"
-            ],
-            "sections": [
-                25,
-                24,
-                22,
-                26,
-                20,
-                41,
-                34,
-                50,
-                43,
-                19,
-                42,
-                27,
-                44,
-                18,
-                51,
-                37,
-                48,
-                21,
-                30,
-                39,
-                46,
-                49,
-                36,
-                47,
-                29,
-                31,
-                32,
-                45,
-                33,
-                35,
-                23,
-                38,
-                40,
-                28
-            ]
-        },
-        "trunk": {
+        "apic": {
             "mechanisms": [
                 "Independent",
                 "Leak",
@@ -101,24 +57,48 @@
             ],
             "sections": [
                 9,
-                17
-            ]
-        },
-        "oblique": {
-            "mechanisms": [
-                "Independent",
-                "Leak",
-                "Na",
-                "Kv"
-            ],
-            "sections": [
-                13,
-                16,
                 10,
                 11,
+                12,
+                13,
                 14,
                 15,
-                12
+                16,
+                17,
+                18,
+                19,
+                20,
+                21,
+                22,
+                23,
+                24,
+                25,
+                26,
+                27,
+                28,
+                29,
+                30,
+                31,
+                32,
+                33,
+                34,
+                35,
+                36,
+                37,
+                38,
+                39,
+                40,
+                41,
+                42,
+                43,
+                44,
+                45,
+                46,
+                47,
+                48,
+                49,
+                50,
+                51
             ]
         }
     },
@@ -133,21 +113,27 @@
             ]
         },
         {
-            "name": "somatic",
+            "name": "soma",
             "domains": [
                 "soma"
             ]
         },
         {
-            "name": "axonal",
+            "name": "axon",
             "domains": [
                 "axon"
             ]
         },
         {
-            "name": "dendritic",
+            "name": "dend",
             "domains": [
                 "dend"
+            ]
+        },
+        {
+            "name": "apic",
+            "domains": [
+                "apic"
             ]
         },
         {
@@ -156,53 +142,32 @@
                 "soma",
                 "axon",
                 "dend",
-                "tuft",
-                "trunk",
-                "oblique"
+                "apic"
             ]
         },
         {
-            "name": "somatic",
+            "name": "soma",
             "domains": [
                 "soma"
             ]
         },
         {
-            "name": "axonal",
+            "name": "axon",
             "domains": [
                 "axon"
             ]
         },
         {
-            "name": "dendritic",
+            "name": "dend",
             "domains": [
                 "dend"
             ]
         },
         {
-            "name": "tuft",
+            "name": "apic",
             "domains": [
-                "tuft"
+                "apic"
             ]
-        },
-        {
-            "name": "trunk",
-            "domains": [
-                "trunk"
-            ]
-        },
-        {
-            "name": "oblique",
-            "domains": [
-                "oblique"
-            ]
-        },
-        {
-            "name": "distal_tuft",
-            "domains": [
-                "tuft"
-            ],
-            "min_dist": 260
         }
     ],
     "params": {
@@ -213,7 +178,7 @@
                     "value": 1
                 }
             },
-            "somatic": {
+            "soma": {
                 "function": "constant",
                 "parameters": {
                     "value": 2
@@ -251,13 +216,7 @@
                     "value": 0.03
                 }
             },
-            "somatic": {
-                "function": "constant",
-                "parameters": {
-                    "value": 0.05
-                }
-            },
-            "distal_tuft": {
+            "soma": {
                 "function": "constant",
                 "parameters": {
                     "value": 0.05
@@ -364,10 +323,10 @@
             "all": {
                 "function": "constant",
                 "parameters": {
-                    "value": 0.003
+                    "value": 0.0015
                 }
             },
-            "somatic": {
+            "soma": {
                 "function": "constant",
                 "parameters": {
                     "value": 0.005

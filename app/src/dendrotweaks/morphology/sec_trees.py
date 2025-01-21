@@ -37,12 +37,15 @@ class Section(Node):
     A set of nodes with a relation on the set. A path.
     """
 
-    def __init__(self, idx: str, parent_idx: str, pts3d: list[Node]) -> None:
+    def __init__(self, idx: str, parent_idx: str, pts3d: List[Node]) -> None:
         super().__init__(idx, parent_idx)
         self.pts3d = pts3d
         self.segments = []
         self._ref = None
-        self.domain = self.pts3d[0].domain
+        self._domain = self.pts3d[0].domain
+
+        if not all(pt.domain == self._domain for pt in pts3d):
+            raise ValueError('All points in a section must belong to the same domain.')
 
     # MAGIC METHODS
 
@@ -77,6 +80,16 @@ class Section(Node):
             yield seg
 
     # PROPERTIES
+
+    @property
+    def domain(self):
+        return self._domain
+
+    @domain.setter
+    def domain(self, domain):
+        self._domain = domain
+        for pt in self.pts3d:
+            pt.domain = domain
 
     @property
     def df_pts3d(self):
@@ -481,7 +494,7 @@ class SectionTree(Tree):
     def __init__(self, sections: list[Section]) -> None:
         super().__init__(sections)
         self.domains = self._init_domains()
-        self.find_apic_subdomains()
+        # self.find_apic_subdomains()
         self._swc_tree = None
         self._seg_tree = None
 
@@ -497,7 +510,7 @@ class SectionTree(Tree):
         return domains
 
 
-    def find_apic_subdomains(self, tolerance=5):
+    def define_apic_subdomains(self, tolerance=5, trunk_end=None):
         """
         Partition apical dendrite nodes into trunk, tuft, and oblique domains starting from the apical root.
         """
@@ -517,6 +530,13 @@ class SectionTree(Tree):
 
         while stack:
             node = stack.pop()
+
+            if trunk_end and node == trunk_end:
+                # Classify the node and all its descendants as tuft
+                trunk_sections.append(node)
+                for child in node.children:
+                    tuft_sections.extend(child.subtree)
+                continue
 
             # If the node is a leaf, skip further processing
             if not node.children:
@@ -706,11 +726,17 @@ class SectionTree(Tree):
         ax.set_ylabel(projection[1])
         ax.set_aspect('equal')
 
-    def plot_radii_distribution(self, ax=None, highlight=None):
+    def plot_radii_distribution(self, ax=None, highlight=None, 
+    domains=True, show_soma=False):
         if ax is None:
             fig, ax = plt.subplots(figsize=(8, 3))
 
         for sec in self.sections:
+            if not show_soma and sec.parent is None:
+                continue
+            color = 'gray'
+            if domains:
+                color = DOMAINS_TO_COLORS.get(sec.domain, color)
             if highlight and sec.idx in highlight:
                 ax.plot(
                     [pt.distance_to_root for pt in sec.pts3d], 
@@ -724,7 +750,7 @@ class SectionTree(Tree):
                     [pt.distance_to_root for pt in sec.pts3d], 
                     sec.radii, 
                     marker='.', 
-                    color='gray', 
+                    color=color, 
                     zorder=1
                 )
         ax.set_xlabel('Distance from root')

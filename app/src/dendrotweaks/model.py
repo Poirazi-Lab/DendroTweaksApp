@@ -263,6 +263,7 @@ class Model():
         swc_tree.align_apical_dendrite()
 
         sec_tree = self.tree_factory.create_sec_tree(swc_tree)
+        sec_tree.sort()
 
         self.swc_tree = swc_tree
         self.sec_tree = sec_tree

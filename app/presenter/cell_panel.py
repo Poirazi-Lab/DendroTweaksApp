@@ -68,13 +68,17 @@ class CellMixin():
                 'color': [self.view.theme.palettes['sec_type'][0]], 
                 'rad': [self.model.sec_tree.soma._ref.diam / 2]}
 
+    @log
     def update_cell_renderer_selection(self):
         """
         Update the selected sections in the cell renderer.
         """
         with remove_callbacks(self.view.figures['cell'].renderers[0].data_source.selected):
             sec_ids = [sec.idx for sec in self.selected_secs]
-            self.view.figures['cell'].renderers[0].data_source.selected.indices = sec_ids
+            indices = [i for i, sec in enumerate(self.model.sec_tree) if sec.idx in sec_ids]
+            logger.debug(f'Sec ids: {sec_ids}')
+            logger.debug(f'Indices: {indices}')
+            self.view.figures['cell'].renderers[0].data_source.selected.indices = indices
 
     def rotate_cell_renderer_callback(self, attr, old, new):
         """
