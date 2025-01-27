@@ -445,6 +445,36 @@ class SWCTree(Tree):
 
     #     ax.set_aspect('equal')
 
+    def plot_radii_distribution(self, ax=None, highlight=None, 
+    domains=True, show_soma=False):
+        if ax is None:
+            fig, ax = plt.subplots(figsize=(8, 3))
+
+        for pt in self.pts3d:
+            if not show_soma and pt.domain is 'soma':
+                continue
+            color = 'gray'
+            if domains:
+                color = DOMAINS_TO_COLORS.get(pt.domain, color)
+            if highlight and pt.idx in highlight:
+                ax.plot(
+                    pt.distance_to_root, 
+                    pt.r, 
+                    marker='.', 
+                    color='red', 
+                    zorder=2
+                )
+            else:
+                ax.plot(
+                    pt.distance_to_root, 
+                    pt.r, 
+                    marker='.', 
+                    color=color, 
+                    zorder=1
+                )
+        ax.set_xlabel('Distance from root')
+        ax.set_ylabel('Radius')
+
 
 @contextmanager
 def remove_overlaps(swc_tree):

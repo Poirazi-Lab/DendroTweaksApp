@@ -26,6 +26,9 @@ def validate_tree(tree):
     if isinstance(tree, SWCTree):
         validate_swc_tree(tree)
 
+    if isinstance(tree, SectionTree):
+        validate_section_tree(tree)
+
     # Check if the tree is sorted
     if not tree.is_sorted:
         raise ValueError("Tree is not sorted")
@@ -143,6 +146,17 @@ def validate_swc_tree(swc_tree):
             issues_str = "\n".join([f"Child {child} does not overlap with parent {pt}" for pt, child in non_overlapping_children])
             raise ValueError(f"Found non-overlapping children:\n{issues_str} for bifurcations")
         
+# =============================================================================
+# Section-specific validation
+# =============================================================================
+
+
+def validate_section_tree(section_tree):
+
+    for sec in section_tree:
+        if not all(pt.domain == sec.domain for pt in sec.pts3d):
+            raise ValueError('All points in a section must belong to the same domain.')
+
 
 
 # =============================================================================

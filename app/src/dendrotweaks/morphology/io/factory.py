@@ -17,7 +17,8 @@ class TreeFactory():
         
         self.reader = SWCReader()
 
-    def create_swc_tree(self, source: Union[str, DataFrame]) -> SWCTree:
+    def create_swc_tree(self, source: Union[str, DataFrame],
+            standardize=True) -> SWCTree:
         """
         Creates an SWC tree from either a file path or a DataFrame.
         
@@ -39,7 +40,8 @@ class TreeFactory():
 
         swc_tree.remove_overlaps()
         swc_tree.sort()
-        self._convert_to_3PS_notation(swc_tree)
+        if standardize:
+            self._convert_to_3PS_notation(swc_tree)
         swc_tree.sort()
         return swc_tree
 

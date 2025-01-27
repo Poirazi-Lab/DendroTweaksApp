@@ -244,7 +244,7 @@ graph_hover_callback = CustomJS(args=dict(plot=view.figures['graph']), code="""
 """)
 
 hover = HoverTool(callback=graph_hover_callback, tooltips=[("ID", "@index"), 
-                                                           ("Name", "@name"), 
+                                                           ("Sec ID", "@sec"),
                                                            ("x", "@x"),
                                                            ("Domain", "@domain"), 
                                                            ("Area", "@area"), 
