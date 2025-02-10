@@ -46,6 +46,7 @@ DOMAINS_TO_COLORS = {
 }
 
 from contextlib import contextmanager
+import random
 
 
 class SWCNode(Node):
@@ -63,31 +64,48 @@ class SWCNode(Node):
     
     @property
     def domain(self):
-        return ID_TO_DOMAIN.get(self.type_idx, 'unknown')
+        return ID_TO_DOMAIN.get(self.type_idx, f"custom_{int(self.type_idx)}")
 
     @domain.setter
     def domain(self, value):
         self.type_idx = DOMAIN_TO_ID.get(value, 0)
 
+
     @property
     def distance_to_parent(self):
         if self.parent:
-            return np.sqrt((self.x - self.parent.x)**2 + (self.y - self.parent.y)**2 + (self.z - self.parent.z)**2)
+            return np.sqrt((self.x - self.parent.x)**2 + 
+                        (self.y - self.parent.y)**2 + 
+                        (self.z - self.parent.z)**2)
         return 0
 
-    @property
-    def distance_to_root(self):
-        if self.parent:
-            return self.parent.distance_to_root + self.distance_to_parent
-        return 0
 
-    @property
-    def relative_distance(self):
-        if self.parent:
-            if self.parent.domain == self.domain:
-                return self.distance_to_parent + self.parent.relative_distance
-            return self.distance_to_parent
-        return 0
+    def path_distance(self, stop_at_domain_change=False, ancestor=None):
+        """
+        Computes the distance from this node to an ancestor.
+        
+        Args:
+            stop_at_domain_change (bool): If True, stops when domain changes.
+            ancestor (Node, optional): If provided, stops at this specific ancestor.
+            
+        Returns:
+            float: The accumulated distance.
+        """
+        distance = 0
+        node = self
+        
+        while node.parent:
+            if ancestor and node.parent == ancestor:
+                break  # Stop if we reach the specified ancestor
+
+            if stop_at_domain_change and node.parent.domain != node.domain:
+                break  # Stop if domain changes
+            
+            distance += node.distance_to_parent
+            node = node.parent
+
+        return distance
+
 
 
     @property
@@ -394,7 +412,14 @@ class SWCTree(Tree):
                                'Z': [edge[0].z, edge[1].z]}
                 ax.plot(edge_coords[projection[0]], edge_coords[projection[1]], color='C1')
 
-        colors = [DOMAINS_TO_COLORS.get(pt.domain, 'black') for pt in self.pts3d] if domains else 'C0'
+        domains_to_colors = DOMAINS_TO_COLORS
+        unique_domains = set(pt.domain for pt in self.pts3d)
+        for domain in unique_domains:
+            if domain not in domains_to_colors:
+                gray_value = int(255 * random.random())
+                domains_to_colors[domain] = "#{:02x}{:02x}{:02x}".format(gray_value, gray_value, gray_value)
+        print(domains_to_colors)
+        colors = [domains_to_colors.get(pt.domain, "black") for pt in self.pts3d] if domains else 'C0'
 
         if nodes:
             ax.scatter(coords[projection[0]], coords[projection[1]], s=10, c=colors, marker='.', zorder=2)
@@ -458,7 +483,7 @@ class SWCTree(Tree):
                 color = DOMAINS_TO_COLORS.get(pt.domain, color)
             if highlight and pt.idx in highlight:
                 ax.plot(
-                    pt.distance_to_root, 
+                    pt.path_distance(), 
                     pt.r, 
                     marker='.', 
                     color='red', 
@@ -466,7 +491,7 @@ class SWCTree(Tree):
                 )
             else:
                 ax.plot(
-                    pt.distance_to_root, 
+                    pt.path_distance(), 
                     pt.r, 
                     marker='.', 
                     color=color, 

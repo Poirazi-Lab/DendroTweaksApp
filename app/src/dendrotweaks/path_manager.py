@@ -97,6 +97,15 @@ class PathManager:
         return [f.replace(extension, '') 
                 for f in os.listdir(directory) if f.endswith(extension)]
 
+    def list_morphologies(self, extension: str = '.swc') -> List[str]:
+        """
+        List all SWC files.
+        
+        Returns:
+        - List[str]: A list of SWC file names.
+        """
+        return self.list_files('swc', 'swc')
+
 
     def print_directory_tree(self, subfolder=None) -> None:
         """

@@ -119,12 +119,12 @@ class VoltageTraceValidation:
             attenuation = [dv / delta_v_at_stimulated for dv in delta_vs]
             return distances, min_voltages, attenuation
 
-    def nonlinearity(self, seg, syn_group, duration):
-        start_ts = int(syn_group.start / self.model.simulator.dt)
+    def nonlinearity(self, seg, population, duration):
+        start_ts = int(population.start / self.model.simulator.dt)
         delta_vs = []
-        max_weight = syn_group.weight
+        max_weight = population.weight
         for i in range(1, max_weight + 1):
-            syn_group.weight = i
+            population.weight = i
             self.model.simulator.run(duration)
             vs = np.array(self.model.simulator.recordings[seg]).flatten()
             vs = np.array(vs).flatten()

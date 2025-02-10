@@ -38,11 +38,11 @@ class TreeFactory():
         ]
         swc_tree =  SWCTree(nodes)
 
-        swc_tree.remove_overlaps()
-        swc_tree.sort()
-        if standardize:
-            self._convert_to_3PS_notation(swc_tree)
-        swc_tree.sort()
+        # swc_tree.remove_overlaps()
+        # swc_tree.sort()
+        # if standardize:
+        #     self._convert_to_3PS_notation(swc_tree)
+        # swc_tree.sort()
         return swc_tree
 
     def _convert_to_3PS_notation(self, swc_tree):
@@ -143,7 +143,8 @@ class TreeFactory():
             section.parent_idx = section.parent.idx if section.parent else -1
 
 
-        sections = self._merge_soma(sections, swc_tree)
+        if swc_tree.soma_notation == '3PS':
+            sections = self._merge_soma(sections, swc_tree)
 
         return sections
 
@@ -152,9 +153,6 @@ class TreeFactory():
         """
         If soma has 3PS notation, merge it into one section.
         """
-
-        if swc_tree.soma_notation != '3PS':
-            raise ValueError('Soma notation must be 3PS to merge the soma.')
 
         true_soma = swc_tree.root._section
         true_soma.idx = 0

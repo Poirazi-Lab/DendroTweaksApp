@@ -42,6 +42,8 @@ class NavigationMixin():
 
         if self.view.widgets.tabs['section'].active == 3:
             self._update_distribution_plot()
+        elif self.view.widgets.tabs['section'].active == 0:
+            self._update_diam_distribution_plot()
 
     @log
     def update_selected_segments(self, old, new):

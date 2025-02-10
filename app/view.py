@@ -393,7 +393,8 @@ PARAMS_TO_UNITS = {
               'diam': 'Diameter (μm)',
               'area': 'Area (μm²)',
               'subtree_size': 'Subtree size',
-              'dist': 'Distance from soma (μm)', 
+              'absolute_distance': 'Distance to soma (μm)',
+              'domain_distance': 'Distance to parent domain (μm)',
               'Ra': 'Axial resistance (Ωcm)',
               },
     'ephys': {'cm': 'Capacitance (μF/cm²)',
@@ -411,7 +412,7 @@ PARAMS_TO_UNITS = {
 
 PARAMS = {
     'Topology': ['domain', 'subtree_size'],
-    'Geometry': ['diam', 'area', 'distance'],
+    'Geometry': ['diam', 'area', 'absolute_distance', 'domain_distance'],
     'Stimuli': ['iclamps'],
     'Recordings': ['recordings'],
     'Synapses': ['AMPA', 'NMDA', 'AMPA_NMDA', 'GABAa']

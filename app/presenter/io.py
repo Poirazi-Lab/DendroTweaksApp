@@ -27,6 +27,9 @@ class IOMixin():
         """
         self.model.name = new
         self.view.widgets.selectors['model'].options = self.model.path_manager.list_models()
+        morphologies = self.model.path_manager.list_morphologies()
+        self.view.widgets.selectors['morphology'].options = ['Select a morphology'] + morphologies
+        # self.view.widgets.selectors['input'].options = self.model.path_manager.list_inputs()
 
     @log
     def load_model_callback(self, event):
@@ -36,7 +39,6 @@ class IOMixin():
     
         self.load_model()
 
-        self.view.widgets.buttons['load_swc'].disabled = True
         self.view.widgets.buttons['load_mod'].disabled = True
         self.view.widgets.buttons['load_model'].disabled = True
 
@@ -61,31 +63,36 @@ class IOMixin():
         self.update_voltage()
 
 
+    def load_input_callback(self, attr, old, new):
+        """
+        Callback for the selectors['input'] widget.
+        """
+        self.model.load_input(new)
+
     # =========================================================================
     # MORPHOLOGY
     # =========================================================================
 
 
-    def load_swc_callback(self, event):
+    def load_swc_callback(self, attr, old, new):
         """
         Creates the cell and the renderers.
         """     
-        self.load_swc() 
+        self.load_swc(new)
 
-        self.view.widgets.buttons['load_swc'].disabled = True
         self.view.widgets.buttons['load_model'].disabled = True
         self.view.widgets.text['model_version'].value = self.model.name
 
 
     @log
-    def load_swc(self):
+    def load_swc(self, swc_file_name):
         """
         Creates the cell and the renderers.
         """
 
         # MORPHOLOGY --------------------------------------------
         
-        self.create_morpohlogy()
+        self.create_morpohlogy(swc_file_name)
 
         # LOAD MECHANISMS -----------------------------------------
         self.model.add_default_mechanisms()
@@ -110,7 +117,7 @@ class IOMixin():
 
 
     @log
-    def create_morpohlogy(self):
+    def create_morpohlogy(self, swc_file_name):
         """
         Loads the selected cell from the SWC file. Builds the swc tree and sec tree.
         Creates sections in the simulator and sets segmentation based on the geometry.
@@ -118,7 +125,6 @@ class IOMixin():
         Creates the default "all" group.
         """
         # Create swc and sec tree
-        swc_file_name = self.model.name
         self.model.from_swc(swc_file_name)
 
         # Create and reference sections in simulator

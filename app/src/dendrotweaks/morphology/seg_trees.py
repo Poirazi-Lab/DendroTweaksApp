@@ -46,13 +46,22 @@ class Segment(Node):
     def Ra(self):
         return self._section.Ra
 
-    @property
-    def distance_to_root(self):
-        return self._section.distance_to_root(self.x)
+    
+    def path_distance(self, stop_at_domain_change=False):
+        return self._section.path_distance(self.x, 
+            stop_at_domain_change=stop_at_domain_change)
 
     @property
-    def distance_to_parent_domain(self):
-        return self._section.distance_to_parent_domain(self.x)
+    def absolute_distance(self):
+        return self.path_distance(stop_at_domain_change=False)
+
+    @property
+    def domain_distance(self):
+        return self.path_distance(stop_at_domain_change=True)
+
+    # @property
+    # def distance_to_parent_domain(self):
+    #     return self._section.distance_to_parent_domain(self.x)
 
     def set_param_value(self, param_name, value):
         if hasattr(self._ref, param_name):

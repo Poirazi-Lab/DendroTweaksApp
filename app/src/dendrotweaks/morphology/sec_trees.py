@@ -6,6 +6,7 @@ from typing import Callable, List
 from neuron import h
 
 from dendrotweaks.morphology.trees import Node, Tree
+from dendrotweaks.morphology.domains import Domain
 from dataclasses import dataclass, field
 from bisect import bisect_left
 
@@ -236,7 +237,8 @@ class Section(Node):
         return round(np.mean(seg_values), 16)
 
 
-    def distance_to_root(self, relative_position: float = 0) -> float:
+    def path_distance(self, relative_position: float = 0, 
+                        stop_at_domain_change: bool = False) -> float:
         """
         Calculate the distance from the section to the root at a given relative position.
 
@@ -257,13 +259,22 @@ class Section(Node):
         if not (0 <= relative_position <= 1):
             raise ValueError('Relative position must be between 0 and 1.')
 
-        dist_to_sec_origin = relative_position * self.length
-        if self.parent:
-            if self.parent.domain == self.domain:
-                return dist_to_sec_origin + self.parent.distance_to_root(1)
-            return dist_to_sec_origin 
-        return 0
-        # TODO: Is it correct to calculate distance to soma surface, not the center
+        distance = 0
+        factor = relative_position
+        node = self
+
+        while node.parent:
+
+            distance += factor * node.length
+
+            if stop_at_domain_change and node.parent.domain != node.domain:
+                break
+
+            node = node.parent
+            factor = 1
+            
+        return distance
+        
 
     
     def disconnect_from_parent(self):
@@ -377,223 +388,26 @@ class Section(Node):
         ax.set_ylim(0, max(self.radii) + 0.1 * max(self.radii))
 
 
-class Domain:
-
-    def __init__(self, name: str, sections: list[Section] = None) -> None:
-        self.name = name
-        self._sections = sections if sections else []
-        self.inserted_mechanisms = {}
-
-
-    @property
-    def mechanisms(self):
-        return {**{'Independent': None}, **self.inserted_mechanisms}
-
-
-    @property
-    def sections(self):
-        return self._sections
-
-
-    def __contains__(self, section):
-        return section in self.sections
-
-    def merge(self, other):
-        """
-        Merge the sections of the other domain into this domain.
-        """
-        self.inserted_mechanisms.update(other.inserted_mechanisms)
-        sections = self.sections + other.sections
-        self._sections = []
-        for sec in sections:
-            self.add_section(sec)
-
-
-    def insert_mechanism(self, mechanism):
-        """
-        Inserts a mechanism in the domain if it is not already inserted.
-
-        Parameters
-        ----------
-        mechanism : Mechanism
-            The mechanism to be inserted in the domain.
-        """
-        if mechanism.name in self.inserted_mechanisms:
-            warnings.warn(f'Mechanism {mechanism.name} already inserted in domain {self.name}.')
-            return
-        self.inserted_mechanisms[mechanism.name] = mechanism
-        for sec in self.sections:
-            sec.insert_mechanism(mechanism.name)
-        mechanism.domains[self.name] = self
-
-
-    def uninsert_mechanism(self, mechanism):
-        """
-        Uninserts a mechanism in the domain if it was inserted.
-
-        Parameters
-        ----------
-        mechanism : Mechanism
-            The mechanism to be uninserted from the domain.
-        """
-        if mechanism.name not in self.inserted_mechanisms:
-            warnings.warn(f'Mechanism {mechanism} not inserted in domain {self.name}.')
-            return
-        self.inserted_mechanisms.pop(mechanism.name)
-        for sec in self.sections:
-            sec.uninsert_mechanism(mechanism.name)
-        mechanism.domains.pop(self.name)
-
-
-    def add_section(self, sec: Section):
-        """
-        Adds a section to the domain. 
-        Changes the domain attribute of the section.
-        Inserts the mechanisms already present in the domain to the section.
-
-        Parameters
-        ----------
-        sec : Section
-            The section to be added to the domain.
-        """
-        if sec in self._sections:
-            warnings.warn(f'Section {sec} already in domain {self.name}.')
-            return
-        sec.domain = self.name
-        for mech_name in self.inserted_mechanisms:
-            sec.insert_mechanism(mech_name)
-        self._sections.append(sec)
-
-
-    def remove_section(self, sec):
-        if sec not in self.sections:
-            warnings.warn(f'Section {sec} not in domain {self.name}.')
-            return
-        sec.domain = None
-        for mech_name in self.inserted_mechanisms:
-            sec.uninsert_mechanism(mech_name)
-        self._sections.remove(sec)
-
-
-    def is_empty(self):
-        return not bool(self._sections)
-
-
-    def to_dict(self):
-        return {
-            'mechanisms': list(self.mechanisms.keys()),
-            'sections': [sec.idx for sec in self.sections]
-        }
-
-
-    def __repr__(self):
-        return f'<Domain({self.name}, {len(self.sections)} sections)>'
-
-
 class SectionTree(Tree):
+
     def __init__(self, sections: list[Section]) -> None:
         super().__init__(sections)
-        self.domains = self._init_domains()
-        # self.find_apic_subdomains()
+        self._create_domains()
         self._swc_tree = None
         self._seg_tree = None
 
-    def _init_domains(self):
+
+    def _create_domains(self):
         """
         Create the domains in the tree.
         """
-        domains = {}
+
+        unique_domain_names = set([sec.domain for sec in self.sections])
+        self.domains = {name: Domain(name) for name in unique_domain_names}
+
         for sec in self.sections:
-            if sec.domain not in domains:
-                domains[sec.domain] = Domain(sec.domain)
-            domains[sec.domain].add_section(sec)
-        return domains
-
-
-    def define_apic_subdomains(self, tolerance=5, trunk_end=None):
-        """
-        Partition apical dendrite nodes into trunk, tuft, and oblique domains starting from the apical root.
-        """
-        # Find the apical root
-        apic_roots = [child for child in self.root.children if child.domain == 'apic']
-        if len(apic_roots) != 1:
-            raise ValueError(f'Tree must have exactly one apical root. Found {len(apic_roots)} apical roots.')
-        apic_root = apic_roots[0]
-
-        # Initialize domain lists
-        trunk_sections = [apic_root]
-        tuft_sections = []
-        oblique_sections = []
-
-        # Start from the apical root and iterate
-        stack = [apic_root]
-
-        while stack:
-            node = stack.pop()
-
-            if trunk_end and node == trunk_end:
-                # Classify the node and all its descendants as tuft
-                trunk_sections.append(node)
-                for child in node.children:
-                    tuft_sections.extend(child.subtree)
-                continue
-
-            # If the node is a leaf, skip further processing
-            if not node.children:
-                continue
-
-            # Binary tree: node.children has exactly 2 elements
-            left_child, right_child = node.children
-
-            # Compute subtree sizes
-            left_size = len(left_child.subtree)
-            right_size = len(right_child.subtree)
-
-            # Check if the sizes are approximately equal (within tolerance)
-            if abs(left_size - right_size) <= tolerance:
-                # Classify both children and their subtrees as tuft
-                tuft_sections.extend([left_child, right_child])
-                tuft_sections.extend(left_child.subtree[1:])  # Exclude the node itself
-                tuft_sections.extend(right_child.subtree[1:])  # Exclude the node itself
-            else:
-                # Determine which child belongs to the trunk and which to oblique
-                if left_size > right_size:
-                    trunk_sections.append(left_child)
-                    oblique_sections.append(right_child)
-                    oblique_sections.extend(right_child.subtree[1:])  # Include right_child's subtree
-                    stack.append(left_child)  # Continue exploring the trunk
-                else:
-                    trunk_sections.append(right_child)
-                    oblique_sections.append(left_child)
-                    oblique_sections.extend(left_child.subtree[1:])  # Include left_child's subtree
-                    stack.append(right_child)  # Continue exploring the trunk
-
-        self.domains.pop('apic')
-        basal_sections = self.domains.get('dend').sections if 'dend' in self.domains else []
-        for sec in self.sections:
-            if sec in trunk_sections:
-                sec.domain = 'trunk'
-            elif sec in tuft_sections:
-                sec.domain = 'tuft'
-            elif sec in oblique_sections:
-                sec.domain = 'oblique'
-            elif sec in basal_sections:
-                sec.domain = 'basal'
-
-        new_domains = {
-            'trunk': Domain('trunk', trunk_sections),
-            'tuft': Domain('tuft', tuft_sections),
-            'oblique': Domain('oblique', oblique_sections),
-            'basal': Domain('basal', basal_sections)
-        }
-        self.domains.update(new_domains)
-
-
+            self.domains[sec.domain].add_section(sec)
             
-
-
-            
-
 
     @property
     def sections(self):
@@ -673,7 +487,39 @@ class SectionTree(Tree):
             h.disconnect(sec=section._ref)
             for sec in section.subtree:
                 h.delete_section(sec=sec._ref)
-                
+
+
+    def downsample(self, factor: float):
+        """
+        Downsample the SWC tree by reducing the number of points in each section 
+        based on the given factor, while preserving the first and last points.
+        
+        :param factor: The proportion of points to keep (e.g., 0.5 keeps 50% of points)
+        """
+        for sec in self.sections:
+            if sec is self.soma:
+                continue
+
+            if len(sec.pts3d) < 3:  # Keep sections with only start & end points
+                continue
+
+            num_points = len(sec.pts3d)
+            num_to_keep = max(2, int(num_points * factor))  # Ensure at least start & end remain
+
+            # Select indices to keep (first, last, and spaced indices in between)
+            keep_indices = np.linspace(0, num_points - 1, num_to_keep, dtype=int)
+            keep_set = set(keep_indices)
+
+            points_to_remove = [pt for i, pt in enumerate(sec.pts3d) if i not in keep_set]
+
+            print(f'Removing {len(points_to_remove)} points from section {sec.idx}')
+            
+            for pt in points_to_remove:
+                self._swc_tree.remove_node(pt)
+            
+        self._swc_tree.sort()
+
+            
 
     def plot_sections_as_matrix(self, ax=None):
         """
@@ -739,7 +585,7 @@ class SectionTree(Tree):
                 color = DOMAINS_TO_COLORS.get(sec.domain, color)
             if highlight and sec.idx in highlight:
                 ax.plot(
-                    [pt.distance_to_root for pt in sec.pts3d], 
+                    [pt.path_distance() for pt in sec.pts3d], 
                     sec.radii, 
                     marker='.', 
                     color='red', 
@@ -747,7 +593,7 @@ class SectionTree(Tree):
                 )
             else:
                 ax.plot(
-                    [pt.distance_to_root for pt in sec.pts3d], 
+                    [pt.path_distance() for pt in sec.pts3d], 
                     sec.radii, 
                     marker='.', 
                     color=color, 

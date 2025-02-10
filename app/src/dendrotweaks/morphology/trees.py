@@ -60,17 +60,36 @@ class Node():
         types = {0: 'termination', 1: 'continuation'}
         return types.get(len(self.children), 'bifurcation')
 
+    # @property
+    # def subtree(self) -> list:
+    #     """
+    #     Gets the subtree of the node (including the node itself).
+
+    #     Returns:
+    #         list: A list of nodes in the subtree.
+    #     """
+    #     subtree = [self]
+    #     for child in self.children:
+    #         subtree += child.subtree
+    #     return subtree
+
     @property
     def subtree(self) -> list:
         """
-        Gets the subtree of the node (including the node itself).
-
+        Gets the subtree of the node (including the node itself) using 
+        an iterative depth-first traversal.
+        
         Returns:
             list: A list of nodes in the subtree.
         """
-        subtree = [self]
-        for child in self.children:
-            subtree += child.subtree
+        subtree = []
+        stack = [self]  # Start from the current node
+
+        while stack:
+            node = stack.pop()
+            subtree.append(node)
+            stack.extend(node.children)  # Push children to stack
+
         return subtree
 
     @property
@@ -86,15 +105,15 @@ class Node():
     @property
     def depth(self):
         """
-        The depth of the node in the tree.
-
-        Returns:
-            int: The depth of the node in the tree.
+        Computes the depth of the node in the tree iteratively.
         """
-        if self.parent is None:
-            return 0
-        else:
-            return self.parent.depth + 1
+        depth = 0
+        node = self
+        while node.parent:  # Traverse up to the root
+            depth += 1
+            node = node.parent
+        return depth
+
 
     @property
     def siblings(self):
@@ -199,7 +218,7 @@ class Tree:
         as the entire tree. False otherwise.
         """
         nodes_set = set(self._nodes)
-        subtree_set = set(self.root.subtree)
+        subtree_set = set(self.get_subtree(self.root))
         return nodes_set == subtree_set
 
     @property
@@ -251,34 +270,39 @@ class Tree:
 
     def _connect_nodes(self):
         """
-        Builds the hierarchical tree structure for the nodes.
-
-        For each node in `self._nodes`, find its parent node.
-        Append the given node as a child to the parent node.
-        Assign the parent node as the parent to the given node.
+        Efficiently builds the hierarchical tree structure for the nodes
+        using a dictionary for fast parent lookups.
         """
         print('Connecting tree.')
+
         if self.is_connected:
             print('  Tree already connected.')
             return
+
+        # Step 1: Create a dictionary for O(1) lookups
+        node_map = {node.idx: node for node in self._nodes}
+
+        # Step 2: Assign parent-child relationships in O(N) time
         for node in self._nodes:
-            if node is not self.root:
-                for parent_node in self._nodes:
-                    if node.parent_idx == parent_node.idx:
-                        node.connect_to_parent(parent_node)
-                        break
-        
+            if node is not self.root and node.parent_idx in node_map:
+                node.connect_to_parent(node_map[node.parent_idx])
+
+        # Step 3: Ensure tree is fully connected
         if not self.is_connected:
             raise ValueError('Tree is not connected.')
 
+        print('Connected tree.')
+
+
     # TRAVERSAL METHODS
 
-    def traverse(self):
+    def traverse(self, root=None):
         """
         Iterate over the nodes in the tree using a stack-based 
         depth-first traversal.
         """
-        stack = [self.root]
+        root = root or self.root
+        stack = [root]
         visited = set()
 
         while stack:
@@ -290,6 +314,18 @@ class Tree:
             visited.add(node)
             for child in reversed(node.children):
                 stack.append(child)
+
+    def get_subtree(self, node):
+        """
+        Get the subtree of a node using the traverse method.
+
+        Args:
+            node (Node): The node to get the subtree for.
+
+        Returns:
+            list: A list of nodes in the subtree.
+        """
+        return list(self.traverse(node))
 
     # SORTIONG METHODS
 
@@ -303,6 +339,9 @@ class Tree:
         Returns:
             None
         """
+
+        # subtree_size_map = {node: len(self.get_subtree(node)) for node in self._nodes}
+
         for node in self._nodes:
             node.children = sorted(
                 node.children, 

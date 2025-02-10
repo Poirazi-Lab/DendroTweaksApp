@@ -16,5 +16,7 @@ app/docs/build/
 app/docs/make.bat
 app/docs/Makefile
 E_6_15_in_um_extended.swc
-**/CA1_Attila
+**/CA1_new
+**/CA1_old
 **/CA1_morpho.ipynb
+**Kyra/

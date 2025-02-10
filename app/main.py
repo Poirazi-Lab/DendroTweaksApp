@@ -249,7 +249,9 @@ hover = HoverTool(callback=graph_hover_callback, tooltips=[("ID", "@index"),
                                                            ("Domain", "@domain"), 
                                                            ("Area", "@area"), 
                                                            ("Diam", "@diam"), 
-                                                           ("Dist", "@distance"), 
+                                                           ("Absolute dist", "@absolute_distance"), 
+                                                           ("Domain dist", "@domain_distance"),
+                                                           ("Length", "@length"),
                                                            ("cm", "@cm"),
                                                            ("Ra", "@Ra"), 
                                                         #    ('g na', '@gbar_na{0.000000}'), 
@@ -604,9 +606,23 @@ view.widgets.buttons['stats'] = Button(label='Stats', button_type='default')
 view.widgets.buttons['stats'].on_event(ButtonClick, p.stats_callback)
 
 
+view.figures['diam_distribution'] = figure(width=400,
+                                        height=150,
+                                        match_aspect=False,
+                                        tools='pan, box_zoom, hover, reset, save',)
+
+view.figures['diam_distribution'].toolbar.autohide = True
+view.figures['diam_distribution'].background_fill_color = None
+view.figures['diam_distribution'].border_fill_color = None
+view.sources['diam_distribution'] = ColumnDataSource(data={'x': [], 'y': []})
+
+view.figures['diam_distribution'].circle(x='x', y='y', source=view.sources['diam_distribution'], line_width=2, color='color')
+view.figures['diam_distribution'].y_range.start = 0
+
 stats_panel = column([view.widgets.buttons['stats'], 
                      view.DOM_elements['stats'],
                      view.figures['section_param_hist'],
+                     view.figures['diam_distribution']
                      ],
                      name='stats_panel')
 
@@ -679,8 +695,8 @@ def create_add_group_panel():
 
     view.widgets.multichoice['group_domains'].on_change('value', p.select_group_segments_callback)
 
-    view.widgets.selectors['select_by'] = Select(options=['dist', 'diam'],
-                                            value='dist',
+    view.widgets.selectors['select_by'] = Select(options=['absolute_distance', 'domain_distance', 'diam'],
+                                            value='absolute_distance',
                                             title='Select by',
                                             width=100)
 
@@ -1085,11 +1101,21 @@ view.widgets.selectors['model'] = Select(value='Select a model to load',
                                 width=242)
 
 view.widgets.selectors['model'].on_change('value', p.select_model_callback)
-
 view.widgets.selectors['model'].description = 'Select a neuronal model to load. To select another model, reload the page.'
 
-view.widgets.buttons['load_swc'] = Button(label='Load morphology', button_type='primary', width=100, styles={"margin-right":"20px"})
-view.widgets.buttons['load_swc'].on_event(ButtonClick, p.load_swc_callback)
+view.widgets.selectors['morphology'] = Select(value='Select a morphology',
+                                options=['Select a morphology'],
+                                title='Morphology',
+                                width=242)
+
+view.widgets.selectors['morphology'].on_change('value', p.load_swc_callback)
+
+view.widgets.selectors['inputs'] = Select(value='Select an input',
+                                options=['Select an input'],
+                                title='Input',
+                                width=242)
+
+view.widgets.selectors['inputs'].on_change('value', p.load_input_callback)
 
 view.widgets.buttons['load_mod'] = Button(label='Load mechanisms', button_type='primary', width=100)
 view.widgets.buttons['load_mod'].on_event(ButtonClick, p.load_mod_callback)
@@ -1117,8 +1143,9 @@ view.widgets.file_input['all'].on_change('value', p.import_file_callback)
 tab_io = TabPanel(title='Input/Output', 
                 child=column(
                     view.widgets.selectors['model'],
-                    row([view.widgets.buttons['load_swc'],
-                    view.widgets.buttons['load_mod']]),
+                    view.widgets.selectors['morphology'],
+                    view.widgets.selectors['inputs'],
+                    view.widgets.buttons['load_mod'],
                     view.widgets.buttons['load_model'],
                     Div(text='<hr style="width:18.5em; margin-top:3em">'), 
                     view.widgets.file_input['all'],

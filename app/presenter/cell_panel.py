@@ -31,7 +31,7 @@ class CellMixin():
     def colors(self):
         color_map = {k:v for k,v in zip(self.view.available_domains,
                                         self.view.theme.palettes['domain'])}
-        return [color_map[sec.domain] for sec in self.model.sec_tree]
+        return [color_map.get(sec.domain, 'gray') for sec in self.model.sec_tree]
         
     @property
     def line_widths(self):

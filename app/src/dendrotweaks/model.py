@@ -23,7 +23,6 @@ from collections import OrderedDict, defaultdict
 from dendrotweaks.path_manager import PathManager
 
 
-
 import pandas as pd
 
 import warnings
@@ -78,6 +77,9 @@ class Model():
         self.swc_tree = None
         self.sec_tree = None
 
+        # Domains
+        self.domains = {}
+
         # Mechanisms
         self.mechanisms = {}
 
@@ -110,6 +112,7 @@ class Model():
             raise ValueError(
                 'Simulator name not recognized. Use NEURON or Jaxley.')
 
+
     # -----------------------------------------------------------------------
     # PROPERTIES
     # -----------------------------------------------------------------------
@@ -118,14 +121,12 @@ class Model():
     def name(self):
         return self._name
 
+
     @name.setter
     def name(self, name):
         self._name = name
         self.path_manager.update_paths(name)
 
-    @property
-    def domains(self):
-        return self.sec_tree.domains if self.sec_tree else {}
 
     @property
     def recordings(self):
@@ -173,13 +174,6 @@ class Model():
         return dict(parameters_to_groups)
 
 
-    # @property
-    # def params(self):
-    #     # combine global and distributed parameters
-    #     return {**self.distributed_params, **self.global_params}
-
-
-
     @property
     def params_to_mechs(self):
         params_to_mechs = {}
@@ -210,7 +204,6 @@ class Model():
     # METADATA
     # -----------------------------------------------------------------------
 
-
     def info(self):
         """
         Print information about the model.
@@ -227,6 +220,7 @@ class Model():
         )
         print(info_str)
 
+
     @property
     def df_params(self):
         data = []
@@ -241,10 +235,10 @@ class Model():
                     })
         df = pd.DataFrame(data)
         return df
+
     # ========================================================================
     # MORPHOLOGY
     # ========================================================================
-
 
     def from_swc(self, file_name):
         """
@@ -255,23 +249,25 @@ class Model():
         file_name : str
             The name of the SWC file to read.
         """
-        self.name = file_name.split('.')[0]
+        # self.name = file_name.split('.')[0]
         path_to_swc_file = self.path_manager.get_file_path('swc', file_name, extension='swc')
         swc_tree = self.tree_factory.create_swc_tree(path_to_swc_file)
+        swc_tree.remove_overlaps()
+        swc_tree.sort()
+        self.tree_factory._convert_to_3PS_notation(swc_tree)
         swc_tree.sort()
         swc_tree.shift_coordinates_to_soma_center()
         swc_tree.align_apical_dendrite()
+        self.swc_tree = swc_tree
 
         sec_tree = self.tree_factory.create_sec_tree(swc_tree)
         sec_tree.sort()
-
-        self.swc_tree = swc_tree
         self.sec_tree = sec_tree
-
 
         self.create_and_reference_sections_in_simulator()
         self.set_segmentation(d_lambda=0.1)
 
+           
 
     def create_and_reference_sections_in_simulator(self):
         """
@@ -295,7 +291,6 @@ class Model():
     # ========================================================================
     # SEGMENTATION
     # ========================================================================
-
 
     def set_segmentation(self, d_lambda=0.1, f=100, use_neuron=False):
         """
@@ -337,6 +332,7 @@ class Model():
             group_name = DOMAIN_TO_GROUP.get(domain_name, domain_name)
             self.add_group(group_name, [domain_name])
 
+
     # ========================================================================
     # MECHANISMS
     # ========================================================================
@@ -364,6 +360,7 @@ class Model():
         for mechanism_name in self.path_manager.list_files(dir_name, extension='mod'):
             self.add_mechanism(mechanism_name)
             self.load_mechanism(mechanism_name, dir_name, recompile)
+
 
     def add_mechanism(self, mechanism_name: str, 
                       python_template_name: str = 'default',
@@ -431,7 +428,6 @@ class Model():
     # DOMAINS
     # ========================================================================
 
-
     def define_domain(self, domain_name: str, sections):
         """
         Adds a new domain to the tree and ensures correct partitioning of
@@ -448,65 +444,44 @@ class Model():
         """
         if isinstance(sections, Callable):
             sections = self.get_sections(sections)
-            
+
         if domain_name not in self.domains:
-            self._create_domain(domain_name, sections)
+            domain = Domain(domain_name)
+            self._add_domain_groups(domain.name)
+            self.domains[domain_name] = domain
         else:
-            self._extend_domain(domain_name, sections)
+            domain = self.domains[domain_name]
 
-        self.remove_empty()
-        
+        sections_to_move = [sec for sec in sections 
+            if sec.domain != domain_name]
 
-    def _create_domain(self, domain_name, sections):
-        """
-        Creates a new domain with the given sections.
-        """
-        print(f'Creating domain {domain_name}...')
-        # 1 Create a new domain
-        domain = Domain(domain_name)
-        # 2 Remove sections from existing domains
-        self.remove_selected_sections_from_existing_domains(sections)
-        # 3 Add sections to new domain
-        for sec in sections:
-            domain.add_section(sec)
-        # 4 Add domain groups
-        self._add_domain_groups(domain.name)
-        # 5 Add domain to the domain dictionary
-        self.domains[domain_name] = domain
-
-
-    def _extend_domain(self, domain_name, sections):
-        """
-        Extends an existing domain with new sections.
-        """
-        print(f'Extending domain {domain_name}...')
-        # 1 Get the domain
-        domain = self.domains.get(domain_name)
-        # 2 Remove sections from existing domains, 
-        # but only if they are not already in the target domain
-        sections_not_in_domain = [sec for sec in sections if sec.domain != domain_name]
-        if not sections_not_in_domain:
-            warnings.warn(f'All sections are already in domain {domain_name}.')
+        if not sections_to_move:
+            warnings.warn(f'Sections already in domain {domain_name}.')
             return
-        self.remove_selected_sections_from_existing_domains(sections_not_in_domain)
-        # 3 Add sections to domain
-        for sec in sections_not_in_domain:
+
+        for sec in sections_to_move:
+            old_domain = self.domains[sec.domain]
+            old_domain.remove_section(sec)
+            
+
+        for sec in sections_to_move:
             domain.add_section(sec)
 
+        self._remove_empty()
 
-    def remove_selected_sections_from_existing_domains(self, sections):
+
+    def _add_domain_groups(self, domain_name):
         """
+        Manage groups when a domain is added.
         """
-        for domain in list(self.domains.values()):
-           
-            overlapping_sections = [sec for sec in sections 
-                                    if sec in domain]
+        # Add new domain to `all` group
+        if self.groups.get('all'):
+            self.groups['all'].domains.append(domain_name)
+        # Create a new group for the domain
+        self.add_group(domain_name, [domain_name])
+    
 
-            for sec in overlapping_sections:
-                domain.remove_section(sec)
-
-
-    def remove_empty(self):
+    def _remove_empty(self):
         self._remove_empty_domains()
         self._remove_uninserted_mechanisms()
         self._remove_empty_groups()
@@ -547,21 +522,9 @@ class Model():
             self.remove_group(group.name)
 
 
-    def _add_domain_groups(self, domain_name):
-        """
-        Manage groups when a domain is added.
-        """
-        # Add new domain to `all` group
-        if self.groups.get('all'):
-            self.groups['all'].domains.append(domain_name)
-        # Create a new group for the domain
-        self.add_group(domain_name, [domain_name])
-
-
     # -----------------------------------------------------------------------
     # INSERT / UNINSERT MECHANISMS
     # -----------------------------------------------------------------------
-
 
     def insert_mechanism(self, mechanism_name: str, 
                          domain_name: str):
@@ -639,6 +602,7 @@ class Model():
         elif ion == 'ca':
             self.params.pop('eca', None)
 
+
     # ========================================================================
     # SET PARAMETERS
     # ========================================================================
@@ -647,19 +611,8 @@ class Model():
     # GROUPS
     # -----------------------------------------------------------------------
 
-
-    def add_group(self, name, domains, min_dist=None, max_dist=None, min_diam=None, max_diam=None):
-        """
-        Add a group to the model.
-
-        Parameters
-        ----------
-        group_name : str
-            The name of the group.
-        sections : list[Section]
-            The sections to include in the group.
-        """
-        group = SegmentGroup(name, domains, min_dist, max_dist, min_diam, max_diam)
+    def add_group(self, name, domains, select_by=None, min_value=None, max_value=None):
+        group = SegmentGroup(name, domains, select_by, min_value, max_value)
         self._groups.append(group)
         
 
@@ -691,7 +644,6 @@ class Model():
     # -----------------------------------------------------------------------
     # DISTRIBUTIONS
     # -----------------------------------------------------------------------
-
 
     def set_param(self, param_name: str,
                         group_name: str = 'all',
@@ -727,7 +679,7 @@ class Model():
                 if seg in group
             ]
             for seg in filtered_segments:
-                value = distribution(seg.distance_to_root)
+                value = distribution(seg.path_distance())
                 seg.set_param_value(param_name, value)
 
 
@@ -739,8 +691,9 @@ class Model():
                 if seg in group
             ]
             for seg in filtered_segments:
-                value = distribution(seg._section(0.5).distance_to_root)
+                value = distribution(seg._section.path_distance(0.5))
                 seg._section._ref.Ra = value
+
 
     def remove_distribution(self, param_name, group_name):
         self.params[param_name].pop(group_name, None)
@@ -800,6 +753,7 @@ class Model():
         population.create_inputs()
         self._add_population(population)
 
+
     def remove_population(self, name):
         syn_type, idx = name.rsplit('_', 1)
         population = self.populations[syn_type].pop(name)
@@ -810,18 +764,21 @@ class Model():
     # SIMULATION
     # ========================================================================
 
-
     def add_recording(self, sec, loc, var='v'):
         self.simulator.add_recording(sec, loc, var)
+
 
     def remove_recording(self, sec, loc):
         self.simulator.remove_recording(sec, loc, var)
 
+
     def remove_all_recordings(self):
         self.simulator.remove_all_recordings()
 
+
     def run(self, duration=300):
         self.simulator.run(duration)
+
 
     # ========================================================================
     # MORPHOLOGY
@@ -831,6 +788,7 @@ class Model():
         self.sec_tree.remove_subtree(sec)
         self.sec_tree.sort()
         self.remove_empty()
+
 
     def merge_domains(self, domain_names: List[str]):
         """
@@ -885,9 +843,7 @@ class Model():
             self.remove_subtree(child_sec)
 
         # Remove intermediate pts3d
-
-
-        
+  
 
     def standardize_channel():
         ...
@@ -896,7 +852,6 @@ class Model():
     # ========================================================================
     # FILE EXPORT
     # ========================================================================
-
 
     def to_dict(self):
         """
@@ -945,7 +900,8 @@ class Model():
                 }
             },
         }
-            
+
+
     def export_data(self):
         name = self.name + '_' + self.version.replace(' ', ' ') if self.version else self.name
         path_to_json = self.path_manager.get_file_path('json', name, extension='json')
@@ -975,6 +931,7 @@ class Model():
 
         with open(path_to_json, 'w') as f:
             json.dump(data, f, **kwargs)
+
 
     def stimuli_to_csv(self, path_to_csv=None):
         """
@@ -1169,4 +1126,8 @@ class Model():
             pop.update_input_params(pop_data['input_params'])
             self._add_population(pop)
 
+
+    def load_parameters(self):
+
+        pass
         

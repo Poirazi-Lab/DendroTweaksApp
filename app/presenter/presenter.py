@@ -160,10 +160,14 @@ class Presenter(IOMixin, NavigationMixin,
         max_val = self.view.widgets.spinners['condition_max'].value
 
         # GET MODEL
-        if select_by == 'dist':
+        if select_by == 'absolute_distance':
             condition = lambda seg: seg.domain in domains and \
-                        (min_val is None or seg.distance_to_root >= min_val) and \
-                        (max_val is None or seg.distance_to_root <= max_val)
+                        (min_val is None or seg.path_distance() >= min_val) and \
+                        (max_val is None or seg.path_distance() <= max_val)
+        elif select_by == 'domain_distance':
+            condition = lambda seg: seg.domain in domains and \
+                        (min_val is None or seg.path_distance(stop_at_domain_change=True) >= min_val) and \
+                        (max_val is None or seg.path_distance(stop_at_domain_change=True) <= max_val)
         elif select_by == 'diam':
             condition = lambda seg: seg.domain in domains and \
                         (min_val is None or seg.diam >= min_val) and \
@@ -182,20 +186,14 @@ class Presenter(IOMixin, NavigationMixin,
         group_name = self.view.widgets.text['group_name'].value
         domains = self.view.widgets.multichoice['group_domains'].value
         select_by = self.view.widgets.selectors['select_by'].value
-        if select_by == 'dist':
-            min_dist = self.view.widgets.spinners['condition_min'].value
-            max_dist = self.view.widgets.spinners['condition_max'].value
-            min_diam = max_diam = None
-        elif select_by == 'diam':
-            min_dist = max_dist = None
-            min_diam = self.view.widgets.spinners['condition_min'].value
-            max_diam = self.view.widgets.spinners['condition_max'].value
-        # nodes = list(self.selected_secs)[:]
-
+        min_value = self.view.widgets.spinners['condition_min'].value
+        max_value = self.view.widgets.spinners['condition_max'].value
+            
         # SET MODEL
         self.model.add_group(group_name, domains, 
-                             min_dist, max_dist, 
-                             min_diam, max_diam)
+                             select_by=select_by,
+                             min_value=min_value, 
+                             max_value=max_value)
 
         # SET VIEW
         self._reset_group_filter_widgets()
@@ -616,13 +614,25 @@ class Presenter(IOMixin, NavigationMixin,
         param_name = self.selected_param_name
         selected_segs = self.selected_segs
 
-        data = {'x': [seg.distance_to_root for seg in selected_segs],
+        data = {'x': [seg.path_distance() for seg in selected_segs],
                 'y': [seg.get_param_value(param_name) for seg in selected_segs],
                 'color': [self.view.theme.domains_to_colors[seg.domain] for seg in selected_segs],
                 'label': [str(seg.idx) for seg in selected_segs]}
 
         self.view.sources['distribution'].data = data
 
+    @log
+    def _update_diam_distribution_plot(self):
+
+        param_name = 'diam'
+        selected_segs = self.selected_segs
+
+        data = {'x': [seg.path_distance() for seg in selected_segs],
+                'y': [seg.diam for seg in selected_segs],
+                'color': [self.view.theme.domains_to_colors[seg.domain] for seg in selected_segs],
+                'label': [str(seg.idx) for seg in selected_segs]}
+
+        self.view.sources['diam_distribution'].data = data
 
 
     #===============================

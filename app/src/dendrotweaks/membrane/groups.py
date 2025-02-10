@@ -7,7 +7,7 @@ from dendrotweaks.membrane.mechanisms import Mechanism
 from dendrotweaks.membrane.distributions import Distribution
 from dendrotweaks.utils import timeit
 from dataclasses import dataclass, field, asdict
-from typing import List, Tuple, Dict
+from typing import List, Tuple, Dict, Optional
 
 # TODO: Sec or seg? Layering or partitioning? Make the user choose.
 
@@ -98,39 +98,52 @@ class Distribution:
             'min_diam': self.min_diam,
         }
 
+
+
+
 @dataclass
 class SegmentGroup:
     name: str
     domains: List[str]
-    min_dist: float = None
-    max_dist: float = None
-    min_diam: float = None
-    max_diam: float = None
+    select_by: Optional[str] = None
+    min_value: Optional[float] = None
+    max_value: Optional[float] = None
 
-    def __contains__(self, segment: Segment) -> bool:
+    def _get_segment_value(self, segment) -> Optional[float]:
+        if self.select_by == 'diam':
+            return segment.diam
+        elif self.select_by == 'absolute_distance':
+            return segment.path_distance()
+        elif self.select_by == 'domain_distance':
+            return segment.path_distance(stop_at_domain_change=True)
+        return None
+
+    def __contains__(self, segment) -> bool:
+        if segment.domain not in self.domains:
+            return False
+        if self.select_by is None:
+            return True
+        
+        segment_value = self._get_segment_value(segment)
         return (
-            segment.domain in self.domains and
-            (self.min_dist is None or segment.distance_to_root > self.min_dist) and
-            (self.max_dist is None or segment.distance_to_root < self.max_dist) and
-            (self.min_diam is None or segment.diam > self.min_diam) and
-            (self.max_diam is None or segment.diam < self.max_diam)
+            (self.min_value is None or segment_value > self.min_value) and
+            (self.max_value is None or segment_value < self.max_value)
         )
 
     def __repr__(self):
-        filters = [
-            f"dist({self.min_dist}, {self.max_dist})" if self.min_dist is not None or self.max_dist is not None else "",
-            f"diam({self.min_diam}, {self.max_diam})" if self.min_diam is not None or self.max_diam is not None else ""
-        ]
-        filters_str = ", ".join(filter(None, filters))
-        return f'SegmentGroup("{self.name}", domains={self.domains}' + (f", {filters_str}" if filters_str else "") + ')'
+        filters = (
+            f"{self.select_by}({self.min_value}, {self.max_value})"
+            if self.select_by is not None and (self.min_value is not None or self.max_value is not None) else ""
+        )
+        return f'SegmentGroup("{self.name}", domains={self.domains}' + (f", {filters}" if filters else "") + ')'
 
     def to_dict(self) -> Dict:
         result = {
             'name': self.name,
             'domains': self.domains,
-            'min_dist': self.min_dist,
-            'max_dist': self.max_dist,
-            'min_diam': self.min_diam,
-            'max_diam': self.max_diam,
+            'select_by': self.select_by,
+            'min_value': self.min_value,
+            'max_value': self.max_value,
         }
         return {k: v for k, v in result.items() if v is not None}
+

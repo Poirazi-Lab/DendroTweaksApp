@@ -58,11 +58,13 @@ class GraphMixin():
                             diam = seg.diam,
                             area = seg.area,
                             subtree_size = seg.subtree_size,
-                            distance = seg.distance_to_root,
+                            absolute_distance = seg.path_distance(),
+                            domain_distance = seg.path_distance(stop_at_domain_change=True),
+                            length=seg._section.length,
                             recordings='None',
                             iclamps=0,
                             radius=radius*0.0015,
-                            color=domains_to_colors[seg._section.domain],
+                            color=domains_to_colors.get(seg._section.domain, 'gray'),
                             )
             if seg.parent is not None:
                 self.G.add_edge(seg.parent.idx, seg.idx)
@@ -104,7 +106,7 @@ class GraphMixin():
     #                         diam = sec._ref.diam,
     #                         # area = sec.area,
     #                         subtree_size = sec.subtree_size,
-    #                         distance = sec.distance_to_root(),
+    
     #                         recordings='None',
     #                         iclamps=0,
     #                         radius=radius*0.002,
@@ -280,10 +282,12 @@ class GraphMixin():
             return 0
         
         # NORMAL PARAMS
-        elif param_name in ['Ra']:
+        elif param_name is 'Ra':
             return seg._section._ref.Ra
-        elif param_name in ['distance']:
-            return seg.distance_to_root
+        elif param_name is 'domain_distance':
+            return seg.path_distance(stop_at_domain_change=True)
+        elif param_name is 'absolute_distance':
+            return seg.path_distance()
         else:
             return seg.get_param_value(param_name)
 
