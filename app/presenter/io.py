@@ -29,32 +29,40 @@ class IOMixin():
         self.view.widgets.selectors['model'].options = self.model.path_manager.list_models()
         morphologies = self.model.path_manager.list_morphologies()
         self.view.widgets.selectors['morphology'].options = ['Select a morphology'] + morphologies
-        # self.view.widgets.selectors['input'].options = self.model.path_manager.list_inputs()
-
-    @log
-    def load_model_callback(self, event):
-        """
-        Loads the selected model.
-        """
-    
-        self.load_model()
-
-        self.view.widgets.buttons['load_mod'].disabled = True
-        self.view.widgets.buttons['load_model'].disabled = True
-
-
-    def load_model(self):
-
-        self.model.load_data()
-
-        self._create_cell_renderer()
-        self._init_cell_widgets()
-        self._create_graph_renderer()
+        membrane = self.model.path_manager.list_membrane()
+        self.view.widgets.selectors['membrane'].options = ['Select a membrane'] + membrane
+        stimuli = self.model.path_manager.list_stimuli()
+        self.view.widgets.selectors['stimuli'].options = ['Select a stimuli'] + stimuli
         
+        self.view.DOM_elements['status'].text = 'Select morphology, membrane mechanisms, and stimuli.'
+        
+
+        
+    def load_membrane_callback(self, attr, old, new):
+        """
+        Callback for the selectors['membrane'] widget.
+        """
+        self.model.load_membrane(new)
+        d_lambda = self.model.d_lambda
+        with remove_callbacks(self.view.widgets.sliders['d_lambda']):
+            self.view.widgets.sliders['d_lambda'].value = d_lambda 
+        self.build_seg_tree(d_lambda)
+
+        # TODO: Maybe the following is not necessary, see above
         for param_name in self.model.params:
             self._update_graph_param(param_name, update_colors=False)
-        for param_name in ['AMPA', 'NMDA', 'GABAa', 'AMPA_NMDA', 'recordings', 'iclamps']:
-            self._update_graph_param(param_name, update_colors=False)       
+
+        self._update_mechs_to_insert_widget()
+        self._update_multichoice_domain_widget()
+
+        self.view.DOM_elements['status'].text = 'Membrane loaded.'
+        
+
+    def load_stimuli_callback(self, attr, old, new):
+        """
+        Callback for the selectors['stimuli'] widget.
+        """
+        self.model.load_stimuli(new)
 
         # MISC --------------------------------------------------------
         self._attach_download_js() # needed to update the names of the files to download
@@ -62,48 +70,46 @@ class IOMixin():
         self.recorded_segments = [seg for seg in self.model.recordings]
         self.update_voltage()
 
+        for param_name in ['AMPA', 'NMDA', 'GABAa', 'AMPA_NMDA', 'recordings', 'iclamps']:
+            self._update_graph_param(param_name, update_colors=False)
 
-    def load_input_callback(self, attr, old, new):
-        """
-        Callback for the selectors['input'] widget.
-        """
-        self.model.load_input(new)
+        self.view.DOM_elements['status'].text = 'Stimuli loaded.'
+
+
 
     # =========================================================================
     # MORPHOLOGY
     # =========================================================================
 
 
-    def load_swc_callback(self, attr, old, new):
+    def load_morphology_callback(self, attr, old, new):
         """
         Creates the cell and the renderers.
         """     
-        self.load_swc(new)
+        self.load_morphology(new)
 
-        self.view.widgets.buttons['load_model'].disabled = True
         self.view.widgets.text['model_version'].value = self.model.name
+        self.view.DOM_elements['status'].text = 'Morphology loaded.'
 
 
     @log
-    def load_swc(self, swc_file_name):
+    def load_morphology(self, file_name):
         """
         Creates the cell and the renderers.
         """
 
         # MORPHOLOGY --------------------------------------------
         
-        self.create_morpohlogy(swc_file_name)
+        self.model.load_morphology(file_name)
+
+        self._create_cell_renderer()
+        self._init_cell_widgets()
 
         # LOAD MECHANISMS -----------------------------------------
-        self.model.add_default_mechanisms()
-        self._update_mechs_to_insert_widget()
-
-        # PARAMETERS ----------------------------------------------
-        # self.model.set_section_param('cm', value=1)
-        # self.model.set_section_param('Ra', value=100)
+        # self.model.add_default_mechanisms()
+        # self._update_mechs_to_insert_widget()
+     
         
-        
-
         # SEGMENTATION --------------------------------------------
         d_lambda = self.view.widgets.sliders['d_lambda'].value
         self.build_seg_tree(d_lambda)
@@ -111,27 +117,10 @@ class IOMixin():
         
         
         # MISC ---------------------------------------------------
-        self._attach_download_js()
+        # self._attach_download_js()
 
         self.view.widgets.multichoice['domains'].options = list(self.model.domains.keys())
 
-
-    @log
-    def create_morpohlogy(self, swc_file_name):
-        """
-        Loads the selected cell from the SWC file. Builds the swc tree and sec tree.
-        Creates sections in the simulator and sets segmentation based on the geometry.
-        Builds the seg tree.
-        Creates the default "all" group.
-        """
-        # Create swc and sec tree
-        self.model.from_swc(swc_file_name)
-
-        # Create and reference sections in simulator
-        self.model.create_and_reference_sections_in_simulator()
-
-        self._create_cell_renderer()
-        self._init_cell_widgets()
 
     def _init_cell_widgets(self):
         """
@@ -156,6 +145,7 @@ class IOMixin():
             self.view.widgets.selectors['mechanism_to_insert'].options = available_mechs
             self.view.widgets.selectors['mechanism_to_insert'].value = available_mechs[0]
 
+
     # =========================================================================
     # MECHANISMS
     # =========================================================================
@@ -168,7 +158,7 @@ class IOMixin():
         self.load_mod()  
 
         self.view.widgets.buttons['load_mod'].disabled = True
-        self.view.widgets.buttons['load_model'].disabled = True
+        self.view.DOM_elements['status'].text = 'Mechanisms loaded.'
 
     @log
     def load_mod(self):
@@ -180,7 +170,8 @@ class IOMixin():
         self.model.add_mechanisms('mod', recompile=self.view.widgets.switches['recompile'].active)
         # TODO: Verify that the mod files are loaded successfully
 
-        self.view.widgets.selectors['mechanism_to_insert'].options = list(self.model.mechanisms.keys())
+        self._update_mechs_to_insert_widget()
+        self._update_multichoice_domain_widget()
         logger.debug(f'Loaded mechanisms: {self.model.mechanisms.keys()}')
 
 
@@ -188,7 +179,7 @@ class IOMixin():
     # SEGMENTATION
     # -------------------------------------------------------------------------
 
-
+    @log
     def build_seg_tree_callback(self, event):
 
         d_lambda = self.view.widgets.sliders['d_lambda'].value

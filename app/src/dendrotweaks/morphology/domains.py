@@ -4,12 +4,12 @@ class Domain:
     def __init__(self, name: str, sections = None) -> None:
         self.name = name
         self._sections = sections if sections else []
-        self.inserted_mechanisms = {}
+        # self.inserted_mechanisms = {}
 
 
-    @property
-    def mechanisms(self):
-        return {**{'Independent': None}, **self.inserted_mechanisms}
+    # @property
+    # def mechanisms(self):
+    #     return {**{'Independent': None}, **self.inserted_mechanisms}
 
 
     @property
@@ -32,40 +32,40 @@ class Domain:
     #         self.add_section(sec)
 
 
-    def insert_mechanism(self, mechanism):
-        """
-        Inserts a mechanism in the domain if it is not already inserted.
+    # def insert_mechanism(self, mechanism):
+    #     """
+    #     Inserts a mechanism in the domain if it is not already inserted.
 
-        Parameters
-        ----------
-        mechanism : Mechanism
-            The mechanism to be inserted in the domain.
-        """
-        if mechanism.name in self.inserted_mechanisms:
-            warnings.warn(f'Mechanism {mechanism.name} already inserted in domain {self.name}.')
-            return
-        self.inserted_mechanisms[mechanism.name] = mechanism
-        for sec in self.sections:
-            sec.insert_mechanism(mechanism.name)
-        mechanism.domains[self.name] = self
+    #     Parameters
+    #     ----------
+    #     mechanism : Mechanism
+    #         The mechanism to be inserted in the domain.
+    #     """
+    #     if mechanism.name in self.inserted_mechanisms:
+    #         warnings.warn(f'Mechanism {mechanism.name} already inserted in domain {self.name}.')
+    #         return
+    #     self.inserted_mechanisms[mechanism.name] = mechanism
+    #     for sec in self.sections:
+    #         sec.insert_mechanism(mechanism.name)
+    #     mechanism.domains[self.name] = self
 
 
-    def uninsert_mechanism(self, mechanism):
-        """
-        Uninserts a mechanism in the domain if it was inserted.
+    # def uninsert_mechanism(self, mechanism):
+    #     """
+    #     Uninserts a mechanism in the domain if it was inserted.
 
-        Parameters
-        ----------
-        mechanism : Mechanism
-            The mechanism to be uninserted from the domain.
-        """
-        if mechanism.name not in self.inserted_mechanisms:
-            warnings.warn(f'Mechanism {mechanism} not inserted in domain {self.name}.')
-            return
-        self.inserted_mechanisms.pop(mechanism.name)
-        for sec in self.sections:
-            sec.uninsert_mechanism(mechanism.name)
-        mechanism.domains.pop(self.name)
+    #     Parameters
+    #     ----------
+    #     mechanism : Mechanism
+    #         The mechanism to be uninserted from the domain.
+    #     """
+    #     if mechanism.name not in self.inserted_mechanisms:
+    #         warnings.warn(f'Mechanism {mechanism} not inserted in domain {self.name}.')
+    #         return
+    #     self.inserted_mechanisms.pop(mechanism.name)
+    #     for sec in self.sections:
+    #         sec.uninsert_mechanism(mechanism.name)
+    #     mechanism.domains.pop(self.name)
 
 
     def add_section(self, sec: "Section"):
@@ -83,8 +83,8 @@ class Domain:
             warnings.warn(f'Section {sec} already in domain {self.name}.')
             return
         sec.domain = self.name
-        for mech_name in self.inserted_mechanisms:
-            sec.insert_mechanism(mech_name)
+        # for mech_name in self.inserted_mechanisms:
+        #     sec.insert_mechanism(mech_name)
         self._sections.append(sec)
 
 
@@ -93,8 +93,8 @@ class Domain:
             warnings.warn(f'Section {sec} not in domain {self.name}.')
             return
         sec.domain = None
-        for mech_name in self.inserted_mechanisms:
-            sec.uninsert_mechanism(mech_name)
+        # for mech_name in self.inserted_mechanisms:
+        #     sec.uninsert_mechanism(mech_name)
         self._sections.remove(sec)
 
 
@@ -102,11 +102,11 @@ class Domain:
         return not bool(self._sections)
 
 
-    def to_dict(self):
-        return {
-            'mechanisms': list(self.mechanisms.keys()),
-            'sections': [sec.idx for sec in self.sections]
-        }
+    # def to_dict(self):
+    #     return {
+    #         # 'mechanisms': list(self.mechanisms.keys()),
+    #         'sections': [sec.idx for sec in self.sections]
+    #     }
 
 
     def __repr__(self):

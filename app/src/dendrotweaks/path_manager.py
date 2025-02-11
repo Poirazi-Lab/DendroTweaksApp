@@ -27,9 +27,9 @@ class PathManager:
             'model': os.path.join(self.path_to_data, model_name),
             'mod': os.path.join(self.path_to_data, model_name, 'mod'),
             'python': os.path.join(self.path_to_data, model_name, 'python'),
-            'swc': os.path.join(self.path_to_data, model_name, 'swc'),
-            'csv': os.path.join(self.path_to_data, model_name, 'csv'),
-            'json': os.path.join(self.path_to_data, model_name, 'json'),
+            'morphology': os.path.join(self.path_to_data, model_name, 'morphology'),
+            'membrane': os.path.join(self.path_to_data, model_name, 'membrane'),
+            'stimuli': os.path.join(self.path_to_data, model_name, 'stimuli'),
         })
 
     def __repr__(self):
@@ -97,6 +97,7 @@ class PathManager:
         return [f.replace(extension, '') 
                 for f in os.listdir(directory) if f.endswith(extension)]
 
+
     def list_morphologies(self, extension: str = '.swc') -> List[str]:
         """
         List all SWC files.
@@ -104,7 +105,27 @@ class PathManager:
         Returns:
         - List[str]: A list of SWC file names.
         """
-        return self.list_files('swc', 'swc')
+        return self.list_files('morphology', extension=extension)
+
+
+    def list_stimuli(self, extension: str = '.json') -> List[str]:
+        """
+        List all JSON files.
+        
+        Returns:
+        - List[str]: A list of JSON file names.
+        """
+        return self.list_files('stimuli', extension=extension)
+
+
+    def list_membrane(self):
+        """
+        List all membrane files.
+        
+        Returns:
+        - List[str]: A list of membrane file names.
+        """
+        return self.list_files('membrane', extension='.json')
 
 
     def print_directory_tree(self, subfolder=None) -> None:

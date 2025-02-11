@@ -10,7 +10,7 @@ class Mechanism():
         self.name = name
         self.params = {}
         self.range_params = {}
-        self.domains = {}
+        # self.domains = {}
 
     @property
     def params_with_suffix(self):
@@ -26,8 +26,8 @@ class Mechanism():
             'params': self.params
         }
 
-    def is_inserted(self):
-        return bool(self.domains)
+    # def is_inserted(self):
+    #     return bool(self.domains)
 
     def __repr__(self):
         return f"<Mechnaism({self.name})>"

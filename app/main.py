@@ -1094,9 +1094,12 @@ curdoc().add_root(right_menu)
 ## I/O TAB
 # ------------------------------------------------------------------------------------
 
+view.DOM_elements['status'] = Div(text='Select a model to start', width=242, styles={"color":"gold"})
+
 # Loading a model from JSON
+available_models = p.model.path_manager.list_models()
 view.widgets.selectors['model'] = Select(value='Select a model to load',
-                                options=['Select a model to load'] + p.model.path_manager.list_models(),
+                                options=['Select a model to load'] + available_models,
                                 title='Model',
                                 width=242)
 
@@ -1108,20 +1111,26 @@ view.widgets.selectors['morphology'] = Select(value='Select a morphology',
                                 title='Morphology',
                                 width=242)
 
-view.widgets.selectors['morphology'].on_change('value', p.load_swc_callback)
+view.widgets.selectors['morphology'].on_change('value', p.load_morphology_callback)
 
-view.widgets.selectors['inputs'] = Select(value='Select an input',
+view.widgets.selectors['membrane'] = Select(value='Select a membrane',
+                                options=['Select a membrane'],
+                                title='Membrane',
+                                width=242)
+
+view.widgets.selectors['membrane'].on_change('value', p.load_membrane_callback)
+
+view.widgets.selectors['stimuli'] = Select(value='Select an input',
                                 options=['Select an input'],
                                 title='Input',
                                 width=242)
 
-view.widgets.selectors['inputs'].on_change('value', p.load_input_callback)
+view.widgets.selectors['stimuli'].on_change('value', p.load_stimuli_callback)
 
+view.widgets.switches['recompile'] = Switch(active=True, 
+                                            name='recompile')
 view.widgets.buttons['load_mod'] = Button(label='Load mechanisms', button_type='primary', width=100)
 view.widgets.buttons['load_mod'].on_event(ButtonClick, p.load_mod_callback)
-
-view.widgets.buttons['load_model'] = Button(label='Load model', button_type='primary', width=242)
-view.widgets.buttons['load_model'].on_event(ButtonClick, p.load_model_callback)
 
 
 # Export model
@@ -1140,13 +1149,15 @@ view.widgets.file_input['all'].on_change('filename', p.import_file_callback)
 view.widgets.file_input['all'].on_change('value', p.import_file_callback)
 
 
-tab_io = TabPanel(title='Input/Output', 
+tab_io = TabPanel(title='Import/Export', 
                 child=column(
+                    view.DOM_elements['status'],
                     view.widgets.selectors['model'],
                     view.widgets.selectors['morphology'],
-                    view.widgets.selectors['inputs'],
+                    row(view.widgets.switches['recompile'], Div(text='Recompile mod files')),
                     view.widgets.buttons['load_mod'],
-                    view.widgets.buttons['load_model'],
+                    view.widgets.selectors['membrane'],
+                    view.widgets.selectors['stimuli'],
                     Div(text='<hr style="width:18.5em; margin-top:3em">'), 
                     view.widgets.file_input['all'],
                     view.widgets.text['model_version'],
@@ -1311,7 +1322,7 @@ view.widgets.selectors['output_format'] = Select(title="Output format:",
                                                 options=['canvas', 'svg', 'webgl'],
                                                 name='output_format')
 
-view.widgets.switches['recompile'] = Switch(active=True, name='recompile')                                             
+
 
 def update_output_format(attr, old, new):
     for fig in view.figures.values():
@@ -1362,7 +1373,6 @@ settings_panel = column(view.widgets.selectors['theme'],
                         # view.widgets.color_pickers['color_picker'],
                         view.widgets.sliders['voltage_plot_x_range'],
                         view.widgets.sliders['voltage_plot_y_range'],
-                        row(view.widgets.switches['recompile'], Div(text='Recompile mod files')),
                         row(view.widgets.switches['enable_record_from_all'], Div(text='Enable record from all')),
                         view.widgets.selectors['graph_layout'],
                         view.DOM_elements['controller'],

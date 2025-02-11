@@ -223,7 +223,7 @@ class Tree:
 
     @property
     def is_sorted(self):
-        if not all([node.idx == i for i, node in enumerate(self._nodes)]):
+        if not all([node.idx == i for i, node in enumerate(self._nodes, start=1)]):
             return False
         traversal_indices = [node.idx for node in self.traverse()]
         return traversal_indices == sorted(traversal_indices)
@@ -273,7 +273,7 @@ class Tree:
         Efficiently builds the hierarchical tree structure for the nodes
         using a dictionary for fast parent lookups.
         """
-        print('Connecting tree.')
+        print('Connecting tree...')
 
         if self.is_connected:
             print('  Tree already connected.')
@@ -290,8 +290,6 @@ class Tree:
         # Step 3: Ensure tree is fully connected
         if not self.is_connected:
             raise ValueError('Tree is not connected.')
-
-        print('Connected tree.')
 
 
     # TRAVERSAL METHODS
@@ -365,7 +363,7 @@ class Tree:
             print('Tree already sorted.')
             return
 
-        count = 0
+        count = 1
         for node in self.traverse():
             node.idx = count
             node.parent_idx = node.parent.idx if node.parent else -1

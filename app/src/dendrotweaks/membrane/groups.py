@@ -147,3 +147,7 @@ class SegmentGroup:
         }
         return {k: v for k, v in result.items() if v is not None}
 
+    @staticmethod
+    def from_dict(data: Dict) -> 'SegmentGroup':
+        return SegmentGroup(**data)
+

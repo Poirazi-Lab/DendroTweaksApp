@@ -40,6 +40,13 @@ INDEPENDENT_PARAMS = {
     'eca': 140 # mV
 }
 
+DOMAIN_TO_GROUP = {
+    'soma': 'somatic',
+    'axon': 'axonal',
+    'dend': 'dendritic',
+    'apic': 'apical',
+}
+
 
 class Model():
     """
@@ -77,11 +84,9 @@ class Model():
         self.swc_tree = None
         self.sec_tree = None
 
-        # Domains
-        self.domains = {}
-
         # Mechanisms
         self.mechanisms = {}
+        self.domains_to_mechs = {}
 
         # Parameters
         self.params = {
@@ -96,7 +101,7 @@ class Model():
         # self.distributed_params = {}
 
         # Segmentation
-        self._d_lambda = None
+        self.d_lambda = 0.1
         self.seg_tree = None
 
         # Stimuli
@@ -126,6 +131,10 @@ class Model():
     def name(self, name):
         self._name = name
         self.path_manager.update_paths(name)
+
+    @property
+    def domains(self):
+        return self.sec_tree.domains
 
 
     @property
@@ -157,6 +166,14 @@ class Model():
                     continue
                 groups_to_parameters[group.name] = params
         return groups_to_parameters
+
+    @property
+    def mechs_to_domains(self):
+        mechs_to_domains = defaultdict(set)
+        for domain, mechs in self.domains_to_mechs.items():
+            for mech in mechs:
+                mechs_to_domains[mech].add(domain)
+        return dict(mechs_to_domains)
 
 
     @property
@@ -231,7 +248,8 @@ class Model():
                         'Mechanism': mech_name,
                         'Parameter': param,
                         'Group': group_name,
-                        'Distribution': distribution
+                        'Distribution': distribution.function_name,
+                        'Distribution params': distribution.parameters,
                     })
         df = pd.DataFrame(data)
         return df
@@ -240,7 +258,7 @@ class Model():
     # MORPHOLOGY
     # ========================================================================
 
-    def from_swc(self, file_name):
+    def load_morphology(self, file_name):
         """
         Read an SWC file and build the SWC and section trees.
 
@@ -250,7 +268,7 @@ class Model():
             The name of the SWC file to read.
         """
         # self.name = file_name.split('.')[0]
-        path_to_swc_file = self.path_manager.get_file_path('swc', file_name, extension='swc')
+        path_to_swc_file = self.path_manager.get_file_path('morphology', file_name, extension='swc')
         swc_tree = self.tree_factory.create_swc_tree(path_to_swc_file)
         swc_tree.remove_overlaps()
         swc_tree.sort()
@@ -265,9 +283,14 @@ class Model():
         self.sec_tree = sec_tree
 
         self.create_and_reference_sections_in_simulator()
-        self.set_segmentation(d_lambda=0.1)
 
-           
+        self._add_default_segment_groups()
+        self._initialize_domains_to_mechs()
+
+        d_lambda = self.d_lambda
+        self.set_segmentation(d_lambda=d_lambda)
+        self.distribute_all_params()
+              
 
     def create_and_reference_sections_in_simulator(self):
         """
@@ -283,14 +306,43 @@ class Model():
         self.seg_tree = self.tree_factory.create_seg_tree(self.sec_tree)
 
 
+    def _add_default_segment_groups(self):
+        self.add_group('all', list(self.domains.keys()))
+        for domain_name in self.domains:
+            group_name = DOMAIN_TO_GROUP.get(domain_name, domain_name)
+            self.add_group(group_name, [domain_name])
+
+
+    def _initialize_domains_to_mechs(self):
+        for domain_name in self.domains:
+            # Only if haven't been defined for the previous morphology
+            # TODO: Check that domains match
+            if not domain_name in self.domains_to_mechs: 
+                self.domains_to_mechs[domain_name] = set()
+        for domain_name, mechs in self.domains_to_mechs.items():
+            for mech_name in mechs:
+                self.insert_mechanism(mech_name, domain_name)
+
+
     def get_sections(self, filter_function):
         """Filter sections using a lambda function."""
         return [sec for sec in self.sec_tree.sections if filter_function(sec)]
 
 
+    def get_segments(self, group_name):
+        group = self.groups[group_name]
+        return [seg for seg in self.seg_tree.segments if seg in group]
+        
     # ========================================================================
     # SEGMENTATION
     # ========================================================================
+
+    def distribute_all_params(self):
+        """
+        """
+        for param_name in self.params:
+            self.distribute(param_name)
+
 
     def set_segmentation(self, d_lambda=0.1, f=100, use_neuron=False):
         """
@@ -305,7 +357,12 @@ class Model():
         use_neuron : bool
             Whether to use NEURON's lambda_f function.
         """
-        self._d_lambda = d_lambda
+        self.d_lambda = d_lambda
+
+        # Pre-distribute parameters needed for lambda_f calculation
+        for param_name in ['cm', 'Ra']:
+            self.distribute(param_name)
+
         for sec in self.sec_tree.sections:
             if use_neuron:
                 from neuron import h
@@ -316,22 +373,7 @@ class Model():
             sec._ref.nseg = nseg
 
         self.seg_tree = self.tree_factory.create_seg_tree(self.sec_tree)
-        self._add_default_segment_groups()
-
-
-    def _add_default_segment_groups(self):
-        DOMAIN_TO_GROUP = {
-            'soma': 'somatic',
-            'axon': 'axonal',
-            'dend': 'dendritic',
-            'apic': 'apical',
-        }
-
-        self.add_group('all', list(self.domains.keys()))
-        for domain_name in self.domains:
-            group_name = DOMAIN_TO_GROUP.get(domain_name, domain_name)
-            self.add_group(group_name, [domain_name])
-
+        
 
     # ========================================================================
     # MECHANISMS
@@ -449,6 +491,7 @@ class Model():
             domain = Domain(domain_name)
             self._add_domain_groups(domain.name)
             self.domains[domain_name] = domain
+            self.domains_to_mechs[domain_name] = set()
         else:
             domain = self.domains[domain_name]
 
@@ -462,10 +505,16 @@ class Model():
         for sec in sections_to_move:
             old_domain = self.domains[sec.domain]
             old_domain.remove_section(sec)
+            for mech_name in self.domains_to_mechs[old_domain.name]:
+                # TODO: What if section is already in domain? Can't be as
+                # we use a filtered list of sections.
+                sec.uninsert_mechanism(mech_name)
             
 
         for sec in sections_to_move:
             domain.add_section(sec)
+            for mech_name in self.domains_to_mechs.get(domain.name, set()):
+                sec.insert_mechanism(mech_name)
 
         self._remove_empty()
 
@@ -478,7 +527,8 @@ class Model():
         if self.groups.get('all'):
             self.groups['all'].domains.append(domain_name)
         # Create a new group for the domain
-        self.add_group(domain_name, [domain_name])
+        group_name = DOMAIN_TO_GROUP.get(domain_name, domain_name)
+        self.add_group(group_name, [domain_name])
     
 
     def _remove_empty(self):
@@ -493,10 +543,9 @@ class Model():
         empty_domains = [domain for domain in self.domains.values() 
             if domain.is_empty()]
         for domain in empty_domains:
-            for mech in domain.inserted_mechanisms.values():
-                mech.domains.pop(domain.name)
             warnings.warn(f'Domain {domain.name} is empty and will be removed.')
             self.domains.pop(domain.name)
+            self.domains_to_mechs.pop(domain.name)
             self.groups['all'].domains.remove(domain.name)
 
 
@@ -505,10 +554,8 @@ class Model():
         mechs = [self.mechanisms[mech_name] for mech_name in mech_names
              if mech_name != 'Independent']
         uninserted_mechs = [mech for mech in mechs
-                            if not mech.is_inserted()]
+                    if mech.name not in self.mechs_to_domains]
         for mech in uninserted_mechs:
-            for domain in mech.domains.values():
-                domain.inserted_mechanisms.pop(mech.name)
             warnings.warn(f'Mechanism {mech.name} is not inserted in any domain and will be removed.')
             self._remove_mechanism_params(mech)
 
@@ -534,7 +581,10 @@ class Model():
         mech = self.mechanisms[mechanism_name]
         domain = self.domains[domain_name]
 
-        domain.insert_mechanism(mech)
+        # domain.insert_mechanism(mech)
+        self.domains_to_mechs[domain_name].add(mech.name)
+        for sec in domain.sections:
+            sec.insert_mechanism(mech.name)
         self._add_mechanism_params(mech)
 
         # TODO: Redistribute parameters if any group contains this domain
@@ -574,7 +624,10 @@ class Model():
         mech = self.mechanisms[mechanism_name]
         domain = self.domains[domain_name]
 
-        domain.uninsert_mechanism(mech)
+        # domain.uninsert_mechanism(mech)
+        for sec in domain.sections:
+            sec.uninsert_mechanism(mech.name)
+        self.domains_to_mechs[domain_name].remove(mech.name)
 
         if not mech.is_inserted():
             self._remove_mechanism_params(mech)
@@ -612,6 +665,7 @@ class Model():
     # -----------------------------------------------------------------------
 
     def add_group(self, name, domains, select_by=None, min_value=None, max_value=None):
+        print(f'Adding group {name}...')
         group = SegmentGroup(name, domains, select_by, min_value, max_value)
         self._groups.append(group)
         
@@ -853,6 +907,16 @@ class Model():
     # FILE EXPORT
     # ========================================================================
 
+    def export_morphology(self, version):
+        """
+        Write the SWC tree to an SWC file.
+        """
+        name = self.name + '_' + version
+        path_to_file = self.path_manager.get_file_path('morphology', name, extension='csv')
+        
+        self.swc_tree.to_swc(path_to_file)
+
+
     def to_dict(self):
         """
         Return a dictionary representation of the model.
@@ -866,14 +930,8 @@ class Model():
             'metadata': {
                 'name': self.name,
             },
-            'simulation': {
-                'd_lambda': self._d_lambda,
-                **self.simulator.to_dict(),
-            },
-            'domains': {
-                domain_name: domain.to_dict()
-                for domain_name, domain in self.domains.items()
-            },
+            'd_lambda': self.d_lambda,
+            'domains': {domain: list(mechs) for domain, mechs in self.domains_to_mechs.items()},
             'groups': [
                 group.to_dict() for group in self._groups
             ],
@@ -883,6 +941,75 @@ class Model():
                     for group_name, distribution in distributions.items()
                 }
                 for param_name, distributions in self.params.items()
+            },
+        }
+
+    def from_dict(self, data):
+        """
+        """
+        if not self.name == data['metadata']['name']:
+            raise ValueError('Model name does not match the data.')
+
+        self.d_lambda = data['d_lambda']
+
+        # Domains and mechanisms
+        self.domains_to_mechs = {
+            domain: set(mechs) for domain, mechs in data['domains'].items()
+        }
+        for domain_name, mechs in self.domains_to_mechs.items():
+            for mech_name in mechs:
+                self.insert_mechanism(mech_name, domain_name)
+
+        # Groups
+        self._groups = [SegmentGroup.from_dict(group) for group in data['groups']]
+
+        # Parameters
+        self.params = {
+            param_name: {
+                group_name: Distribution.from_dict(distribution)
+                for group_name, distribution in distributions.items()
+            }
+            for param_name, distributions in data['params'].items()
+        }
+
+        if self.sec_tree is not None:
+            d_lambda = self.d_lambda
+            self.set_segmentation(d_lambda=d_lambda)
+            self.distribute_all_params()
+
+
+    def export_membrane(self, version, **kwargs):
+        """
+        """        
+        name = self.name + '_' + version
+        path_to_json = self.path_manager.get_file_path('membrane', name, extension='json')
+
+        data = self.to_dict()
+        with open(path_to_json, 'w') as f:
+            json.dump(data, f, **kwargs)
+
+
+    def load_membrane(self, file_name, recompile=True):
+        """
+        """
+        self.add_default_mechanisms()
+        self.add_mechanisms('mod', recompile=recompile)
+
+        path_to_json = self.path_manager.get_file_path('membrane', file_name, extension='json')
+
+        with open(path_to_json, 'r') as f:
+            data = json.load(f)
+
+        self.from_dict(data)
+
+
+    def stimuli_to_dict(self):
+        return {
+            'metadata': {
+                'name': self.name,
+            },
+            'simulation': {
+                **self.simulator.to_dict(),
             },
             'stimuli': {
                 'iclamps': [
@@ -902,38 +1029,7 @@ class Model():
         }
 
 
-    def export_data(self):
-        name = self.name + '_' + self.version.replace(' ', ' ') if self.version else self.name
-        path_to_json = self.path_manager.get_file_path('json', name, extension='json')
-        # path_to_groups_csv = self.path_manager.get_file_path('csv', self.name + '_groups', extension='csv')
-        path_to_stimuli_csv = self.path_manager.get_file_path('csv', name + '_stimuli', extension='csv')
-
-        self.to_json(path_to_json, indent=4)
-        # self.groups_to_csv(path_to_groups_csv)
-        self.stimuli_to_csv(path_to_stimuli_csv)
-
-
-    def to_json(self, path_to_json, **kwargs):
-        """
-        Return a JSON representation of the model.
-
-        Parameters
-        ----------
-        \**kwargs
-            Additional keyword arguments to pass to json.dumps.
-
-        Returns
-        -------
-        str
-            The JSON representation of the model.
-        """
-        data = self.to_dict()
-
-        with open(path_to_json, 'w') as f:
-            json.dump(data, f, **kwargs)
-
-
-    def stimuli_to_csv(self, path_to_csv=None):
+    def _stimuli_to_csv(self, path_to_csv=None):
         """
         Write the model to a CSV file.
 
@@ -987,114 +1083,49 @@ class Model():
         if path_to_csv: df.to_csv(path_to_csv, index=False)
 
         return df
+        
 
-    # def groups_to_csv(self, path_to_csv=None):
-
-    #     groups_data = {
-    #         'sec_idx': [sec.idx for sec in self.sec_tree.sections]
-    #     }
-
-    #     for group_name, group in self.groups.items():
-    #         groups_data[group_name] = [
-    #         int(sec.idx in [s.idx for s in group.sections]) for sec in self.sec_tree.sections
-    #         ]
-
-    #     df = pd.DataFrame(groups_data)
-    #     if path_to_csv:
-    #         df.to_csv(path_to_csv, index=False)
-
-    #     return df
-
-
-    def to_swc(self, file_name):
+    def export_stimuli(self, version, **kwargs):
         """
-        Write the SWC tree to an SWC file.
-
-        Parameters
-        ----------
-        file_name : str
-            The name of the SWC file to write.
         """
-        path_to_file = f'{self.path_to_data}/swc/{file_name}'.replace(
-            '//', '/')
-        self.swc_tree.to_swc(path_to_file)
+        name = self.name + '_' + version
+        path_to_json = self.path_manager.get_file_path('stimuli', name, extension='json')
+
+        data = self.stimuli_to_dict()
+
+        with open(path_to_json, 'w') as f:
+            json.dump(data, f, **kwargs)
+
+        path_to_stimuli_csv = self.path_manager.get_file_path('stimuli', name, extension='csv')
+        self._stimuli_to_csv(path_to_stimuli_csv)
 
 
-    def to_mod(self):
-        ...
-
-
-    def load_data(self, recompile=True):
+    def load_stimuli(self, file_name):
         """
-        Load a model from a JSON file.
-
-        Parameters
-        ----------
-        path_to_json : str
-            The path to the JSON file to load.
         """
-
-        path_to_json = self.path_manager.get_file_path('json', self.name, extension='json')
-        # path_to_groups_csv = self.path_manager.get_file_path('csv', self.name + '_groups', extension='csv')
-        path_to_stimuli_csv = self.path_manager.get_file_path('csv', self.name + '_stimuli', extension='csv')
+        
+        path_to_json = self.path_manager.get_file_path('stimuli', file_name, extension='json')
+        path_to_stimuli_csv = self.path_manager.get_file_path('stimuli', file_name, extension='csv')
 
         with open(path_to_json, 'r') as f:
             data = json.load(f)
 
-        # df_groups = pd.read_csv(path_to_groups_csv)
-        df_stimuli = pd.read_csv(path_to_stimuli_csv)
+        if not self.name == data['metadata']['name']:
+            raise ValueError('Model name does not match the data.')
 
-        self.name = data['metadata']['name']
+        df_stimuli = pd.read_csv(path_to_stimuli_csv)
 
         self.simulator.from_dict(data['simulation'])
 
-        swc_file_name = data['metadata']['name']
-        self.from_swc(swc_file_name)
-        self.create_and_reference_sections_in_simulator()
-        
-        print(f'DOMAINS: {self.domains}')
-        self.add_default_mechanisms()
-        self.add_group('all', list(self.domains.keys()))
-        self.add_mechanisms('mod', recompile=recompile)
-        print(f'GROUPS: {self.groups}')
-
-        self.sec_tree.domains = {}
-        for domain_name, domain_data in data['domains'].items():
-            sections = [self.sec_tree.sections[sec_idx] for sec_idx in domain_data['sections']]
-            domain = Domain(domain_name)
-            for sec in sections:
-                domain.add_section(sec)
-            self.domains[domain_name] = domain
-            for mech_name in domain_data['mechanisms']:
-                if mech_name == "Independent":
-                    continue
-                self.insert_mechanism(mech_name, domain_name)
-        self.remove_empty()
-
-        for group_params in data['groups']:
-            self.add_group(**group_params)
-        
-        self.params = {
-            param_name: {
-                group_name: Distribution.from_dict(distribution)
-                for group_name, distribution in distributions.items()
-            }
-            for param_name, distributions in data['params'].items()
-        }
-
-        for param_name in ['cm', 'Ra']:
-            self.distribute(param_name)
-
-        self.set_segmentation(data['simulation']['d_lambda'])
-
-        for param_name in self.params:
-            self.distribute(param_name)
+        # Recordings ---------------------------------------------------------
 
         df_recs = df_stimuli[df_stimuli['type'] == 'recording']
         for i, row in df_recs.iterrows():
             self.add_recording(
                 self.sec_tree.sections[row['sec_idx']], row['loc']
             )
+
+        # IClamps -----------------------------------------------------------
 
         df_iclamps = df_stimuli[df_stimuli['type'] == 'iclamp'].reset_index(drop=True, inplace=False)
 
@@ -1107,6 +1138,7 @@ class Model():
             data['stimuli']['iclamps'][i]['dur']
             )
 
+        # Populations -------------------------------------------------------
 
         syn_types = ['AMPA', 'NMDA', 'AMPA_NMDA', 'GABAa']
 
@@ -1127,7 +1159,4 @@ class Model():
             self._add_population(pop)
 
 
-    def load_parameters(self):
-
-        pass
         

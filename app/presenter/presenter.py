@@ -107,9 +107,8 @@ class Presenter(IOMixin, NavigationMixin,
 
     def _update_multichoice_domain_widget(self):
         mech_name = self.view.widgets.selectors['mechanism_to_insert'].value
-        mech = self.model.mechanisms[mech_name]
         available_domains = list(self.model.domains.keys())
-        mech_domains = list(mech.domains.keys())
+        mech_domains = list(self.model.mechs_to_domains.get(mech_name, []))
         logger.debug(f'Available domains: {available_domains}, mech domains: {mech_domains}')
         with remove_callbacks(self.view.widgets.multichoice['domains']):
             self.view.widgets.multichoice['domains'].options = list(self.model.domains.keys())
@@ -238,8 +237,8 @@ class Presenter(IOMixin, NavigationMixin,
         Selects the segments in the graph that belong to group sections.
         """
         # GET MODEL
-        group = self.model.groups[group_name]        
-        group_segments = [seg for seg in self.model.seg_tree.segments if seg in group]
+        group_segments = self.model.get_segments(group_name)
+        logger.debug(f'Group {group_name} segments: {len(group_segments)}')
         seg_ids = [seg.idx for seg in group_segments]
         logger.debug(f'Selected segments: {seg_ids}')
 
@@ -461,11 +460,14 @@ class Presenter(IOMixin, NavigationMixin,
         mech_name = self.selected_mech_name
 
         # Such groups that span the domain where the mechanism is inserted
-        available_groups = [
-            group_name for group_name, group in self.model.groups.items()
-            if any(mech_name in self.model.domains[domain_name].mechanisms 
-                   for domain_name in group.domains)
-        ]
+        if mech_name == 'Independent':
+            available_groups = list(self.model.groups.keys())
+        else:
+            available_groups = [
+                group_name for group_name, group in self.model.groups.items()
+                if any(mech_name in self.model.domains_to_mechs[domain_name] 
+                    for domain_name in group.domains)
+            ]
 
         logger.debug(f'Avaliable groups: {available_groups}')
 
