@@ -1,7 +1,7 @@
 Groups
 ==========================
 
-.. autoclass:: dendrotweaks.membrane.groups.SectionGroup
+.. autoclass:: dendrotweaks.membrane.groups.SegmentGroup
     :members:
     :undoc-members:
     :show-inheritance:

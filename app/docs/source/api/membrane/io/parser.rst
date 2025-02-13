@@ -1,7 +1,7 @@
 MOD Parser
 ==========================
 
-.. autoclass:: dendrotweaks.membrane.io.parser.Parser
+.. autoclass:: dendrotweaks.membrane.io.parser.MODFileParser
     :members:
     :undoc-members:
     :show-inheritance:

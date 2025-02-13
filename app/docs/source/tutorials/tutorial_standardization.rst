@@ -6,7 +6,7 @@ Standardizing channel models
     Only voltage-gated ion channels can be standardized. The standardization process is not applicable to other mechanisms.
 
 DendroTweaks provides a simple way to standardize voltage-gated ion channel models.
-In the previous :ref:`tutorial <tutorial_mod>`, we learned how to load and create ion channels from MOD files.
+In the previous :doc:`tutorial </tutorials/tutorial_mod>`, we learned how to load and create ion channels from MOD files.
 
 .. code-block:: python
 

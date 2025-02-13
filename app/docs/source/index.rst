@@ -7,9 +7,9 @@ DendroTweaks is a Python toolbox designed to facilitate
 the creation and validation of single-cell biophysical neuronal models.
 
 
-The toolbox is available both as a **standalone Python package** and as a **web-based GUI application**.
+The toolbox is available both as a **standalone Python package** and as a **web-based application**.
 
-The GUI can be accessed online at `dendrotweaks.dendrites.gr <https://dendrotweaks.dendrites.gr>`_.
+The application's GUI can be accessed online at `dendrotweaks.dendrites.gr <https://dendrotweaks.dendrites.gr>`_.
 
 To learn more about the GUI, please refer to the :doc:`GUI documentation<gui>`.
 

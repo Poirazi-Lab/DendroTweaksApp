@@ -1,7 +1,7 @@
 MOD Reader
 ==========================
 
-.. autoclass:: dendrotweaks.membrane.io.reader.Reader
+.. autoclass:: dendrotweaks.membrane.io.reader.MODFileReader
     :members:
     :undoc-members:
     :show-inheritance:

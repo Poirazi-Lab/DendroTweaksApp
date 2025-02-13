@@ -1,7 +1,7 @@
 Synapses
 ================
 
-.. autoclass:: dendrotweaks.stimuli.synapses.Synapse
+.. autoclass:: dendrotweaks.stimuli.populations.Synapse
     :members:
     :undoc-members:
     :show-inheritance:
@@ -9,7 +9,7 @@ Synapses
     :exclude-members: __init__, __str__, __repr__
 
 
-.. autoclass:: dendrotweaks.stimuli.synapses.Population
+.. autoclass:: dendrotweaks.stimuli.populations.Population
     :members:
     :undoc-members:
     :show-inheritance:

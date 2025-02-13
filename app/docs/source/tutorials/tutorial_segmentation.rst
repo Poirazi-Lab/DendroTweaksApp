@@ -7,24 +7,20 @@ We can do this by setting the values globally for the entire cell.
 
 .. code-block:: python
 
-    >>> model.set_global_parameter('cm', 1.0)
-    >>> model.set_global_parameter('Ra', 100.0)
+    >>> model.set_parameter('cm', value=1.0)
+    >>> model.set_parameter('Ra', value=100.0)
 
 Alternatively, we can set the values for specific groups of sections. For example, to set the membrane capacitance and axial resistance for all sections in the model.
 This approach is more flexible and allows us to set different values for different groups of sections. For example, we can set the membrane capacitance for the soma to 2 pF/cm^2 and for all other sections to 1 pF/cm^2.
 
-.. code-block:: python
-
-    >>> model.groups['all'].set_distribution('cm', 'uniform', value=1)
-    >>> model.groups['soma'].set_distribution('cm', 'uniform', value=2)
 
 
 The :code:`set_segmentation` method is used to set the spatial discretization coefficient. The spatial discretization coefficient determines the number of segments in a section. The number of segments is calculated based on the frequency-dependent length constant and the spatial discretization coefficient.
 
 .. code-block:: python
     
-    >>> model.set_segmentation(d_lambda=0.1)
-    Aimed for x segments per um
+    >>> model.set_segmentation(d_lambda=0.1, f=100)
+    
 
 We can access the segmentation graph using the :code:`seg_tree` attribute.
 

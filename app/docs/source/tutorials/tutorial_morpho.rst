@@ -101,7 +101,7 @@ We can visualize the tree using the :code:`plot` method.
 
     fig, ax = plt.subplots(figsize=(8, 8))
     model.swc_tree.plot(ax, edges=True, projection='XY', 
-                        annotate=False, hightlight=swc_tree.bifurcations)
+                        annotate=False, highlight=swc_tree.bifurcations)
 
 .. figure:: ../_static/swc_tree.png
     :align: center
@@ -127,7 +127,7 @@ calculate the path lenght distance to the root node.
 
 .. code-block:: python
 
-    >>> pt.domain, pt.distance_to_root
+    >>> pt.domain, pt.path_distance()
     ('soma', 0.0)
     
 

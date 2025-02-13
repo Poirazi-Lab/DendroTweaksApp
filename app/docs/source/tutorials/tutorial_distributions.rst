@@ -3,17 +3,20 @@ Distributing Parameters
 
 In this tutorial, we will learn how to distribute parameters across the cell using the :code:`dendrotweaks` package.
 
+
+
 The simplest case is to assign a single value to a parameter for all sections of the cell. For example, to set the capacitance :code:`cm` to 1 pF/cm^2 and the axial resistance :code:`Ra` to 100 Ohm*cm, we can use the following code:
 
 .. code-block:: python
 
-    >>> model.set_global_parameter('cm', 1.0)
-    >>> model.set_global_parameter('Ra', 100.0)
+    >>> model.set_global_parameter('cm', value=1.0)
+    >>> model.set_global_parameter('Ra', value=100.0)
 
 .. code-block:: python
 
-    >>> model.global_params
-    {'cm': 1, 'Ra': 100, 'ena': 50, 'ek': -77}
+    >>> model.params
+    {'cm': constant({'value': 1.0}), 
+    'Ra': constant({'value': 100.0})}
 
 However, in many cases, we want to set different values for different groups of sections. Ion channels, for example, are often distributed non-uniformly across the cell. To achieve this, we can create groups of sections and assign distribution functions to parameters.
 
