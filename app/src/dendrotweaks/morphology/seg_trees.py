@@ -47,17 +47,17 @@ class Segment(Node):
         return self._section.Ra
 
     
-    def path_distance(self, stop_at_domain_change=False):
+    def path_distance(self, within_domain=False):
         return self._section.path_distance(self.x, 
-            stop_at_domain_change=stop_at_domain_change)
+            within_domain=within_domain)
 
     @property
     def absolute_distance(self):
-        return self.path_distance(stop_at_domain_change=False)
+        return self.path_distance(within_domain=False)
 
     @property
     def domain_distance(self):
-        return self.path_distance(stop_at_domain_change=True)
+        return self.path_distance(within_domain=True)
 
     # @property
     # def distance_to_parent_domain(self):

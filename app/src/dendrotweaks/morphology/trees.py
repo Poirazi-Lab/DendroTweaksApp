@@ -223,7 +223,7 @@ class Tree:
 
     @property
     def is_sorted(self):
-        if not all([node.idx == i for i, node in enumerate(self._nodes, start=1)]):
+        if not all([node.idx == i for i, node in enumerate(self._nodes, start=0)]):
             return False
         traversal_indices = [node.idx for node in self.traverse()]
         return traversal_indices == sorted(traversal_indices)
@@ -273,8 +273,6 @@ class Tree:
         Efficiently builds the hierarchical tree structure for the nodes
         using a dictionary for fast parent lookups.
         """
-        print('Connecting tree...')
-
         if self.is_connected:
             print('  Tree already connected.')
             return
@@ -356,14 +354,14 @@ class Tree:
             sort_children (bool, optional): Whether to sort the children of each node 
             based on the number of bifurcations in their subtrees. Defaults to True.
         """
-        if sort_children:
-            self._sort_children()
-
         if self.is_sorted:
             print('Tree already sorted.')
             return
 
-        count = 1
+        if sort_children:
+            self._sort_children()
+
+        count = 0
         for node in self.traverse():
             node.idx = count
             node.parent_idx = node.parent.idx if node.parent else -1

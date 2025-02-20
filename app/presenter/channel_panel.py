@@ -167,7 +167,7 @@ class ChannelMixin():
             standard_ch.add_group(segments, 
                                   param_name=f"{group['param_name']}s", 
                                   distribution=Distribution.from_dict(group['distribution']))
-        self.update_graph_param(f"{group['param_name']}s")
+        self._update_graph_param(f"{group['param_name']}s")
 
         inf_fit_data = {'xs': [v_range.tolist() for _ in range(len(standard_ch.state_vars))],
                         'ys': [getattr(standard_ch, standard_ch.state_vars[state]['inf']).tolist() for state in standard_ch.state_vars],

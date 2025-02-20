@@ -167,6 +167,7 @@ class IOMixin():
         and adds them to model.mechanisms.
         """
 
+        self.model.add_default_mechanisms(recompile=False)
         self.model.add_mechanisms('mod', recompile=self.view.widgets.switches['recompile'].active)
         # TODO: Verify that the mod files are loaded successfully
 

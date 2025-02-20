@@ -2,7 +2,7 @@ from typing import List, Union, Callable
 import os
 import json
 
-from dendrotweaks.morphology.swc_trees import SWCTree
+from dendrotweaks.morphology.point_trees import PointTree
 from dendrotweaks.morphology.sec_trees import Section, SectionTree, Domain
 from dendrotweaks.morphology.seg_trees import Segment, SegmentTree
 from dendrotweaks.simulators import NEURONSimulator
@@ -60,17 +60,14 @@ class Model():
         The name of the simulator to use (either 'NEURON' or 'Jaxley').
     path_to_data : str
         The path to the data files where swc and mod files are stored.
-    group_by : str
-        The grouping method to use (either 'segments' or 'sections').
     """
 
-    def __init__(self, name: str,
+    def __init__(self, name: str=None,
                  simulator_name='NEURON',
-                 path_to_data='data',
-                 group_by='sections') -> None:
+                 path_to_data='data') -> None:
 
         # Metadata
-        self._name = name
+        self._name = name or os.path.basename(os.path.normpath(path))
         self.version = ''
         self.path_manager = PathManager(path_to_data, model_name=name)
         self.simulator_name = simulator_name
@@ -81,7 +78,7 @@ class Model():
         self.mod_loader = MODFileLoader()
 
         # Morphology
-        self.swc_tree = None
+        self.point_tree = None
         self.sec_tree = None
 
         # Mechanisms
@@ -254,6 +251,36 @@ class Model():
         df = pd.DataFrame(data)
         return df
 
+    def print_directory_tree(self, *args, **kwargs):
+        """
+        Print the directory tree.
+        """
+        self.path_manager.print_directory_tree(*args, **kwargs)
+
+    def list_morphologies(self, extension='swc'):
+        """
+        List the morphologies available for the model.
+        """
+        self.path_manager.list_files('morphology', extension=extension)
+
+    def list_membrane_configs(self, extension='json'):
+        """
+        List the membrane configurations available for the model.
+        """
+        self.path_manager.list_files('membrane', extension=extension)
+
+    def list_mechanisms(self, extension='mod'):
+        """
+        List the mechanisms available for the model.
+        """
+        self.path_manager.list_files('mod', extension=extension)
+
+    def list_stimuli_configs(self, extension='json'):
+        """
+        List the stimuli configurations available for the model.
+        """
+        self.path_manager.list_files('stimuli', extension=extension)
+
     # ========================================================================
     # MORPHOLOGY
     # ========================================================================
@@ -269,16 +296,16 @@ class Model():
         """
         # self.name = file_name.split('.')[0]
         path_to_swc_file = self.path_manager.get_file_path('morphology', file_name, extension='swc')
-        swc_tree = self.tree_factory.create_swc_tree(path_to_swc_file)
-        swc_tree.remove_overlaps()
-        swc_tree.sort()
-        self.tree_factory._convert_to_3PS_notation(swc_tree)
-        swc_tree.sort()
-        swc_tree.shift_coordinates_to_soma_center()
-        swc_tree.align_apical_dendrite()
-        self.swc_tree = swc_tree
+        point_tree = self.tree_factory.create_point_tree(path_to_swc_file)
+        point_tree.remove_overlaps()
+        point_tree.sort()
+        self.tree_factory._convert_to_3PS_notation(point_tree)
+        point_tree.sort()
+        point_tree.shift_coordinates_to_soma_center()
+        point_tree.align_apical_dendrite()
+        self.point_tree = point_tree
 
-        sec_tree = self.tree_factory.create_sec_tree(swc_tree)
+        sec_tree = self.tree_factory.create_sec_tree(point_tree)
         sec_tree.sort()
         self.sec_tree = sec_tree
 
@@ -289,7 +316,7 @@ class Model():
 
         d_lambda = self.d_lambda
         self.set_segmentation(d_lambda=d_lambda)
-        self.distribute_all_params()
+        
               
 
     def create_and_reference_sections_in_simulator(self):
@@ -337,13 +364,6 @@ class Model():
     # SEGMENTATION
     # ========================================================================
 
-    def distribute_all_params(self):
-        """
-        """
-        for param_name in self.params:
-            self.distribute(param_name)
-
-
     def set_segmentation(self, d_lambda=0.1, f=100, use_neuron=False):
         """
         Set the number of segments in each section based on the geometry.
@@ -363,6 +383,7 @@ class Model():
         for param_name in ['cm', 'Ra']:
             self.distribute(param_name)
 
+        # Calculate lambda_f for each section and set nseg
         for sec in self.sec_tree.sections:
             if use_neuron:
                 from neuron import h
@@ -372,8 +393,13 @@ class Model():
             nseg = int((sec._ref.L / (d_lambda * lambda_f) + 0.9) / 2) * 2 + 1
             sec._ref.nseg = nseg
 
+        # Rebuild the segment tree
         self.seg_tree = self.tree_factory.create_seg_tree(self.sec_tree)
-        
+
+        # Redistribute parameters
+        for param_name in self.params:
+            self.distribute(param_name)  
+
 
     # ========================================================================
     # MECHANISMS
@@ -896,7 +922,7 @@ class Model():
         for child_sec in children:
             self.remove_subtree(child_sec)
 
-        # Remove intermediate pts3d
+        # Remove intermediate points
   
 
     def standardize_channel():
@@ -914,7 +940,7 @@ class Model():
         name = self.name + '_' + version
         path_to_file = self.path_manager.get_file_path('morphology', name, extension='csv')
         
-        self.swc_tree.to_swc(path_to_file)
+        self.point_tree.to_swc(path_to_file)
 
 
     def to_dict(self):
@@ -975,7 +1001,7 @@ class Model():
         if self.sec_tree is not None:
             d_lambda = self.d_lambda
             self.set_segmentation(d_lambda=d_lambda)
-            self.distribute_all_params()
+            
 
 
     def export_membrane(self, version, **kwargs):

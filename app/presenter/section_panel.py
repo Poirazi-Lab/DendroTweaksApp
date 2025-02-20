@@ -40,7 +40,7 @@ class SectionMixin():
     def update_section_diam_data(self):
         sec_name = self.view.widgets.selectors['section'].value
         self.view.sources['section_diam'].data = self.get_radii_data()
-        self.view.figures['section_diam'].title.text = f'{sec_name}: diam (pts3d)'
+        self.view.figures['section_diam'].title.text = f'{sec_name}: diam (points)'
 
     def get_radii_data(self):
         if len(self.selected_secs) == 1:

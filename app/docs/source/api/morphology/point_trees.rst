@@ -2,7 +2,7 @@ SWC tree (Reconstruction)
 ==========================
 
 
-.. autoclass:: dendrotweaks.morphology.swc_trees.SWCNode
+.. autoclass:: dendrotweaks.morphology.point_trees.Point
     :members:
     :undoc-members:
     :show-inheritance:
@@ -10,7 +10,7 @@ SWC tree (Reconstruction)
     :exclude-members: __init__, __str__, __repr__
 
 
-.. autoclass:: dendrotweaks.morphology.swc_trees.SWCTree
+.. autoclass:: dendrotweaks.morphology.point_trees.PointTree
     :members:
     :undoc-members:
     :show-inheritance:

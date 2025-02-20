@@ -165,8 +165,8 @@ class Presenter(IOMixin, NavigationMixin,
                         (max_val is None or seg.path_distance() <= max_val)
         elif select_by == 'domain_distance':
             condition = lambda seg: seg.domain in domains and \
-                        (min_val is None or seg.path_distance(stop_at_domain_change=True) >= min_val) and \
-                        (max_val is None or seg.path_distance(stop_at_domain_change=True) <= max_val)
+                        (min_val is None or seg.path_distance(within_domain=True) >= min_val) and \
+                        (max_val is None or seg.path_distance(within_domain=True) <= max_val)
         elif select_by == 'diam':
             condition = lambda seg: seg.domain in domains and \
                         (min_val is None or seg.diam >= min_val) and \
@@ -989,7 +989,7 @@ class Presenter(IOMixin, NavigationMixin,
 
     #     self.selected_secs = set()
     #     self.selected_segs = []
-    #     self.points = self.get_pts3d()
+    #     self.points = self.get_points()
     #     if hasattr(self.model.cell, 'segments'):
     #         del self.model.cell.segments
     #     if hasattr(self.model.cell, 'sections'):

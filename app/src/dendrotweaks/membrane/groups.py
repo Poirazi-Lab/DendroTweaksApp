@@ -115,7 +115,7 @@ class SegmentGroup:
         elif self.select_by == 'absolute_distance':
             return segment.path_distance()
         elif self.select_by == 'domain_distance':
-            return segment.path_distance(stop_at_domain_change=True)
+            return segment.path_distance(within_domain=True)
         return None
 
     def __contains__(self, segment) -> bool:

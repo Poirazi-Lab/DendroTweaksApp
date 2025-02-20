@@ -6,7 +6,7 @@ This set of tutorials is designed to provide a basic introduction to the feature
 .. toctree::
    :maxdepth: 1
 
-   tutorials/tutorial_loading_models
+   tutorials/tutorial_io
    tutorials/tutorial_morpho
    tutorials/tutorial_distributions
    tutorials/tutorial_segmentation

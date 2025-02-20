@@ -38,14 +38,14 @@ class Section(Node):
     A set of nodes with a relation on the set. A path.
     """
 
-    def __init__(self, idx: str, parent_idx: str, pts3d: List[Node]) -> None:
+    def __init__(self, idx: str, parent_idx: str, points: List[Node]) -> None:
         super().__init__(idx, parent_idx)
-        self.pts3d = pts3d
+        self.points = points
         self.segments = []
         self._ref = None
-        self._domain = self.pts3d[0].domain
+        self._domain = self.points[0].domain
 
-        if not all(pt.domain == self._domain for pt in pts3d):
+        if not all(pt.domain == self._domain for pt in points):
             raise ValueError('All points in a section must belong to the same domain.')
 
     # MAGIC METHODS
@@ -89,16 +89,16 @@ class Section(Node):
     @domain.setter
     def domain(self, domain):
         self._domain = domain
-        for pt in self.pts3d:
+        for pt in self.points:
             pt.domain = domain
 
     @property
-    def df_pts3d(self):
+    def df_points(self):
         """
         Return the nodes in the section as a pandas DataFrame.
         """
         # concatenate the dataframes of the nodes
-        return pd.concat([pt.df for pt in self.pts3d])
+        return pd.concat([pt.df for pt in self.points])
 
     @property
     def df(self):
@@ -123,19 +123,19 @@ class Section(Node):
 
     @property
     def radii(self):
-        return [pt.r for pt in self.pts3d]
+        return [pt.r for pt in self.points]
 
     @property
     def xs (self):
-        return [pt.x for pt in self.pts3d]
+        return [pt.x for pt in self.points]
 
     @property
     def ys(self):
-        return [pt.y for pt in self.pts3d]
+        return [pt.y for pt in self.points]
 
     @property
     def zs(self):
-        return [pt.z for pt in self.pts3d]
+        return [pt.z for pt in self.points]
 
     @property
     def seg_centers(self):
@@ -153,7 +153,7 @@ class Section(Node):
 
     @property
     def distances(self):
-        coords = np.array([[pt.x, pt.y, pt.z] for pt in self.pts3d])
+        coords = np.array([[pt.x, pt.y, pt.z] for pt in self.points])
         deltas = np.diff(coords, axis=0)
         frusta_distances = np.sqrt(np.sum(deltas**2, axis=1))
         cumulative_frusta_distances = np.insert(np.cumsum(frusta_distances), 0, 0)
@@ -190,7 +190,7 @@ class Section(Node):
             else:
                 self._ref.connect(self.parent._ref(1))
         # Add 3D points to the section
-        for pt in self.pts3d:
+        for pt in self.points:
             diam = 2*pt.r
             diam = round(diam, 16)
             self._ref.pt3dadd(pt.x, pt.y, pt.z, diam)
@@ -238,7 +238,7 @@ class Section(Node):
 
 
     def path_distance(self, relative_position: float = 0, 
-                        stop_at_domain_change: bool = False) -> float:
+                        within_domain: bool = False) -> float:
         """
         Calculate the distance from the section to the root at a given relative position.
 
@@ -267,7 +267,7 @@ class Section(Node):
 
             distance += factor * node.length
 
-            if stop_at_domain_change and node.parent.domain != node.domain:
+            if within_domain and node.parent.domain != node.domain:
                 break
 
             node = node.parent
@@ -286,8 +286,8 @@ class Section(Node):
         # In NEURON
         if self._ref:
             h.disconnect(sec=self._ref) #from parent
-        # In SWCTree
-        self.pts3d[0].disconnect_from_parent()
+        # In PointTree
+        self.points[0].disconnect_from_parent()
         # In SegmentTree
         if self.segments:
             self.segments[0].disconnect_from_parent()
@@ -306,12 +306,12 @@ class Section(Node):
                 else:
                     self._ref.connect(self.parent._ref(1))
                 
-        # In SWCTree
+        # In PointTree
         if self.parent is not None:
             if self.parent.parent is None: # if parent is soma
-                self.pts3d[0].connect_to_parent(self.parent.pts3d[1]) # attach to the middle of the parent
+                self.points[0].connect_to_parent(self.parent.points[1]) # attach to the middle of the parent
             else:
-                self.pts3d[0].connect_to_parent(parent.pts3d[-1]) # attach to the end of the parent
+                self.points[0].connect_to_parent(parent.points[-1]) # attach to the end of the parent
         # In SegmentTree
         if self.segments:
             self.segments[0].connect_to_parent(parent.segments[-1])
@@ -364,9 +364,9 @@ class Section(Node):
 
         if plot_parent and self.parent:
             child_to_parent_distance = np.sqrt(
-                (self.pts3d[0].x - self.parent.pts3d[-1].x)**2 +
-                (self.pts3d[0].y - self.parent.pts3d[-1].y)**2 +
-                (self.pts3d[0].z - self.parent.pts3d[-1].z)**2
+                (self.points[0].x - self.parent.points[-1].x)**2 +
+                (self.points[0].y - self.parent.points[-1].y)**2 +
+                (self.points[0].z - self.parent.points[-1].z)**2
             )
             distances = self.distances + child_to_parent_distance
         else: 
@@ -385,6 +385,8 @@ class Section(Node):
             ax.bar(seg_centers, avg_rs, width=bar_width, edgecolor='white', color='C1', label='Segment radii')
 
         ax.set_title('Radius')
+        ax.set_xlabel('Distance')
+        ax.set_ylabel('Radius')
         ax.set_ylim(0, max(self.radii) + 0.1 * max(self.radii))
 
 
@@ -393,7 +395,7 @@ class SectionTree(Tree):
     def __init__(self, sections: list[Section]) -> None:
         super().__init__(sections)
         self._create_domains()
-        self._swc_tree = None
+        self._point_tree = None
         self._seg_tree = None
 
 
@@ -435,7 +437,7 @@ class SectionTree(Tree):
         """
         print('Sorting sections...')
         count_sections = 0
-        count_pts3d = 0
+        count_points = 0
         count_segments = 0
 
         for sec in self.traverse():
@@ -444,20 +446,20 @@ class SectionTree(Tree):
             count_sections += 1
 
             if sec.parent is None:
-                sec.pts3d[1].idx = count_pts3d
-                sec.pts3d[1].parent_idx = -1
-                count_pts3d += 1
-                sec.pts3d[0].idx = count_pts3d
-                sec.pts3d[0].parent_idx = sec.pts3d[0].parent.idx
-                count_pts3d += 1
-                sec.pts3d[2].idx = count_pts3d
-                sec.pts3d[2].parent_idx = sec.pts3d[2].parent.idx
-                count_pts3d += 1
+                sec.points[1].idx = count_points
+                sec.points[1].parent_idx = -1
+                count_points += 1
+                sec.points[0].idx = count_points
+                sec.points[0].parent_idx = sec.points[0].parent.idx
+                count_points += 1
+                sec.points[2].idx = count_points
+                sec.points[2].parent_idx = sec.points[2].parent.idx
+                count_points += 1
             else:
-                for pt in sec.pts3d:
-                    pt.idx = count_pts3d
+                for pt in sec.points:
+                    pt.idx = count_points
                     pt.parent_idx = pt.parent.idx
-                    count_pts3d += 1
+                    count_points += 1
 
             for seg in sec:
                 seg.idx = count_segments
@@ -466,7 +468,7 @@ class SectionTree(Tree):
 
     def sort(self):
         super().sort()
-        self._swc_tree.sort()
+        self._point_tree.sort()
         if self._seg_tree:
             self._seg_tree.sort()
 
@@ -478,7 +480,7 @@ class SectionTree(Tree):
                 if sec in domain.sections:
                     domain.remove_section(sec)
         # Points
-        self._swc_tree.remove_subtree(section.pts3d[0])
+        self._point_tree.remove_subtree(section.points[0])
         # Segments
         if self._seg_tree:
             self._seg_tree.remove_subtree(section.segments[0])
@@ -488,6 +490,19 @@ class SectionTree(Tree):
             for sec in section.subtree:
                 h.delete_section(sec=sec._ref)
 
+    def remove_zero_length_sections(self):
+        """
+        Remove sections with zero length.
+        """
+        for sec in self.sections:
+            if sec.length == 0:
+                for pt in sec.points:
+                    self._point_tree.remove_node(pt)
+                for seg in sec.segments:
+                    self._seg_tree.remove_node(seg)
+                self.remove_node(sec)
+
+
 
     def downsample(self, factor: float):
         """
@@ -495,29 +510,34 @@ class SectionTree(Tree):
         based on the given factor, while preserving the first and last points.
         
         :param factor: The proportion of points to keep (e.g., 0.5 keeps 50% of points)
+                       If factor is 0, keep only the first and last points.
         """
         for sec in self.sections:
             if sec is self.soma:
                 continue
 
-            if len(sec.pts3d) < 3:  # Keep sections with only start & end points
+            if len(sec.points) < 3:  # Keep sections with only start & end points
                 continue
 
-            num_points = len(sec.pts3d)
-            num_to_keep = max(2, int(num_points * factor))  # Ensure at least start & end remain
+            num_points = len(sec.points)
+            if factor == 0:
+                num_to_keep = 2
+            else:
+                num_to_keep = max(2, int(num_points * factor))  # Ensure at least start & end remain
 
             # Select indices to keep (first, last, and spaced indices in between)
             keep_indices = np.linspace(0, num_points - 1, num_to_keep, dtype=int)
             keep_set = set(keep_indices)
 
-            points_to_remove = [pt for i, pt in enumerate(sec.pts3d) if i not in keep_set]
+            points_to_remove = [pt for i, pt in enumerate(sec.points) if i not in keep_set]
 
             print(f'Removing {len(points_to_remove)} points from section {sec.idx}')
             
             for pt in points_to_remove:
-                self._swc_tree.remove_node(pt)
+                self._point_tree.remove_node(pt)
+                sec.points.remove(pt)
             
-        self._swc_tree.sort()
+        self._point_tree.sort()
 
             
 
@@ -540,22 +560,24 @@ class SectionTree(Tree):
         ax.set_ylabel('Parent ID')
 
     def plot(self, ax=None, show_points=False, show_lines=True, 
-                      annotate=False, projection='XY', domains=False):
+                      annotate=False, projection='XY', domains=False, highlight=None):
         if ax is None:
             fig, ax = plt.subplots(figsize=(10, 10))
 
         x_attr, y_attr = projection[0], projection[1]
 
         for sec in self.sections:
-            coords = {'X': [pt.x for pt in sec.pts3d],
-                      'Y': [pt.y for pt in sec.pts3d],
-                      'Z': [pt.z for pt in sec.pts3d]}
+            coords = {'X': [pt.x for pt in sec.points],
+                      'Y': [pt.y for pt in sec.points],
+                      'Z': [pt.z for pt in sec.points]}
             xs = coords[x_attr]
             ys = coords[y_attr]
             
             color = plt.cm.jet(1-sec.idx/len(self.sections))
             if domains:
                 color = DOMAINS_TO_COLORS.get(sec.domain, color)
+            if highlight and sec in highlight:
+                color = 'red'
             
             if show_points:
                 ax.plot(xs, ys, '.', color=color, markersize=5)
@@ -585,7 +607,7 @@ class SectionTree(Tree):
                 color = DOMAINS_TO_COLORS.get(sec.domain, color)
             if highlight and sec.idx in highlight:
                 ax.plot(
-                    [pt.path_distance() for pt in sec.pts3d], 
+                    [pt.path_distance() for pt in sec.points], 
                     sec.radii, 
                     marker='.', 
                     color='red', 
@@ -593,7 +615,7 @@ class SectionTree(Tree):
                 )
             else:
                 ax.plot(
-                    [pt.path_distance() for pt in sec.pts3d], 
+                    [pt.path_distance() for pt in sec.points], 
                     sec.radii, 
                     marker='.', 
                     color=color, 
@@ -606,7 +628,7 @@ class SectionTree(Tree):
         """
         Save the SectionTree as an SWC file.
         """
-        if not self.is_sorted or not self._swc_tree.is_sorted:
+        if not self.is_sorted or not self._point_tree.is_sorted:
             raise ValueError('The tree must be sorted before saving.')
 
         data = {
@@ -620,8 +642,8 @@ class SectionTree(Tree):
         }
 
         for sec in self.sections:
-            pts3d = sec.pts3d if sec.parent is None or sec.parent.parent is None else sec.pts3d[1:]
-            for pt in pts3d:
+            points = sec.points if sec.parent is None or sec.parent.parent is None else sec.points[1:]
+            for pt in points:
                 data['idx'].append(pt.idx)
                 data['type_idx'].append(pt.type_idx)
                 data['x'].append(pt.x)

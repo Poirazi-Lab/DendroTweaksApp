@@ -49,7 +49,7 @@ from contextlib import contextmanager
 import random
 
 
-class SWCNode(Node):
+class Point(Node):
 
     def __init__(self, idx: str, type_idx: int, 
                  x: float, y: float, z: float, r: float, 
@@ -80,12 +80,12 @@ class SWCNode(Node):
         return 0
 
 
-    def path_distance(self, stop_at_domain_change=False, ancestor=None):
+    def path_distance(self, within_domain=False, ancestor=None):
         """
         Computes the distance from this node to an ancestor.
         
         Args:
-            stop_at_domain_change (bool): If True, stops when domain changes.
+            within_domain (bool): If True, stops when domain changes.
             ancestor (Node, optional): If provided, stops at this specific ancestor.
             
         Returns:
@@ -98,7 +98,7 @@ class SWCNode(Node):
             if ancestor and node.parent == ancestor:
                 break  # Stop if we reach the specified ancestor
 
-            if stop_at_domain_change and node.parent.domain != node.domain:
+            if within_domain and node.parent.domain != node.domain:
                 break  # Stop if domain changes
             
             distance += node.distance_to_parent
@@ -133,7 +133,7 @@ class SWCNode(Node):
         print(info)
 
     def copy(self):
-        new_node = SWCNode(self.idx, self.type_idx, self.x,
+        new_node = Point(self.idx, self.type_idx, self.x,
                             self.y, self.z, self.r, self.parent_idx)
         return new_node
 
@@ -147,9 +147,9 @@ class SWCNode(Node):
 
 
 
-class SWCTree(Tree):
+class PointTree(Tree):
 
-    def __init__(self, nodes: list[SWCNode]) -> None:
+    def __init__(self, nodes: list[Point]) -> None:
         super().__init__(nodes)
         self._sections = []
         self._is_extended = False
@@ -157,7 +157,7 @@ class SWCTree(Tree):
     # PROPERTIES
 
     @property
-    def pts3d(self):
+    def points(self):
         return self._nodes
 
     @property
@@ -165,30 +165,30 @@ class SWCTree(Tree):
         return len(self._sections) > 0
 
     @property
-    def soma_pts3d(self):
-        return [pt for pt in self.pts3d if pt.type_idx == 1]
+    def soma_points(self):
+        return [pt for pt in self.points if pt.type_idx == 1]
 
     @property
     def soma_center(self):
         return np.mean([[pt.x, pt.y, pt.z] 
-                        for pt in self.soma_pts3d], axis=0)
+                        for pt in self.soma_points], axis=0)
 
     @property
     def apical_center(self):
-        apical_pts3d = [pt for pt in self.pts3d 
+        apical_points = [pt for pt in self.points 
                         if pt.type_idx == 4]
-        if len(apical_pts3d) == 0:
+        if len(apical_points) == 0:
             return None
         return np.mean([[pt.x, pt.y, pt.z] 
-                       for pt in apical_pts3d], axis=0)
+                       for pt in apical_points], axis=0)
 
     @property
     def soma_notation(self):
-        if len(self.soma_pts3d) == 1:
+        if len(self.soma_points) == 1:
             return '1PS'
-        elif len(self.soma_pts3d) == 2:
+        elif len(self.soma_points) == 2:
             return '2PS'
-        elif len(self.soma_pts3d) == 3:
+        elif len(self.soma_points) == 3:
             return '3PS'
         else:
             return 'contour'
@@ -234,7 +234,7 @@ class SWCTree(Tree):
         Shift all coordinates so that the soma center is at the origin (0, 0, 0).
         """
         soma_x, soma_y, soma_z = self.soma_center
-        for pt in self.pts3d:
+        for pt in self.points:
             pt.x = round(pt.x - soma_x, 8)
             pt.y = round(pt.y - soma_y, 8)
             pt.z = round(pt.z - soma_z, 8)
@@ -270,7 +270,7 @@ class SWCTree(Tree):
             raise ValueError("Axis must be 'X', 'Y', or 'Z'")
 
         # Subtract rotation point to translate the cloud to the origin
-        coords = np.array([[pt.x, pt.y, pt.z] for pt in self.pts3d])
+        coords = np.array([[pt.x, pt.y, pt.z] for pt in self.points])
         coords -= rotation_point
 
         # Apply rotation
@@ -319,7 +319,7 @@ class SWCTree(Tree):
         rotation_matrix = Rotation.from_rotvec(rotation_angle * rotation_vector / np.linalg.norm(rotation_vector)).as_matrix()
 
         # Apply the rotation to each point
-        for pt in self.pts3d:
+        for pt in self.points:
             coords = np.array([pt.x, pt.y, pt.z]) - soma_center
             rotated_coords = np.dot(rotation_matrix, coords) + soma_center
             pt.x, pt.y, pt.z = rotated_coords
@@ -330,7 +330,7 @@ class SWCTree(Tree):
         """
         Removes overlapping nodes from the tree.
         """
-        nodes_before = len(self.pts3d)
+        nodes_before = len(self.points)
 
         overlapping_nodes = [
             pt for pt in self.traverse() 
@@ -340,7 +340,7 @@ class SWCTree(Tree):
             self.remove_node(pt)
 
         self._is_extended = False
-        nodes_after = len(self.pts3d)
+        nodes_after = len(self.points)
         print(f'Removed {nodes_before - nodes_after} overlapping nodes.')
 
 
@@ -350,7 +350,7 @@ class SWCTree(Tree):
         overlapping with the parent node for geometrical continuity.
         """
         
-        nodes_before = len(self.pts3d)
+        nodes_before = len(self.points)
 
         if self._is_extended:
             print('Tree is already extended.')
@@ -370,7 +370,7 @@ class SWCTree(Tree):
                 self.insert_node_before(new_node, child)
 
         self._is_extended = True
-        nodes_after = len(self.pts3d)
+        nodes_after = len(self.points)
         print(f'Extended {nodes_after - nodes_before} nodes.')
 
 
@@ -388,6 +388,8 @@ class SWCTree(Tree):
                 'r': float,
                 'parent_idx': int
             })
+            df['idx'] += 1
+            df[df['parent_idx'] >= 0]['parent_idx'] += 1
             df.to_csv(path_to_file, sep=' ', index=False, header=False)
 
 
@@ -401,9 +403,9 @@ class SWCTree(Tree):
             fig, ax = plt.subplots(figsize=(10, 10))
 
         # Create a dictionary for coordinates
-        coords = {'X': [pt.x for pt in self.pts3d],
-                  'Y': [pt.y for pt in self.pts3d],
-                  'Z': [pt.z for pt in self.pts3d]}
+        coords = {'X': [pt.x for pt in self.points],
+                  'Y': [pt.y for pt in self.points],
+                  'Z': [pt.z for pt in self.points]}
 
         if edges:
             for edge in self.edges:
@@ -413,20 +415,19 @@ class SWCTree(Tree):
                 ax.plot(edge_coords[projection[0]], edge_coords[projection[1]], color='C1')
 
         domains_to_colors = DOMAINS_TO_COLORS
-        unique_domains = set(pt.domain for pt in self.pts3d)
+        unique_domains = set(pt.domain for pt in self.points)
         for domain in unique_domains:
             if domain not in domains_to_colors:
                 gray_value = int(255 * random.random())
                 domains_to_colors[domain] = "#{:02x}{:02x}{:02x}".format(gray_value, gray_value, gray_value)
-        print(domains_to_colors)
-        colors = [domains_to_colors.get(pt.domain, "black") for pt in self.pts3d] if domains else 'C0'
+        colors = [domains_to_colors.get(pt.domain, "black") for pt in self.points] if domains else 'C0'
 
         if nodes:
             ax.scatter(coords[projection[0]], coords[projection[1]], s=10, c=colors, marker='.', zorder=2)
 
         # Annotate the node index
-        if annotate and len(self.pts3d) < 50:
-            for i, pt in enumerate(self.pts3d):
+        if annotate and len(self.points) < 50:
+            for i, pt in enumerate(self.points):
                 ax.annotate(
                     f'{pt.idx}', 
                     (coords[projection[0]][i], coords[projection[1]][i]), 
@@ -442,40 +443,13 @@ class SWCTree(Tree):
         ax.set_ylabel(projection[1])
         ax.set_aspect('equal')
 
-    # def plot_sections(self, ax=None, show_points=False, show_lines=True, 
-    #                   annotate=False):
-
-    #     if not self.is_sectioned:
-    #         raise ValueError('Tree is not sectioned. Use split_to_sections() method.')
-
-    #     if ax is None:
-    #         fig, ax = plt.subplots(figsize=(10, 10))
-
-    #     for sec in self._sections:
-    #         xs = [pt.x for pt in sec.pts3d]
-    #         ys = [pt.y for pt in sec.pts3d]
-    #         if show_points:
-    #             ax.plot(xs, ys, '.', color=plt.cm.jet(
-    #                 1-sec.idx/len(self._sections)), markersize=5)
-    #         if show_lines:
-    #             ax.plot(xs, ys, color=plt.cm.jet(
-    #                 1-sec.idx/len(self._sections)))
-
-    #         # annotate the section index
-    #         if annotate:
-    #             ax.annotate(f'{sec.idx}', (np.mean(
-    #                 xs), np.mean(ys)), fontsize=8)
-    #             ax.annotate(f'{sec.idx}', (np.mean(xs), np.mean(ys)), fontsize=8,
-    #                         bbox=dict(facecolor='white', edgecolor='black', boxstyle='round,pad=0.3'))
-
-    #     ax.set_aspect('equal')
 
     def plot_radii_distribution(self, ax=None, highlight=None, 
     domains=True, show_soma=False):
         if ax is None:
             fig, ax = plt.subplots(figsize=(8, 3))
 
-        for pt in self.pts3d:
+        for pt in self.points:
             if not show_soma and pt.domain is 'soma':
                 continue
             color = 'gray'
@@ -502,23 +476,23 @@ class SWCTree(Tree):
 
 
 @contextmanager
-def remove_overlaps(swc_tree):
+def remove_overlaps(point_tree):
     """
-    Context manager for temporarily removing overlaps in the given swc_tree.
-    Restores the swc_tree's original state when exiting the context.
+    Context manager for temporarily removing overlaps in the given point_tree.
+    Restores the point_tree's original state when exiting the context.
     """
-    # Store whether the swc_tree was already extended
-    was_extended = swc_tree._is_extended
+    # Store whether the point_tree was already extended
+    was_extended = point_tree._is_extended
     
     # Remove overlaps
-    swc_tree.remove_overlaps()
-    swc_tree.sort()
+    point_tree.remove_overlaps()
+    point_tree.sort()
     
     try:
         # Yield control to the context block
         yield
     finally:
-        # Restore the overlapping state if the swc_tree was extended
+        # Restore the overlapping state if the point_tree was extended
         if was_extended:
-            swc_tree.extend_sections()
-            swc_tree.sort()
+            point_tree.extend_sections()
+            point_tree.sort()

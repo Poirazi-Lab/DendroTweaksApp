@@ -31,6 +31,9 @@ class PathManager:
             'membrane': os.path.join(self.path_to_data, model_name, 'membrane'),
             'stimuli': os.path.join(self.path_to_data, model_name, 'stimuli'),
         })
+        for path in self.paths.values():
+            if not os.path.exists(path):
+                os.makedirs(path)
 
     def __repr__(self):
         return f"PathManager({self.path_to_data}/{self.model_name})"

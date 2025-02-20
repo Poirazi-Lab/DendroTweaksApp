@@ -21,11 +21,11 @@ class CellMixin():
 
     @property
     def xs(self):
-        return [[pt.x for pt in sec.pts3d] for sec in self.model.sec_tree]
+        return [[pt.x for pt in sec.points] for sec in self.model.sec_tree]
 
     @property
     def ys(self):
-        return [[pt.y for pt in sec.pts3d] for sec in self.model.sec_tree]
+        return [[pt.y for pt in sec.points] for sec in self.model.sec_tree]
             
     @property
     def colors(self):
@@ -84,5 +84,5 @@ class CellMixin():
         """
         Rotate the cell renderer around the XY axis. Attaches to the rotation slider.
         """
-        self.model.swc_tree.rotate(new - old)
+        self.model.point_tree.rotate(new - old)
         self.view.sources['cell'].data = self.get_cell_data()

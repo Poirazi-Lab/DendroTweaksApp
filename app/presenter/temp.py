@@ -89,7 +89,7 @@ class TempMixin():
                                growth_rate = -0.0117912091,
                                horizontal_shift = 533.9617117381)
 
-        self.update_graph_param('Ra')
+        self._update_graph_param('Ra')
 
 
         max_ar2 = 0.95  # Somatic value of ar2

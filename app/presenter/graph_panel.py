@@ -59,7 +59,7 @@ class GraphMixin():
                             area = seg.area,
                             subtree_size = seg.subtree_size,
                             absolute_distance = seg.path_distance(),
-                            domain_distance = seg.path_distance(stop_at_domain_change=True),
+                            domain_distance = seg.path_distance(within_domain=True),
                             length=seg._section.length,
                             recordings='None',
                             iclamps=0,
@@ -285,7 +285,7 @@ class GraphMixin():
         elif param_name is 'Ra':
             return seg._section._ref.Ra
         elif param_name is 'domain_distance':
-            return seg.path_distance(stop_at_domain_change=True)
+            return seg.path_distance(within_domain=True)
         elif param_name is 'absolute_distance':
             return seg.path_distance()
         else:

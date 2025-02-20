@@ -12,23 +12,23 @@ First, we create a model object and specify the path to the folder with the data
 .. code-block:: python
 
     >>> import dendrotweaks as dd
-    >>> model = dd.Model(path_to_data='path/to/data/')
+    >>> model = dd.Model(name='UserModel', path_to_data='path/to/data/')
 
 The subfolders of the data folder should follow the structure below wich we can
-see using the :code:`model.path_manager.print_directory_tree()` method.
+see using the :code:`model.print_directory_tree()` method.
 
 .. code-block:: bash
 
     .
     └── data/
-        ├── Default/    # Default mechanisms
+        ├── Default/
         |  ├── Leak.mod
         |  ├── AMPA.mod
         |  ...
-        ├── Templates/  # Jinja2 templates
+        ├── Templates/
         |  ├── channel.py
         |  └── standard_channel.mod
-        └── UserModel/  # User-defined mechanisms
+        └── UserModel/
             ├── morphology/
             │   └── cell.swc
             └── mod/
@@ -40,7 +40,7 @@ Load the morphology
 ------------------------------------------
 
 We proceed by loading the morphology of the cell from an SWC file.
-First, we list the available morphologies in the data folder.
+First, we list the available morphologies in the morphology folder.
 
 .. code-block:: python
 
@@ -54,12 +54,12 @@ We can load the morphology of the cell using the :code:`load_morphology` method.
     >>> model.load_morphology('cell')
 
 
-We now have access to :code:`swc_tree`, :code:`sec_tree` and :code:`seg_tree`
+We now have access to :code:`point_tree`, :code:`sec_tree` and :code:`seg_tree`
 attributes of the model object.
 
 .. code-block:: python
 
-    >>> model.swc_tree
+    >>> model.point_tree
     >>> model.sec_tree
     >>> model.seg_tree
 
@@ -78,14 +78,25 @@ Add mechanisms
 
 After defining the neuronal morphology, we should proceed with 
 specifying its biophysical properties.
-Biophysical properties of the model depend on the membrane mechanisms that are inserted into the model.
-These mechanisms are defined in MOD files, which are compiled and loaded into NEURON.
+Biophysical properties of the model depend on the membrane mechanisms
+that are present in the membrane.
+These mechanisms are defined in MOD files as a set of equations and their parameters, which are compiled and loaded into NEURON.
+
+.. code-block:: python
+
+    >>> model.add_default_mechanisms(recompile=False)
+
+.. code-block:: python
+
+    >>> model.list_mechanisms()
+    ['Leak', 'Nav', 'Kv']
+
 We will add the default and user-defined mechanisms to the model and distribute their parameters across the cell.
 
 .. code-block:: python
 
-    >>> model.add_default_mechanisms(recompile=True)
-    >>> model.add_mechanisms(recompile=True) # user-defined mechanisms
+    >>> for mech in model.list_mechanisms():
+    >>>     model.add_mechanism(mech, recompile=True)
 
 
 With this commands we create python objects from MOD files, adding them to :code:`model.mechanisms`.
@@ -102,7 +113,7 @@ We can see the mechanisms available in the model with the :code:`mechanisms` att
      'Nav': <Mechanism(Nav)>,
      'Kv': <Mechanism(Kv)>}
 
-We can see the parameters of the mechanisms in the model with the :code:`params` attribute.
+We can see the parameters of the mechanisms with the :code:`params` attribute.
 
 .. code-block:: python
 
@@ -122,8 +133,10 @@ We can see the parameters of the mechanisms in the model with the :code:`params`
     {'cm': {'all': constant({'value': 1})},
      'Ra': {'all': constant({'value': 35.4})}}
 
-We should interpret the output as follows: the specific membrane capacitance :code:`cm` is set to 1 uF/cm^2,
-and the axial resistance :code:`Ra` is set to 35.4 Ohm*cm across the cell. We will discuss how to set these parameters in a bit.
+We should interpret the output as follows: the specific membrane capacitance :code:`cm` is set to a constant value of 1 uF/cm^2,
+and the axial resistance :code:`Ra` is set to 35.4 Ohm*cm for all segments of the cell. We will discuss how to update these parameters in a bit.
+We will learn more about segment groups and parameter distributions in the
+:doc:`tutorial</tutorials/tutorial_distributions>` on distributing parameters across the cell.
 
 .. warning::
 
@@ -136,7 +149,9 @@ Insert mechanisms to specific domains
 ------------------------------------------
 
 In DendroTweaks membrane mechanisms are mapped to the morhological domains.
-A domain is a group of sections with similar properties. In a typical pyramidal cell model we have the following domains:
+A domain is a region of a neuron distinguished by its anatomical 
+or functional properties. 
+In a typical pyramidal cell model we have the following domains:
 soma, axon, basal dendrites, apical dendrite (further subdivided to trunk, tuft and oblique dendrites).
 
 .. figure:: ../_static/domains2.png
@@ -146,6 +161,9 @@ soma, axon, basal dendrites, apical dendrite (further subdivided to trunk, tuft 
 
     *Figure 1: Domains of a pyramidal cell*
 
+In DendroTweaks a domain represents a collection of sections that share the same properties.
+We can see the domains of the model with the :code:`domains` attribute.
+
 .. code-block:: python
 
     >>> model.domains
@@ -154,21 +172,8 @@ soma, axon, basal dendrites, apical dendrite (further subdivided to trunk, tuft 
      'axon': <Domain(axon, 1 sections)>,
      'dend': <Domain(dend, 7 sections)>}
 
-To define a new domain, we can use the :code:`define_domain` method.
-
-.. code-block:: python
-
-    >>> sections = model.get_sections(lambda sec: sec.domain == 'apic' and sec.diam < 1)
-    >>> model.define_domain('tuft', sections)
-
-.. tip::
-
-    Assigning sections to domains is easy with the GUI.
-    You can select sections using the interactive plot with a mouse lasso tool, 
-    which allows for precise and intuitive selection.
-
 In the previous step we uploaded the mechanisms, now we want to actually insert them into the specific domains.
-In this example we simply insert each of the three mechanism to all domains. However, we could insert some mechanisms only to the soma,
+In this example we simply insert each of the three avaliable mechanisms to all domains. However, we could insert some mechanisms only to the soma,
 or only to the apical dendrite, etc.
 
 .. code-block:: python
@@ -179,7 +184,7 @@ or only to the apical dendrite, etc.
     >>>     model.insert_mechanism('Nav', domain)
     >>>     model.insert_mechanism('Kv', domain)
 
-We can see the mechanisms inserted in each domain with the :code:`domains_to_mechs` attribute.
+We can see the mechanisms inserted in any domain with the :code:`domains_to_mechs` attribute.
 
 .. code-block:: python
 
@@ -203,110 +208,84 @@ Some parameters, such as specific membrane capacitance :code:`cm` and axial resi
 Such independent parameters are combined under "Independent" pseudo-mechanism for consistency of the interface.
 These parameters are avaliable in each domain by default.
 
-If we access the model parameters now, we will see the parameters of the mechanisms inserted in the model.
+At this point we have inserted the mechanisms into the membrane and set the default parameters for the model.
+We can see the parameters of the mechanisms inserted in the model with the :code:`params` attribute.
 
 .. code-block:: python
 
     >>> model.params
     {'cm': {'all': constant({'value': 1})},
      'Ra': {'all': constant({'value': 35.4})},
-     'gbar_Leak': {'all': constant({'value': 0.0}),
-     'e_Leak': {'all': constant({'value': -70}),
-     'gbar_Nav': {'all': constant({'value': 0.0}),
+     'gbar_Leak': {'all': constant({'value': 0.0})},
+     'e_Leak': {'all': constant({'value': -70})},
+     'gbar_Nav': {'all': constant({'value': 0.0})},
      'vhalf_m_Nav': {'all': constant({'value': -30}),
      ...
      'ena': {'all': constant({'value': 50}),
-     'gbar_Kv': {'all': constant({'value': 0.0}),
-     'vhalf_n_Kv': {'all': constant({'value': -35}),
+     'gbar_Kv': {'all': constant({'value': 0.0})},
+     'vhalf_n_Kv': {'all': constant({'value': -35})},
      ...
-     'ek': {'all': constant({'value': -77})
+     'ek': {'all': constant({'value': -77})},
      }
 
-As you might have noticed, the default parameter values for 
-the mechanisms are uniformly distributed across the entire cell.
-This is, however, not always the case in real neurons. Some parameters, such as 
-the conductance of ion channels, can vary across the cell. 
-DendroTweaks provides a way to distribute parameters across the cell as we discuss in the next section.
+As we can see, all the parameters are set to their defaul value across all segments of the cell, and for some 
+of the parameters the value is 0.0. We need to set the values of the parameters to the desired, more realisitc
+values before running the simulation and we will learn how to do that in the next step.
 
-
-
-
-Distribute parameters: Where?
+Set model parameters
 ------------------------------------------
 
+We can set the value
+of the parameters
+of the mechanisms inserted in the model using the :code:`set_param` method.
+As an example, let's set the conductance of the leak channel to 0.0001 S/cm^2.
+
+.. code-block:: python
+
+    >>> model.set_param('gbar_Leak', value=0.0001) # S/cm^2
+
+
+
+However, in real neurons, some properties, such as the conductance of ion channels, can vary across different regions of the cell. 
 To distribute parameters across the cell, we need to specify **where** and **how** the parameter will be distributed.
 
-To select the segments where a given distribution will be applied, we will use the segment groups:
+To select the segments **where** a given distribution will be applied, we will use the segment groups.
+A segment group is a collection of segments that meet certain criteria, 
+such as the diameter or distance from the soma.
 
-.. code-block:: python
-
-    >>> model.groups
-    {'all': SegmentGroup("all", domains=['soma', 'apic', 'axon', 'dend']),
-     'somatic': SegmentGroup("somatic", domains=['soma']),
-     'apical': SegmentGroup("apical", domains=['apic']),
-     'axonal': SegmentGroup("axonal", domains=['axon']),
-     'dendritic': SegmentGroup("dendritic", domains=['dend'])}
-
-By default a group is created for each domain and the group :code:`all` is created for the entire cell.
-
-We define a segment group by specifying the domains to which the group will be applied, as well as 
-a criterion for selecting the segments of the group. This criterion can be the diameter,
-the absolute distance (to the root of the tree) or the relative distance within a domain.
-Examples of group definitions are shown below:
-
-.. code-block:: python
-
-    >>> model.add_group('thin_apical', domains=['apic'], select_by='diameter', max_val=0.5)
-    >>> model.add_group('proximal_dendritic', domains=['dend', 'apic'], select_by='abs_distance', max_val=100)
-    >>> model.add_group('hot_spot', domains=['apic'], select_by='rel_distance', min_val=300, max_val=400)
-
-From these definitions you can clearly see the difference between the domains and the groups.
-Domains are a logical division of the cell, while groups are a way to select segments based on some criteria.
-A group can tear a section apart, so a section's segments can be in multiple groups, as for example the beginning segments of a section 
-might satisfy the criteria of one group, while the end segments might not.
-Moreover, the domains partition the cell into non-overlapping regions, so that each section belongs to one and only one domain.
-Whereas the groups can overlap, so that a segment can belong to multiple groups at the same time.
-
-.. important::
-
-    The order of groups in :code:`model.groups` is important. 
-    Groups act like layers, where parameters set in earlier groups 
-    can be overwritten by those in later groups. 
-    In this example, we first created a group for 'all' sections 
-    and then a group specifically for the 'soma'. 
-    Thus, for the soma section parameters set for the 'soma' group will overwrite 
-    those set for the 'all' group. We can use ::code:`model.move_group_up('soma')` and ::code:`model.move_group_down('soma')` to change the order of groups.
-
-
-
-Distribute parameters: How?
-------------------------------------------
-
-Now we know where we want to distribute the parameters, we need to specify how we want to distribute them.
-We can set the distribution of the parameter for each group. The distribution is a function that
-defines how the parameter value changes across the cell. The function
-takes the segment distance from the root of the tree and returns the value of the parameter at that segment.
+To define **how** the parameter will be distributed, we will use the distribution functions.
+A distribution function is a function that takes segment's distance from the soma as an input
+and returns the value of the parameter at that distance. The figure below schematically shows an example 
+of a segment group for the apical nexus region and a Gaussian distribution function for a parameter, such as ion channel conductance.
 
 .. figure:: ../_static/distribution.png
     :align: center
     :width: 80%
     :alt: Distribution of parameters across the cell
 
-    *Figure 2: Distribution of parameters across the cell*
+    *Figure 1: Distribution of parameters across the cell*
 
-In the following example, we set the conductance of the leak channel to one value for all segments,
-whereas for the sodium and potassium channels, we set different conductances all segments and then overwrite the values for the soma.
+We can set the value of the parameters of the mechanisms inserted in the model using the :code:`set_param` method
+by specifying the group name and the distribution type.
 
 .. code-block:: python
 
-    >>> model.set_param('gbar_Leak', group_name = 'all', distr_type='constant', value=0.0001) # S/cm^2
-    >>> model.set_param('gbar_Nav', group_name = 'all', distr_type='constant', value=0.03) # S/cm^2
-    >>> model.set_param('gbar_Nav', group_name = 'soma', distr_type='constant', value=0.05) # S/cm^2
-    >>> model.set_param('gbar_Kv', group_name = 'all', distr_type='constant', value=0.003) # S/cm^2
-    >>> model.set_param('gbar_Kv', group_name = 'soma', distr_type='constant', value=0.005) # S/cm^2
+    >>> model.set_param('gbar_Nav', group_name='all', distr_type='constant', value=0.03)  
+    >>> model.set_param('gbar_Nav', group_name='somatic', distr_type='constant', value=0.05) #
+    >>> model.set_param('gbar_Kv', group_name='all', distr_type='constant', value=0.003) 
+    >>> model.set_param('gbar_Kv', group_name='somatic', distr_type='constant', value=0.005)
+    
+We can utilized a more concise notation if a parameter does not vary across the cell.
+If we don't provide a group name, the parameter will be set for all segments.
+If we don't provide a distribution type, the parameter will be set using a constant distribution.
+The two examples below are equivalent:
 
+.. code-block:: python
 
-We can also set other parameters, such as reversal potentials, temperature, and initial membrane potential.
+    >>> model.set_param('gbar_Leak', value=0.0001) # S/cm^2
+    >>> model.set_param('gbar_Leak', group_name='all', distr_type='constant', value=0.0001) # S/cm^2
+
+We can set other parameters, such as reversal potentials, temperature, and initial membrane potential.
 
 .. code-block:: python
 
@@ -316,11 +295,30 @@ We can also set other parameters, such as reversal potentials, temperature, and 
     >>> model.set_param('temperature', value=37) # degC
     >>> model.set_param('v_init', value=-70) # mV
 
-We utilized a more concise notation as these parameters do not vary across the cell.
-If we don't provide a group name, the parameter will be set for all segments.
-If we don't provide a distribution type, the parameter will be set using a constant distribution.
+We can again access the model parameters with the :code:`params` attribute.
 
-More on this in the :doc:`tutorial</tutorials/tutorial_distributions>` on distributing parameters across the cell.
+.. code-block:: python
+
+    >>> model.params
+    {'cm': {'all': constant({'value': 1})},
+     'Ra': {'all': constant({'value': 35.4})},
+     'gbar_Leak': {'all': constant({'value': 0.0001})},
+     'e_Leak': {'all': constant({'value': -70})},
+     'gbar_Nav': {'all': constant({'value': 0.03}),
+                  'somatic': constant({'value': 0.05})},
+     'vhalf_m_Nav': {'all': constant({'value': -30}),
+     ...
+     'ena': {'all': constant({'value': 50}),
+     'gbar_Kv': {'all': constant({'value': 0.003}),
+                 'somatic': constant({'value': 0.005})},
+     'vhalf_n_Kv': {'all': constant({'value': -35})},
+     ...
+     'ek': {'all': constant({'value': -77})},
+     }
+
+
+To learn more about segment groups and parameter distributions, refer to the
+:doc:`tutorial</tutorials/tutorial_distributions>` on distributing parameters.
 
 Add stimuli and run a simulation
 ------------------------------------------
@@ -333,31 +331,41 @@ First, we select the soma section of the model.
 
     >>> soma = model.get_sections(lambda sec: sec.domain == 'soma')[0]
 
-Next, we add a recording point at the center of the soma.
+Next, we add a recording point at the center of the soma. 
+The :code:`loc` parameter specifies the location along the section 
+where the recording will be placed. 
+It is a normalized length, with 0.0 representing the start of the section 
+and 1.0 representing the end.
 
 .. code-block:: python
 
     >>> model.add_recording(sec=soma, loc=0.5)
 
+
 Then, we add a current clamp stimulus to the center of the soma.
+We specify the duration of the stimulus in ms, the delay before the stimulus starts, and the amplitude of the stimulus
+in pikoAmperes.
 
 .. code-block:: python
 
-    >>> model.add_iclamp(sec=soma, loc=0.5, dur=100*ms, delay=100*ms, amp=150*pA)
+    >>> model.add_iclamp(sec=soma, loc=0.5, dur=100, delay=100, amp=150)
 
-Finally, we run the simulation for 300 milliseconds.
+Now we are ready to run the simulation.
 
 .. code-block:: python
 
-    >>> model.simulator.run(300) # ms
+    >>> model.run(300) # ms
 
 For more complex stimuli, such as synaptic inputs, refer to the :doc:`tutorial</tutorials/tutorial_synapses>`.
 
 Analyze the results
 ------------------------------------------
+
+Finally, we can analyze the results of the simulation using some of the built-in functions in DendroTweaks.
+
 .. code-block:: python
 
     >>> voltage_trace = model.simulator.recordings[0]
-    >>> pike_data = dd.validation.count_spikes(voltage_trace)
+    >>> spike_data = dd.validation.count_spikes(voltage_trace)
 
 More on this in the :doc:`tutorial</tutorials/tutorial_validation>` on analyzing simulation results.

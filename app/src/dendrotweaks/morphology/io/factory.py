@@ -1,5 +1,5 @@
 from dendrotweaks.morphology.trees import Node, Tree
-from dendrotweaks.morphology.swc_trees import SWCNode, SWCTree
+from dendrotweaks.morphology.point_trees import Point, PointTree
 from dendrotweaks.morphology.sec_trees import Section, SectionTree
 from dendrotweaks.morphology.seg_trees import Segment, SegmentTree
 
@@ -17,10 +17,10 @@ class TreeFactory():
         
         self.reader = SWCReader()
 
-    def create_swc_tree(self, source: Union[str, DataFrame],
-            standardize=True) -> SWCTree:
+    def create_point_tree(self, source: Union[str, DataFrame],
+            standardize=True) -> PointTree:
         """
-        Creates an SWC tree from either a file path or a DataFrame.
+        Creates a point tree from either a file path or a DataFrame.
         
         Parameters:
             source (str | pd.DataFrame): File path to the SWC file or a preprocessed DataFrame.
@@ -33,31 +33,31 @@ class TreeFactory():
             raise ValueError("Source must be a file path (str) or a DataFrame.")
 
         nodes = [
-            SWCNode(row['Index'], row['Type'], row['X'], row['Y'], row['Z'], row['R'], row['Parent'])
+            Point(row['Index'], row['Type'], row['X'], row['Y'], row['Z'], row['R'], row['Parent'])
             for _, row in df.iterrows()
         ]
-        swc_tree =  SWCTree(nodes)
+        point_tree =  PointTree(nodes)
 
-        # swc_tree.remove_overlaps()
-        # swc_tree.sort()
-        # if standardize:
-        #     self._convert_to_3PS_notation(swc_tree)
-        # swc_tree.sort()
-        return swc_tree
+        point_tree.remove_overlaps()
+        # point_tree.sort()
+        if standardize:
+            self._convert_to_3PS_notation(point_tree)
+        point_tree.sort()
+        return point_tree
 
-    def _convert_to_3PS_notation(self, swc_tree):
+    def _convert_to_3PS_notation(self, point_tree):
         """
         Convert the soma to 3PS notation.
         """
-        if swc_tree.soma_notation == '3PS':
+        if point_tree.soma_notation == '3PS':
             return
 
-        if swc_tree.soma_notation == '1PS':
+        if point_tree.soma_notation == '1PS':
 
-            pt = swc_tree.soma_pts3d[0]
+            pt = point_tree.soma_points[0]
 
-            pt_left = SWCNode(
-                idx=1,
+            pt_left = Point(
+                idx=2,
                 type_idx=1,
                 x=pt.x - pt.r,
                 y=pt.y,
@@ -65,8 +65,8 @@ class TreeFactory():
                 r=pt.r,
                 parent_idx=pt.idx)
 
-            pt_right = SWCNode(
-                idx=2,
+            pt_right = Point(
+                idx=3,
                 type_idx=1,
                 x=pt.x + pt.r,
                 y=pt.y,
@@ -74,10 +74,10 @@ class TreeFactory():
                 r=pt.r,
                 parent_idx=pt.idx)
 
-            swc_tree.add_subtree(pt_right, pt)
-            swc_tree.add_subtree(pt_left, pt)
+            point_tree.add_subtree(pt_right, pt)
+            point_tree.add_subtree(pt_left, pt)
             
-        elif swc_tree.soma_notation =='contour':
+        elif point_tree.soma_notation =='contour':
             # if soma has contour notation, take the average
             # distance of the nodes from the center of the soma
             # and use it as radius, create 3 new nodes
@@ -86,13 +86,13 @@ class TreeFactory():
         print('Converted soma to 3PS notation.')
 
 
-    def create_sec_tree(self, swc_tree: SWCTree):
+    def create_sec_tree(self, point_tree: PointTree):
         """
         Creates a section tree from an SWC tree.
 
         Parameters
         ----------
-        swc_tree : SWCTree
+        point_tree : PointTree
             The SWC tree to be partitioned into a section tree.
         Returns
         -------
@@ -100,33 +100,33 @@ class TreeFactory():
             The section tree created from the SWC tree.
         """
 
-        swc_tree.extend_sections()
-        swc_tree.sort()
+        point_tree.extend_sections()
+        point_tree.sort()
 
-        sections = self._split_to_sections(swc_tree)
+        sections = self._split_to_sections(point_tree)
 
         sec_tree = SectionTree(sections)
-        sec_tree._swc_tree = swc_tree
+        sec_tree._point_tree = point_tree
 
         return sec_tree
 
 
-    def _split_to_sections(self, swc_tree: SWCTree) -> List[Section]:
+    def _split_to_sections(self, point_tree: PointTree) -> List[Section]:
 
         sections = []
 
         bifurcation_children = [
-            child for b in swc_tree.bifurcations for child in b.children]
-        bifurcation_children = [swc_tree.root] + bifurcation_children
+            child for b in point_tree.bifurcations for child in b.children]
+        bifurcation_children = [point_tree.root] + bifurcation_children
         # bifurcation_children = sorted(bifurcation_children,
         #                               key=lambda x: x.idx)
         # Filter out the bifurcation children to enforce the original order
-        bifurcation_children = [node for node in swc_tree._nodes 
+        bifurcation_children = [node for node in point_tree._nodes 
                                 if node in bifurcation_children]
 
         # Assign a section to each bifurcation child
         for i, child in enumerate(bifurcation_children):
-            section = Section(idx=i, parent_idx=-1, pts3d=[child])
+            section = Section(idx=i, parent_idx=-1, points=[child])
             sections.append(section)
             child._section = section
             # Propagate the section to the children until the next 
@@ -136,25 +136,25 @@ class TreeFactory():
                 if next_child in bifurcation_children:
                     break
                 next_child._section = section
-                section.pts3d.append(next_child)
+                section.points.append(next_child)
                 child = next_child
 
-            section.parent = section.pts3d[0].parent._section if section.pts3d[0].parent else None
+            section.parent = section.points[0].parent._section if section.points[0].parent else None
             section.parent_idx = section.parent.idx if section.parent else -1
 
 
-        if swc_tree.soma_notation == '3PS':
-            sections = self._merge_soma(sections, swc_tree)
+        if point_tree.soma_notation == '3PS':
+            sections = self._merge_soma(sections, point_tree)
 
         return sections
 
 
-    def _merge_soma(self, sections: List[Section], swc_tree: SWCTree):
+    def _merge_soma(self, sections: List[Section], point_tree: PointTree):
         """
         If soma has 3PS notation, merge it into one section.
         """
 
-        true_soma = swc_tree.root._section
+        true_soma = point_tree.root._section
         true_soma.idx = 0
         true_soma.parent_idx = -1
 
@@ -166,22 +166,22 @@ class TreeFactory():
 
         for i, sec in enumerate(false_somas):
             sections.remove(sec)
-            if len(sec.pts3d) != 1:
+            if len(sec.points) != 1:
                 raise ValueError('Soma children must have exactly 1 point.')
-            for pt in sec.pts3d:
+            for pt in sec.points:
                 pt._section = true_soma
 
-        true_soma.pts3d = [
-            false_somas[0].pts3d[0], 
-            true_soma.pts3d[0], 
-            false_somas[1].pts3d[0]
+        true_soma.points = [
+            false_somas[0].points[0], 
+            true_soma.points[0], 
+            false_somas[1].points[0]
         ]
 
         for sec in sections:
             if sec is true_soma:
                 continue
             sec.idx -= 2
-            sec.parent_idx = sec.pts3d[0].parent._section.idx
+            sec.parent_idx = sec.points[0].parent._section.idx
             
 
         return sections

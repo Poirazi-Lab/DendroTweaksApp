@@ -310,7 +310,7 @@ class ValidationMixin():
     #         self.view.figures['stats_ephys'].y_range.end = max_y
 
     #     _group.weight += 1
-    #     self.view.DOM_elements['syn_group_panel'].children[3].value += 1
+    #     self.view.DOM_elements['population_panel'].children[3].value += 1
     #     self.update_voltage()
 
     def update_histogram(self):

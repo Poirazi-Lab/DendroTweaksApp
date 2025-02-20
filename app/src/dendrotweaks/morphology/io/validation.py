@@ -1,5 +1,5 @@
 from dendrotweaks.morphology.trees import Tree
-from dendrotweaks.morphology.swc_trees import SWCTree
+from dendrotweaks.morphology.point_trees import PointTree
 from dendrotweaks.morphology.sec_trees import SectionTree
 
 import numpy as np
@@ -23,8 +23,8 @@ def validate_tree(tree):
     # validate_order(self.tree)
 
 
-    if isinstance(tree, SWCTree):
-        validate_swc_tree(tree)
+    if isinstance(tree, PointTree):
+        validate_point_tree(tree)
 
     if isinstance(tree, SectionTree):
         validate_section_tree(tree)
@@ -122,22 +122,22 @@ def check_bifurcations(tree):
 # =============================================================================
 
 
-def validate_swc_tree(swc_tree):
+def validate_point_tree(point_tree):
 
     # Check for NaN values in the DataFrame
-    nan_counts = swc_tree.df.isnull().sum()
+    nan_counts = point_tree.df.isnull().sum()
     if nan_counts.sum() > 0:
         raise ValueError(f"Found {nan_counts} NaN values in the DataFrame")
 
     # Check for bifurcations in the soma
-    bifurcations_without_root = [pt for pt in swc_tree.bifurcations 
-        if pt is not swc_tree.root]
+    bifurcations_without_root = [pt for pt in point_tree.bifurcations 
+        if pt is not point_tree.root]
     bifurcations_within_soma = [pt for pt in bifurcations_without_root
         if pt.type_idx == 1]
     if bifurcations_within_soma:
         raise ValueError(f"Soma must be non-branching. Found bifurcations: {bifurcations_within_soma}")
 
-    if swc_tree._is_extended:
+    if point_tree._is_extended:
         non_overlapping_children = [
             (pt, child) for pt in bifurcations_without_root for child in pt.children
             if not child.overlaps_with(pt)
@@ -154,9 +154,14 @@ def validate_swc_tree(swc_tree):
 def validate_section_tree(section_tree):
 
     for sec in section_tree:
-        if not all(pt.domain == sec.domain for pt in sec.pts3d):
+        if not all(pt.domain == sec.domain for pt in sec.points):
             raise ValueError('All points in a section must belong to the same domain.')
 
+    if any(sec.length == 0 for sec in section_tree):
+        raise ValueError('All sections must have a non-zero length.')
+
+    if any(len(sec.children) not in {0, 2} and sec is not section_tree.root for sec in section_tree):
+        raise ValueError('All sections must have 0 or 2 children.')
 
 
 # =============================================================================

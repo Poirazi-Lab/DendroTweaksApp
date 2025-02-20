@@ -19,9 +19,11 @@ following URL: https://dendrotweaks.dendrites.gr
 Installing the GUI locally
 --------------------------
 
-The GUI can be installed locally by running the following command:
+The GUI can be installed locally by cloning the DendroTweaks `GitHub repository <https://github.com/Poirazi-Lab/DendroTweaksApp>`_
+using the following command:
+
 
 .. code-block:: bash
 
-    git clone 
+    git clone https://github.com/Poirazi-Lab/DendroTweaksApp.git
 

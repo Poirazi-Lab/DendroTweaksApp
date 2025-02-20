@@ -1,6 +1,7 @@
 Neuronal morphologies
 ==========================================
 
+In this tutorial, we will discuss how to represent neuronal morphologies in DendroTweaks.
 
 What are SWC files?
 -------------------
@@ -46,11 +47,11 @@ Representing morphologies in DendroTweaks
 ---------------------------------------------
 
 In DendroTweaks, neuronal morphologies are represented as tree graphs. 
-A single neuron can be represented in three distinct forms: the SWC tree, the section tree, and the segment tree.
-Each tree is composed of nodes that correspond to points in the SWC file, sections, and segments, respectively.
+A single neuron can be represented in three distinct forms: the point tree, the section tree, and the segment tree.
+Each tree is composed of nodes that correspond to points in a morphology reconstruction (SWC file), sections, and segments, respectively.
 The edges in these trees denote the parent-child relationships between the nodes.
-These trees represent three levels of abstraction: geometry (SWC tree), topology (section tree), and spatial discretization (segment tree).
-All three representations are linked to each other, since each section has a reference to its geometry (SWC points) and its segmentation (Segments).
+These trees represent three levels of abstraction: geometry (point tree), topology (section tree), and spatial discretization (segment tree).
+All three representations are linked to each other, since each section has a reference to its geometry (:code:`points`) and its segmentation (:code:`segments`).
 
 .. table:: Neuronal Morphology Representations
     :widths: 20 40 40
@@ -59,7 +60,7 @@ All three representations are linked to each other, since each section has a ref
     +-------------------------+-----------------------------+------------------------------------------------------------+
     | Abstraction Level       | Representation              | Description                                                |
     +=========================+=============================+============================================================+
-    | Geometry                | SWC Tree (SWC nodes)        | Represents geometrical properties such as coordinates and  |
+    | Geometry                | Point Tree (points)         | Represents geometrical properties such as coordinates and  |
     |                         |                             | radii.                                                     |
     +-------------------------+-----------------------------+------------------------------------------------------------+
     | Topology                | Section Tree (sections)     | Represents the parent-child relationships between sections.|
@@ -81,65 +82,124 @@ The figure below illustrates the relationship between the three representations:
 Creating a morphology from an SWC file
 ------------------------------------------------
 
-DendroTweaks provides a shortcut for creating a morphology from an SWC file that we have already seen in the first :doc:`tutorial</tutorials/tutorial_quickstart>`. You can use the :code:`from_swc` method to create a morphology from an SWC file:
+As an alternative to manually instantiating each tree graph, 
+DendroTweaks provides a shortcut for creating a morphology from an SWC file
+that we have already seen in the quickstart :doc:`tutorial</tutorials/tutorial_quickstart>`. 
+
+First, we list the available morphologies in the morphology folder.
 
 .. code-block:: python
 
-    >>> model.from_swc('path/to/swc_file.swc')
+    >>> model.list_morphologies()
+    ['cell']
 
-This method automatically sorts the points, splits them into sections, extends the sections, and shifts and rotates the morphology to a standard orientation.
+We can use the :code:`load_morphology` method to create a morphology from an SWC file:
+
+.. code-block:: python
+
+    >>> model.load_morphology('cell')
+
+This method automatically sorts the points, 
+splits them into sections, and standardizes the morphology.
 The trees are then stored in the :code:`model` object for further processing.
 
 .. code-block:: python
     
-        >>> model.swc_tree, model.sec_tree
-        <dendrotweaks.morphology.SWCTree at 0x7f8b3b3b3b50>
-
-We can visualize the tree using the :code:`plot` method.
+    >>> model.sec_tree
+    Tree [••0, ••1, ••2, ••3, ••4, ••5, ••6, ...]
 
 .. code-block:: python
 
-    fig, ax = plt.subplots(figsize=(8, 8))
-    model.swc_tree.plot(ax, edges=True, projection='XY', 
-                        annotate=False, highlight=swc_tree.bifurcations)
+    >>> from dendrotweaks.morphology import validate_tree
+    >>> validate_tree(model.sec_tree)
+    Tree validation passed successfully
 
-.. figure:: ../_static/swc_tree.png
+Note that validation of a section tree involves validation of 
+the corresponding SWC and segment trees as well.
+
+Besides automatic validation, we can visualize the tree using the :code:`plot` method.
+
+.. code-block:: python
+
+    >>> fig, ax = plt.subplots(figsize=(10, 10))
+    >>> model.sec_tree.plot(ax, show_points=True, show_lines=True, 
+    ...             annotate=True, projection='XY', domains=True)
+
+.. figure:: ../_static/sec_tree.png
     :align: center
     :width: 50%
-    :alt: Visualizing the SWC tree
+    :alt: Visualizing the section tree 
 
-    *Figure 2: Visualizing the SWC tree (SWC nodes — blue, edges - orange, bifurcations - red)*
+    *Figure 2: Visualizing the section tree (sections are annotated with their indexes)*
 
+    
 Nodes and their properties
 --------------------------------
 
-Each node (point) in the SWC tree has the following properties:
+
+We will select a section and explore its properties starting with its place in the tree graph.
 
 .. code-block:: python
 
-    >>> pt = model.swc_tree.pts3d[0]
-    >>> pt.idx, pt.type, pt.x, pt.y, pt.z, pt.r, pt.parent
-    (1, 1, 0.0, 0.0, 0.0, 1.0, -1)
+    >>> sec = model.sec_tree.sections[11]
+    >>> sec.idx, sec.parent_idx
+    (11, 10)
 
-The SWC tree also provides methods to access the parent and children of a node.
-In addition, it provides methods to access the domain of the node and
-calculate the path lenght distance to the root node.
-
-.. code-block:: python
-
-    >>> pt.domain, pt.path_distance()
-    ('soma', 0.0)
-    
-
-Each section in the section tree has the following properties:
+The section's parent and children are references to the parent and children sections, respectively.
+The root of the tree is the only section without a parent (None).
 
 .. code-block:: python
 
-    >>> sec = model.sec_tree.sections[17]
-    >>> sec.idx, sec.type, sec.parent, sec.children
-    (1, 1, None, [2, 3])
+    >>> sec.parent, sec.children
+    (••10, [••12, ••13])
 
-The section's geometry can be visualized using the :code:`plot_pts3d` method.
+The subtree of a section is a list of sections that contains the section itself and all its descendants.
+
+.. code-block:: python
+
+    >>> sec.subtree
+    [••11, ••13, ••12]
+
+.. note::
+
+    Note that these topological attributes and properties are common for 
+    any type of a tree node whether it is a section, point, or segment.
+    Below, we will explore properties specific to each type.
+
+Section geometry
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Besides the topological properties, the section has a geometry that is represented by the points that define it.
+
+
+.. code-block:: python
+
+    >>> sec.points
+    [•427, •428, •429, •430, ...]
+
+Each point is a node in the corresponding point tree that has additional properties:
+
+.. code-block:: python
+
+    >>> pt = sec.points[0]
+    >>> pt.domain, pt.x, pt.y, pt.z, pt.r
+    ('apic', 9.074, 36.225, 4.2, 0.365)
+
+From the point's coordinates and radii, we can calculate the section's geometric properties such as length:
+
+.. code-block:: python
+
+    >>> sec.length
+    34.876
+
+We can also calculate the distances between the points of the section.
+
+.. code-block:: python
+
+    >>> sec.distances
+    [0.0, 2.508, 2.968, 5.034, ..., 34.876]
+
+The section's geometry can be visualized using the :code:`plot_points` method.
 
 .. code-block:: python
 
@@ -150,31 +210,57 @@ The section's geometry can be visualized using the :code:`plot_pts3d` method.
 .. figure:: ../_static/sec_extended.png
     :align: center
     :width: 50%
-    :alt: Visualizing the section tree
+    :alt: Visualizing a section
 
-    *Figure 3: Visualizing the section tree (section — blue, parent - orange)*
+    *Figure 3: Visualizing a section (section — blue, parent - orange)*
 
-Section tree
-----------------
-
-To visualize the section tree, use the :code:`plot` method.
+In addition to the geometry, we can calculate the path distance from a given point of the 
+section to the root section, which will become extremely important when we will
+distribute biophysical properties along the morphology.
 
 .. code-block:: python
 
-    >>> fig, ax = plt.subplots(figsize=(8, 8))
-    >>> model.sec_tree.plot(ax=ax, show_points=True, 
-    ...                     show_lines=True, annotate=True)
+    >>> sec.path_distance(0)
+    40.787
 
-.. figure:: ../_static/sec_tree.png
-    :align: center
-    :width: 50%
-    :alt: Visualizing the section tree
+To calculate the distance only within a given domain (e.g., for an oblique dendrite to the place it meets the trunk, instead of all the way to the soma),
+we can pass the :code:`within_domain` parameter as True.
 
-    *Figure 4: Visualizing the section tree*
+Section segmentation
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Our custom section object acts as a wrapper around the simulator's object (for details see the :doc:`tutorial</tutorials/tutorial_referencing>`).
+To access the corresponding section object in the NEURON simulator, we can use the :code:`_ref` attribute.
+
+.. code-block:: python
+
+    >>> sec._ref
+    __nrnsec_0x2dcd5c10
+
+In order to perform simulations, we need to discretize the sections into segments.
+
+.. code-block:: python
+
+    >>> sec.segments
+    [•51]
+
+As in NEURON, sections are callable objects that return 
+the segment which center is closest to the given normalized distance.
+
+.. code-block:: python
+
+    >>> seg = sec(0.5)
+    >>> seg.idx, seg.x
+    (51, 0.5)
+
+The segment object has the following properties:
+
+.. code-block:: python
+
+    >>> seg._ref
+    __nrnsec_0x2dcd5c10(0.5)
 
 For more details on working with neuronal morphologies in DendroTweaks, refer to the :doc:`tutorial</tutorials/tutorial_swc>` on refining neuronal morphology.
 
 Creating the segmentation tree requires us to set the passive properties of the sections. 
-Therefore in the next tutorial we will discuss how we can define properties in our model.
-
-
+Therefore, in the next tutorial, we will discuss how we can define properties in our model.
