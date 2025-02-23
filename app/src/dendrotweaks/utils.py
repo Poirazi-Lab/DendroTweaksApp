@@ -9,6 +9,24 @@ import numpy as np
 import os
 
 
+DOMAINS_TO_COLORS = {
+    'soma': '#E69F00',       
+    'apic': '#0072B2',       
+    'dend': '#019E73',       
+    'basal': '#31A354',      
+    'axon': '#F0E442',       
+    'trunk': '#56B4E9',
+    'tuft': '#A55194', #'#9467BD',
+    'oblique': '#8C564B',
+    'perisomatic': '#D55E00',
+    # 'custom': '#BDBD22',
+    'custom': '#D62728',
+    'custom2': '#E377C2',
+    'undefined': '#7F7F7F',
+}
+
+
+
 def timeit(func):
     def wrapper(*args, **kwargs):
         start = time.time()

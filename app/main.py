@@ -1127,7 +1127,7 @@ view.widgets.selectors['stimuli'] = Select(value='Select an input',
 
 view.widgets.selectors['stimuli'].on_change('value', p.load_stimuli_callback)
 
-view.widgets.switches['recompile'] = Switch(active=True, 
+view.widgets.switches['recompile'] = Switch(active=False, 
                                             name='recompile')
 view.widgets.buttons['load_mod'] = Button(label='Load mechanisms', button_type='primary', width=100)
 view.widgets.buttons['load_mod'].on_event(ButtonClick, p.load_mod_callback)
@@ -1360,6 +1360,8 @@ def update_voltage_plot_y_range(attr, old, new):
     view.figures['sim'].y_range.start = new[0]
     view.figures['sim'].y_range.end = new[1]
 
+view.widgets.switches['show_kinetics'] = Switch(active=True, name='show_kinetics')
+
 view.widgets.sliders['voltage_plot_x_range'].on_change('value_throttled', update_voltage_plot_x_range)
 view.widgets.sliders['voltage_plot_y_range'].on_change('value_throttled', update_voltage_plot_y_range)
 
@@ -1371,6 +1373,7 @@ view.widgets.selectors['graph_layout'] = Select(title='Graph layout',
 settings_panel = column(view.widgets.selectors['theme'],
                         # view.widgets.selectors['output_format'],
                         # view.widgets.color_pickers['color_picker'],
+                        view.widgets.switches['show_kinetics'],
                         view.widgets.sliders['voltage_plot_x_range'],
                         view.widgets.sliders['voltage_plot_y_range'],
                         row(view.widgets.switches['enable_record_from_all'], Div(text='Enable record from all')),

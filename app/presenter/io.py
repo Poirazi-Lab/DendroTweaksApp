@@ -42,7 +42,7 @@ class IOMixin():
         """
         Callback for the selectors['membrane'] widget.
         """
-        self.model.load_membrane(new)
+        self.model.load_membrane(new, recompile=self.view.widgets.switches['recompile'].active)
         d_lambda = self.model.d_lambda
         with remove_callbacks(self.view.widgets.sliders['d_lambda']):
             self.view.widgets.sliders['d_lambda'].value = d_lambda 
@@ -256,9 +256,9 @@ class IOMixin():
         logger.info(f'Model exported.')
         
     def to_swc_callback(self, event):
-        import os
-        path_to_swc = os.path.join('app', 'static', 'data', f'{self.model.cell.name}.swc')
-        self.model.to_swc(path_to_swc)
+        self.model.export_morphology()
+        self.view.DOM_elements['status'].text = 'SWC file exported.'
+
 
     # MISC
 

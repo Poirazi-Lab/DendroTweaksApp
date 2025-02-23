@@ -338,7 +338,8 @@ class Presenter(IOMixin, NavigationMixin,
         logger.debug(f'Selected mechanism: {mech_name}')
 
         self._update_param_selector_widget(mech_name)
-        self._toggle_kinetic_plots(mech_name)
+        if self.view.widgets.switches['show_kinetics'].active:
+            self._toggle_kinetic_plots(mech_name)
 
 
     @log

@@ -83,7 +83,7 @@ class MODFileParser():
         """
         Postprocess the parsed AST.
         """
-        self.split_comment_block()
+        # self.split_comment_block()
         self.standardize_state_var_names()
         self.update_state_vars_with_power()
         self.restore_expressions()

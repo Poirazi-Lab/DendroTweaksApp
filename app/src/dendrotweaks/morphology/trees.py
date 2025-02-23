@@ -151,7 +151,7 @@ class Node():
             parent (Node): The parent node to attach the node to.
         """
         if parent in self.subtree:
-            raise ValueError('Attaching a node will create a loop in the tree.')
+            raise ValueError(f'Attaching a node will create a loop in the tree: {self} -> {parent}')
         self.parent = parent
         if self not in parent.children:
             parent.children.append(self)
@@ -218,7 +218,7 @@ class Tree:
         as the entire tree. False otherwise.
         """
         nodes_set = set(self._nodes)
-        subtree_set = set(self.get_subtree(self.root))
+        subtree_set = set(self.root.subtree)
         return nodes_set == subtree_set
 
     @property
@@ -311,17 +311,7 @@ class Tree:
             for child in reversed(node.children):
                 stack.append(child)
 
-    def get_subtree(self, node):
-        """
-        Get the subtree of a node using the traverse method.
 
-        Args:
-            node (Node): The node to get the subtree for.
-
-        Returns:
-            list: A list of nodes in the subtree.
-        """
-        return list(self.traverse(node))
 
     # SORTIONG METHODS
 
@@ -473,7 +463,6 @@ class Tree:
                 prefix = prefix.replace(root_str, "")
                 print_node(child, prefix + branch, is_last_child)
 
-        # Assume the root node is the first in self._nodes
         print('parent |   idx')
         print('-'*15)
         print_node(self.root)

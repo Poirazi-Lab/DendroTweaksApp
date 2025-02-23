@@ -3,6 +3,7 @@ from dendrotweaks.morphology.point_trees import PointTree
 from dendrotweaks.morphology.sec_trees import SectionTree
 
 import numpy as np
+import warnings
 
 
 def validate_tree(tree):
@@ -31,10 +32,9 @@ def validate_tree(tree):
 
     # Check if the tree is sorted
     if not tree.is_sorted:
-        raise ValueError("Tree is not sorted")
-    print("Tree is sorted")
-    
-    print("\nTree validation passed successfully")
+        warnings.warn("Tree is not sorted")
+    else:
+        print("Tree is sorted")
 
 
 # -----------------------------------------------------------------------------
@@ -45,14 +45,14 @@ def validate_tree(tree):
 def check_unique_ids(tree):
     node_ids = {node.idx for node in tree._nodes}
     if len(node_ids) != len(tree._nodes):
-        raise ValueError(f"Tree contains {len(tree._nodes) - len(node_ids)} duplicate node ids.")
+        warnings.warn(f"Tree contains {len(tree._nodes) - len(node_ids)} duplicate node ids.")
 
 
 def check_unique_children(tree):
     for node in tree._nodes:
         children = node.children
         if len(children) != len(set(children)):
-            raise ValueError(f"Node {node} contains duplicate children.")
+            warnings.warn(f"Node {node} contains duplicate children.")
 
 
 def check_unique_root(tree):
@@ -60,9 +60,9 @@ def check_unique_root(tree):
         if node.parent is None or node.parent_idx in {None, -1, '-1'}
     }
     if len(root_nodes) > 1:
-        raise ValueError(f"Found {len(root_nodes)} root nodes.")
+        warnings.warn(f"Found {len(root_nodes)} root nodes.")
     if len(root_nodes) == 0:
-        raise ValueError("Tree does not contain a root node.")
+        warnings.warn("Tree does not contain a root node.")
 
 
 # -----------------------------------------------------------------------------
@@ -80,7 +80,7 @@ def check_connections(tree):
 
     if not tree.is_connected:
         not_connected = set(tree._nodes) - set(tree.root.subtree)
-        raise ValueError(f"The following nodes are not connected to the root node: {not_connected}")
+        warnings.warn(f"The following nodes are not connected to the root node: {not_connected}")
 
     for node in tree._nodes:
         parent = node.parent
@@ -88,16 +88,16 @@ def check_connections(tree):
         # Validate that the node is in its parent's children list.
         if parent is not None:
             if node not in parent.children:
-                raise ValueError(
-                    f"Validation Error: Node {node} is not listed in the children of its parent {parent}. "
+                warnings.warn(
+                    f"Validation Warning: Node {node} is not listed in the children of its parent {parent}. "
                     f"Expected parent.children to include {node}, but it does not."
                 )
 
         # Validate that the parent of each child is the current node.
         for child in node.children:
             if child.parent is not node:
-                raise ValueError(
-                    f"Validation Error: Node {child} has an incorrect parent. "
+                warnings.warn(
+                    f"Validation Warning: Node {child} has an incorrect parent. "
                     f"Expected parent {node}, but found {child.parent}."
                 )
 
@@ -107,14 +107,14 @@ def check_loops(tree):
     for node in tree._nodes:
         for descendant in node.subtree:
             if node in descendant.children:
-                raise ValueError(f"Node {node} is a descendant of itself. Loop detected at node {descendant}.")
+                warnings.warn(f"Node {node} is a descendant of itself. Loop detected at node {descendant}.")
 
 
 def check_bifurcations(tree):
     bifurcation_issues = {node: len(node.children) for node in tree.bifurcations if len(node.children) > 2 and node is not tree.root}
     if bifurcation_issues:
         issues_str = "\n".join([f"Node {node.idx:<6} has {count} children" for node, count in bifurcation_issues.items()])
-        raise ValueError(f"Tree contains bifurcations with more than 2 children:\n{issues_str}")
+        warnings.warn(f"Tree contains bifurcations with more than 2 children:\n{issues_str}")
 
 
 # =============================================================================
@@ -127,7 +127,7 @@ def validate_point_tree(point_tree):
     # Check for NaN values in the DataFrame
     nan_counts = point_tree.df.isnull().sum()
     if nan_counts.sum() > 0:
-        raise ValueError(f"Found {nan_counts} NaN values in the DataFrame")
+        warnings.warn(f"Found {nan_counts} NaN values in the DataFrame")
 
     # Check for bifurcations in the soma
     bifurcations_without_root = [pt for pt in point_tree.bifurcations 
@@ -135,7 +135,7 @@ def validate_point_tree(point_tree):
     bifurcations_within_soma = [pt for pt in bifurcations_without_root
         if pt.type_idx == 1]
     if bifurcations_within_soma:
-        raise ValueError(f"Soma must be non-branching. Found bifurcations: {bifurcations_within_soma}")
+        warnings.warn(f"Soma must be non-branching. Found bifurcations: {bifurcations_within_soma}")
 
     if point_tree._is_extended:
         non_overlapping_children = [
@@ -144,7 +144,7 @@ def validate_point_tree(point_tree):
         ]
         if non_overlapping_children:
             issues_str = "\n".join([f"Child {child} does not overlap with parent {pt}" for pt, child in non_overlapping_children])
-            raise ValueError(f"Found non-overlapping children:\n{issues_str} for bifurcations")
+            warnings.warn(f"Found non-overlapping children:\n{issues_str} for bifurcations")
         
 # =============================================================================
 # Section-specific validation
@@ -155,13 +155,16 @@ def validate_section_tree(section_tree):
 
     for sec in section_tree:
         if not all(pt.domain == sec.domain for pt in sec.points):
-            raise ValueError('All points in a section must belong to the same domain.')
+            warnings.warn('All points in a section must belong to the same domain.')
 
     if any(sec.length == 0 for sec in section_tree):
-        raise ValueError('All sections must have a non-zero length.')
+        warnings.warn('All sections must have a non-zero length.')
 
     if any(len(sec.children) not in {0, 2} and sec is not section_tree.root for sec in section_tree):
-        raise ValueError('All sections must have 0 or 2 children.')
+        warnings.warn('All sections must have 0 or 2 children.')
+
+    if not section_tree.root.domain == 'soma':
+        warnings.warn('Root section must have domain soma.')
 
 
 # =============================================================================

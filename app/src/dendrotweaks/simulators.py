@@ -1,7 +1,7 @@
 from collections import defaultdict
 import warnings
 
-
+import matplotlib.pyplot as plt
 import neuron
 from neuron import h
 from neuron.units import ms, mV
@@ -32,7 +32,25 @@ reset_neuron()
 
 class Simulator:
     def __init__(self):
-        pass
+        self.vs = None
+        self.t = None
+        self.recordings = {}
+
+    def plot_voltage(self, ax=None, segments=None):
+        if ax is None:
+            fig, ax = plt.subplots()
+        if segments is None:
+            segments = self.recordings.keys()
+        if all(isinstance(seg, int) for seg in segments):
+            segments = [seg for seg in self.recordings.keys() if seg.idx in segments]
+        for seg in segments:
+            ax.plot(self.t, self.vs[seg.idx], label=f'{seg.domain} {seg.idx}')
+
+        if len(segments) < 10:
+            ax.legend()
+        ax.set_xlabel('Time (ms)')
+        ax.set_ylabel('Voltage (mV)')
+        
 
 class NEURONSimulator(Simulator):
     """
@@ -47,9 +65,6 @@ class NEURONSimulator(Simulator):
 
         self.dt = dt
         self._cvode = cvode
-
-        self.recordings = {}
-        # self.t = []
 
 
     def add_recording(self, sec, loc, var='v'):
@@ -90,7 +105,7 @@ class NEURONSimulator(Simulator):
 
 
 
-        vs = list(self.recordings.values())
+        # vs = list(self.recordings.values())
         Is = []
 
         # for v in self.recordings.values():
@@ -98,7 +113,6 @@ class NEURONSimulator(Simulator):
         #     vs.append(v)
 
         t = h.Vector().record(h._ref_t)
-        self.t = t
 
         # if self.ch is None:
         #     pass
@@ -115,7 +129,13 @@ class NEURONSimulator(Simulator):
 
         h.continuerun(duration * ms)
 
-        return [t.to_python() for _ in vs], [v.to_python() for v in vs], [i.to_python() for i in Is]
+        
+        self.t = t.to_python()
+        self.vs = {seg.idx: v.to_python() for seg, v in self.recordings.items()}
+    
+        return [self.t] * len(self.vs), list(self.vs.values()), Is
+
+        
 
     def to_dict(self):
         return {

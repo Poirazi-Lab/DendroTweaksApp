@@ -17,8 +17,7 @@ class TreeFactory():
         
         self.reader = SWCReader()
 
-    def create_point_tree(self, source: Union[str, DataFrame],
-            standardize=True) -> PointTree:
+    def create_point_tree(self, source: Union[str, DataFrame]) -> PointTree:
         """
         Creates a point tree from either a file path or a DataFrame.
         
@@ -37,53 +36,9 @@ class TreeFactory():
             for _, row in df.iterrows()
         ]
         point_tree =  PointTree(nodes)
-
         point_tree.remove_overlaps()
-        # point_tree.sort()
-        if standardize:
-            self._convert_to_3PS_notation(point_tree)
-        point_tree.sort()
+
         return point_tree
-
-    def _convert_to_3PS_notation(self, point_tree):
-        """
-        Convert the soma to 3PS notation.
-        """
-        if point_tree.soma_notation == '3PS':
-            return
-
-        if point_tree.soma_notation == '1PS':
-
-            pt = point_tree.soma_points[0]
-
-            pt_left = Point(
-                idx=2,
-                type_idx=1,
-                x=pt.x - pt.r,
-                y=pt.y,
-                z=pt.z,
-                r=pt.r,
-                parent_idx=pt.idx)
-
-            pt_right = Point(
-                idx=3,
-                type_idx=1,
-                x=pt.x + pt.r,
-                y=pt.y,
-                z=pt.z,
-                r=pt.r,
-                parent_idx=pt.idx)
-
-            point_tree.add_subtree(pt_right, pt)
-            point_tree.add_subtree(pt_left, pt)
-            
-        elif point_tree.soma_notation =='contour':
-            # if soma has contour notation, take the average
-            # distance of the nodes from the center of the soma
-            # and use it as radius, create 3 new nodes
-            raise NotImplementedError('Conversion from contour to 3PS notation is not implemented yet.')
-
-        print('Converted soma to 3PS notation.')
 
 
     def create_sec_tree(self, point_tree: PointTree):

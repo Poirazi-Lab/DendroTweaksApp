@@ -228,6 +228,63 @@ class PointTree(Tree):
                 reverse=False
             )
 
+    # STANDARDIZATION METHODS
+
+    def change_soma_notation(self, notation):
+        """
+        Convert the soma to 3PS notation.
+        """
+        if self.soma_notation == notation:
+            print(f'Soma is already in {notation} notation.')
+            return
+
+        if self.soma_notation == '1PS':
+
+            pt = self.soma_points[0]
+
+            pt_left = Point(
+                idx=2,
+                type_idx=1,
+                x=pt.x - pt.r,
+                y=pt.y,
+                z=pt.z,
+                r=pt.r,
+                parent_idx=pt.idx)
+
+            pt_right = Point(
+                idx=3,
+                type_idx=1,
+                x=pt.x + pt.r,
+                y=pt.y,
+                z=pt.z,
+                r=pt.r,
+                parent_idx=pt.idx)
+
+            self.add_subtree(pt_right, pt)
+            self.add_subtree(pt_left, pt)
+
+        elif self.soma_notation == '3PS':
+            raise NotImplementedError('Conversion from 1PS to 3PS notation is not implemented yet.')
+            
+        elif self.soma_notation =='contour':
+            # if soma has contour notation, take the average
+            # distance of the nodes from the center of the soma
+            # and use it as radius, create 3 new nodes
+            raise NotImplementedError('Conversion from contour is not implemented yet.')
+
+        print('Converted soma to 3PS notation.')
+
+    # GEOMETRICAL METHODS
+
+    def round_coordinates(self, decimals=8):
+        """
+        Round the coordinates of all nodes to the specified number of decimals.
+        """
+        for pt in self.points:
+            pt.x = round(pt.x, decimals)
+            pt.y = round(pt.y, decimals)
+            pt.z = round(pt.z, decimals)
+            pt.r = round(pt.r, decimals)
 
     def shift_coordinates_to_soma_center(self):
         """
@@ -367,7 +424,7 @@ class PointTree(Tree):
                     raise ValueError(f'Child {child} already overlaps with parent {pt}.')
                 new_node = pt.copy()
                 new_node.domain = child.domain
-                self.insert_node_before(new_node, child)
+                self.insert_node_before(new_node, child)           
 
         self._is_extended = True
         nodes_after = len(self.points)
@@ -389,59 +446,71 @@ class PointTree(Tree):
                 'parent_idx': int
             })
             df['idx'] += 1
-            df[df['parent_idx'] >= 0]['parent_idx'] += 1
+            df.loc[df['parent_idx'] >= 0, 'parent_idx'] += 1
             df.to_csv(path_to_file, sep=' ', index=False, header=False)
 
 
     # PLOTTING METHODS
 
-    def plot(self, ax=None, nodes=True, edges=True, 
+    def plot(self, ax=None, 
+             show_nodes=True, show_edges=True, show_domains=True,
              annotate=False, projection='XY', 
-             highlight=None, domains=False):
+             highlight_nodes=None, focus_nodes=None):
 
         if ax is None:
             fig, ax = plt.subplots(figsize=(10, 10))
 
-        # Create a dictionary for coordinates
-        coords = {'X': [pt.x for pt in self.points],
-                  'Y': [pt.y for pt in self.points],
-                  'Z': [pt.z for pt in self.points]}
+        # Convert focus/highlight to sets for faster lookup
+        focus_nodes = set(focus_nodes) if focus_nodes else None
+        highlight_nodes = set(highlight_nodes) if highlight_nodes else None
 
-        if edges:
-            for edge in self.edges:
-                edge_coords = {'X': [edge[0].x, edge[1].x],
-                               'Y': [edge[0].y, edge[1].y],
-                               'Z': [edge[0].z, edge[1].z]}
-                ax.plot(edge_coords[projection[0]], edge_coords[projection[1]], color='C1')
+        # Determine which points to consider
+        points_to_plot = self.points if focus_nodes is None else [pt for pt in self.points if pt in focus_nodes]
 
-        domains_to_colors = DOMAINS_TO_COLORS
-        unique_domains = set(pt.domain for pt in self.points)
-        for domain in unique_domains:
-            if domain not in domains_to_colors:
-                gray_value = int(255 * random.random())
-                domains_to_colors[domain] = "#{:02x}{:02x}{:02x}".format(gray_value, gray_value, gray_value)
-        colors = [domains_to_colors.get(pt.domain, "black") for pt in self.points] if domains else 'C0'
+        # Extract coordinates for projection
+        coords = {axis: [getattr(pt, axis.lower()) for pt in points_to_plot] for axis in "XYZ"}
 
-        if nodes:
+        # Draw edges efficiently
+        if show_edges:
+            point_set = set(points_to_plot)  # Convert list to set for fast lookup
+            for pt1, pt2 in self.edges:
+                if pt1 in point_set and pt2 in point_set:
+                    ax.plot(
+                        [getattr(pt1, projection[0].lower()), getattr(pt2, projection[0].lower())],
+                        [getattr(pt1, projection[1].lower()), getattr(pt2, projection[1].lower())],
+                        color='C1'
+                    )
+
+        # Assign colors based on domains
+        if show_domains:
+            domains_to_colors = DOMAINS_TO_COLORS.copy()  # Avoid modifying the global dict
+            for pt in points_to_plot:
+                domains_to_colors.setdefault(pt.domain, "#{:02x}{:02x}{:02x}".format(*(int(255 * random.random()),) * 3))
+            colors = [domains_to_colors[pt.domain] for pt in points_to_plot]
+        else:
+            colors = 'C0'
+
+        # Plot nodes
+        if show_nodes:
             ax.scatter(coords[projection[0]], coords[projection[1]], s=10, c=colors, marker='.', zorder=2)
 
-        # Annotate the node index
-        if annotate and len(self.points) < 50:
-            for i, pt in enumerate(self.points):
-                ax.annotate(
-                    f'{pt.idx}', 
-                    (coords[projection[0]][i], coords[projection[1]][i]), 
-                    fontsize=8
-                )
+        # Annotate nodes if few enough
+        if annotate and len(points_to_plot) < 50:
+            for pt, x, y in zip(points_to_plot, coords[projection[0]], coords[projection[1]]):
+                ax.annotate(f'{pt.idx}', (x, y), fontsize=8)
 
-        # Highlight the specified node
-        if highlight:
-            for pt in highlight:
-                ax.plot(coords[projection[0]][pt.idx], coords[projection[1]][pt.idx], 'o', color='C3', markersize=5)
+        # Highlight nodes correctly
+        if highlight_nodes:
+            for i, pt in enumerate(points_to_plot):
+                if pt in highlight_nodes:
+                    ax.plot(coords[projection[0]][i], coords[projection[1]][i], 'o', color='C3', markersize=5)
 
+        # Set labels and aspect ratio
         ax.set_xlabel(projection[0])
         ax.set_ylabel(projection[1])
-        ax.set_aspect('equal')
+        if projection in {"XY", "XZ", "YZ"}:
+            ax.set_aspect('equal')
+
 
 
     def plot_radii_distribution(self, ax=None, highlight=None, 
@@ -450,7 +519,7 @@ class PointTree(Tree):
             fig, ax = plt.subplots(figsize=(8, 3))
 
         for pt in self.points:
-            if not show_soma and pt.domain is 'soma':
+            if not show_soma and pt.domain == 'soma':
                 continue
             color = 'gray'
             if domains:

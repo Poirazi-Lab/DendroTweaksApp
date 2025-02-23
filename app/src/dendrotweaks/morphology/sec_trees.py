@@ -12,26 +12,14 @@ from bisect import bisect_left
 
 import warnings
 
+from dendrotweaks.utils import DOMAINS_TO_COLORS
+
 def custom_warning_formatter(message, category, filename, lineno, file=None, line=None):
     return f"{category.__name__}: {message} ({os.path.basename(filename)}, line {lineno})\n"
 
 warnings.formatwarning = custom_warning_formatter
 
-DOMAINS_TO_COLORS = {
-    'soma': '#E69F00',       
-    'apic': '#0072B2',       
-    'dend': '#019E73',       
-    'basal': '#31A354',      
-    'axon': '#F0E442',       
-    'trunk': '#56B4E9',
-    'tuft': '#A55194', #'#9467BD',
-    'oblique': '#8C564B',
-    'perisomatic': '#D55E00',
-    # 'custom': '#BDBD22',
-    'custom': '#D62728',
-    'custom2': '#E377C2',
-    'undefined': '#7F7F7F',
-}
+
 
 class Section(Node):
     """
@@ -166,6 +154,13 @@ class Section(Node):
     @property
     def length(self):
         return self.distances[-1]
+
+    def area(self):
+        """
+        Calculate the area of the section using the formula for a frustum.
+        """
+        areas = [np.pi * (r1 + r2) * np.sqrt((r1 - r2)**2 + h**2) for r1, r2, h in zip(self.radii[:-1], self.radii[1:], np.diff(self.distances))]
+        return sum(areas)
 
     # REFERENCING METHODS
 
@@ -309,7 +304,9 @@ class Section(Node):
         # In PointTree
         if self.parent is not None:
             if self.parent.parent is None: # if parent is soma
-                self.points[0].connect_to_parent(self.parent.points[1]) # attach to the middle of the parent
+                parent_sec = self.parent
+                parent_pt = parent_sec.points[1] if len(parent_sec.points) > 1 else parent_sec.points[0]
+                self.points[0].connect_to_parent(parent_pt) # attach to the middle of the parent
             else:
                 self.points[0].connect_to_parent(parent.points[-1]) # attach to the end of the parent
         # In SegmentTree
@@ -560,39 +557,51 @@ class SectionTree(Tree):
         ax.set_ylabel('Parent ID')
 
     def plot(self, ax=None, show_points=False, show_lines=True, 
-                      annotate=False, projection='XY', domains=False, highlight=None):
+            show_domains=True, annotate=False, 
+            projection='XY', highlight_sections=None, focus_sections=None):
         if ax is None:
             fig, ax = plt.subplots(figsize=(10, 10))
 
-        x_attr, y_attr = projection[0], projection[1]
+        highlight_sections = set(highlight_sections) if highlight_sections else None
+        focus_sections = set(focus_sections) if focus_sections else None
+        x_attr, y_attr = projection[0].lower(), projection[1].lower()
+
+        section_count = len(self.sections)  # Avoid recalculating
 
         for sec in self.sections:
-            coords = {'X': [pt.x for pt in sec.points],
-                      'Y': [pt.y for pt in sec.points],
-                      'Z': [pt.z for pt in sec.points]}
-            xs = coords[x_attr]
-            ys = coords[y_attr]
-            
-            color = plt.cm.jet(1-sec.idx/len(self.sections))
-            if domains:
+            # Skip sections that are not in the focus set (if focus is specified)
+            if focus_sections and sec not in focus_sections:
+                continue
+
+            xs = [getattr(pt, x_attr) for pt in sec.points]
+            ys = [getattr(pt, y_attr) for pt in sec.points]
+
+            # Assign colors based on domains or section index
+            color = plt.cm.jet(1 - sec.idx / section_count)
+            if show_domains:
                 color = DOMAINS_TO_COLORS.get(sec.domain, color)
-            if highlight and sec in highlight:
+            if highlight_sections and sec in highlight_sections:
                 color = 'red'
-            
+
+            # Plot section points and lines
             if show_points:
                 ax.plot(xs, ys, '.', color=color, markersize=5)
             if show_lines:
                 ax.plot(xs, ys, color=color)
 
-            # annotate the section index
+            # Annotate section index if needed
             if annotate:
-                ax.annotate(f'{sec.idx}', (np.mean(xs), np.mean(ys)), fontsize=8)
-                ax.annotate(f'{sec.idx}', (np.mean(xs), np.mean(ys)), fontsize=8,
-                            bbox=dict(facecolor='white', edgecolor='black', boxstyle='round,pad=0.3'))
+                mean_x, mean_y = np.mean(xs), np.mean(ys)
+                ax.annotate(
+                    f'{sec.idx}', (mean_x, mean_y), fontsize=8,
+                    bbox=dict(facecolor='white', edgecolor='black', boxstyle='round,pad=0.3')
+                )
 
         ax.set_xlabel(projection[0])
         ax.set_ylabel(projection[1])
         ax.set_aspect('equal')
+
+
 
     def plot_radii_distribution(self, ax=None, highlight=None, 
     domains=True, show_soma=False):

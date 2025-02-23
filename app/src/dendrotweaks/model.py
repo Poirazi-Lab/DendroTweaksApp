@@ -1,6 +1,7 @@
 from typing import List, Union, Callable
 import os
 import json
+import matplotlib.pyplot as plt
 
 from dendrotweaks.morphology.point_trees import PointTree
 from dendrotweaks.morphology.sec_trees import Section, SectionTree, Domain
@@ -15,9 +16,10 @@ from dendrotweaks.stimuli.iclamps import IClamp
 from dendrotweaks.membrane.distributions import Distribution
 from dendrotweaks.stimuli.populations import Population
 from dendrotweaks.utils import calculate_lambda_f, dynamic_import
+from dendrotweaks.utils import DOMAINS_TO_COLORS
 
 from collections import OrderedDict, defaultdict
-
+from numpy import nan
 # from .logger import logger
 
 from dendrotweaks.path_manager import PathManager
@@ -214,6 +216,10 @@ class Model():
         return dict(mechs_to_params)
 
 
+    @property 
+    def conductances(self):
+        return {param: value for param, value in self.params.items()
+                if param.startswith('gbar')}
     # -----------------------------------------------------------------------
     # METADATA
     # -----------------------------------------------------------------------
@@ -255,37 +261,37 @@ class Model():
         """
         Print the directory tree.
         """
-        self.path_manager.print_directory_tree(*args, **kwargs)
+        return self.path_manager.print_directory_tree(*args, **kwargs)
 
     def list_morphologies(self, extension='swc'):
         """
         List the morphologies available for the model.
         """
-        self.path_manager.list_files('morphology', extension=extension)
+        return self.path_manager.list_files('morphology', extension=extension)
 
     def list_membrane_configs(self, extension='json'):
         """
         List the membrane configurations available for the model.
         """
-        self.path_manager.list_files('membrane', extension=extension)
+        return self.path_manager.list_files('membrane', extension=extension)
 
     def list_mechanisms(self, extension='mod'):
         """
         List the mechanisms available for the model.
         """
-        self.path_manager.list_files('mod', extension=extension)
+        return self.path_manager.list_files('mod', extension=extension)
 
     def list_stimuli_configs(self, extension='json'):
         """
         List the stimuli configurations available for the model.
         """
-        self.path_manager.list_files('stimuli', extension=extension)
+        return self.path_manager.list_files('stimuli', extension=extension)
 
     # ========================================================================
     # MORPHOLOGY
     # ========================================================================
 
-    def load_morphology(self, file_name):
+    def load_morphology(self, file_name, soma_notation='3PS'):
         """
         Read an SWC file and build the SWC and section trees.
 
@@ -298,11 +304,11 @@ class Model():
         path_to_swc_file = self.path_manager.get_file_path('morphology', file_name, extension='swc')
         point_tree = self.tree_factory.create_point_tree(path_to_swc_file)
         point_tree.remove_overlaps()
+        point_tree.change_soma_notation(soma_notation)
         point_tree.sort()
-        self.tree_factory._convert_to_3PS_notation(point_tree)
-        point_tree.sort()
-        point_tree.shift_coordinates_to_soma_center()
-        point_tree.align_apical_dendrite()
+        # point_tree.shift_coordinates_to_soma_center()
+        # point_tree.align_apical_dendrite()
+        # point_tree.round_coordinates(5)
         self.point_tree = point_tree
 
         sec_tree = self.tree_factory.create_sec_tree(point_tree)
@@ -310,6 +316,8 @@ class Model():
         self.sec_tree = sec_tree
 
         self.create_and_reference_sections_in_simulator()
+        seg_tree = self.tree_factory.create_seg_tree(sec_tree)
+        self.seg_tree = seg_tree
 
         self._add_default_segment_groups()
         self._initialize_domains_to_mechs()
@@ -330,7 +338,7 @@ class Model():
                     if sec._ref is not None])
         print(f'{n_sec} sections created.')
 
-        self.seg_tree = self.tree_factory.create_seg_tree(self.sec_tree)
+        
 
 
     def _add_default_segment_groups(self):
@@ -426,12 +434,16 @@ class Model():
         """
         # Create Mechanism objects and add them to the model
         for mechanism_name in self.path_manager.list_files(dir_name, extension='mod'):
-            self.add_mechanism(mechanism_name)
-            self.load_mechanism(mechanism_name, dir_name, recompile)
+            self.add_mechanism(mechanism_name, 
+                               load=True, 
+                               dir_name=dir_name, 
+                               recompile=recompile)
+            
 
 
     def add_mechanism(self, mechanism_name: str, 
                       python_template_name: str = 'default',
+                      load=True, dir_name: str = 'mod', recompile=True
                       ) -> None:
         """
         Create a Mechanism object from the MOD file (or LeakChannel).
@@ -452,7 +464,8 @@ class Model():
         self.mechanisms[mech.name] = mech
         # Update the global parameters
 
-        
+        if load:
+            self.load_mechanism(mechanism_name, dir_name, recompile)
         print(f'Mechanism {mech.name} added to model.')
 
 
@@ -600,7 +613,7 @@ class Model():
     # -----------------------------------------------------------------------
 
     def insert_mechanism(self, mechanism_name: str, 
-                         domain_name: str):
+                         domain_name: str, distribute=True):
         """
         Insert a mechanism into all sections in a domain.
         """
@@ -614,8 +627,9 @@ class Model():
         self._add_mechanism_params(mech)
 
         # TODO: Redistribute parameters if any group contains this domain
-        for param_name in self.params:
-            self.distribute(param_name)
+        if distribute:
+            for param_name in self.params:
+                self.distribute(param_name)
         
 
     def _add_mechanism_params(self, mech):
@@ -691,6 +705,22 @@ class Model():
     # -----------------------------------------------------------------------
 
     def add_group(self, name, domains, select_by=None, min_value=None, max_value=None):
+        """
+        Add a group of sections to the model.
+
+        Parameters
+        ----------
+        name : str
+            The name of the group.
+        domains : list[str]
+            The domains to include in the group.
+        select_by : str, optional
+            The parameter to select the sections by. Can be 'diam', 'absolute_distance', 'domain_distance'.
+        min_value : float, optional
+            The minimum value of the parameter.
+        max_value : float, optional
+            The maximum value of the
+        """
         print(f'Adding group {name}...')
         group = SegmentGroup(name, domains, select_by, min_value, max_value)
         self._groups.append(group)
@@ -730,9 +760,16 @@ class Model():
                         distr_type: str = 'constant',
                         **distr_params):
 
+        if 'group' in distr_params:
+            raise ValueError("Did you mean 'group_name' instead of 'group'?")
+
         if param_name in ['temperature', 'v_init']:
             setattr(self.simulator, param_name, distr_params['value'])
             return
+
+        for key, value in distr_params.items():
+            if not isinstance(value, (int, float)) or value is nan:
+                raise ValueError(f"Parameter '{key}' must be a numeric value and not NaN, got {type(value).__name__} instead.")
 
         self.set_distribution(param_name, group_name, distr_type, **distr_params)
         self.distribute(param_name)
@@ -746,6 +783,9 @@ class Model():
         distribution = Distribution(distr_type, **distr_params)
         self.params[param_name][group_name] = distribution
 
+    def distribute_all(self):
+        for param_name in self.params:
+            self.distribute(param_name)
 
     def distribute(self, param_name: str):
         if param_name == 'Ra':
@@ -849,7 +889,7 @@ class Model():
 
 
     def remove_recording(self, sec, loc):
-        self.simulator.remove_recording(sec, loc, var)
+        self.simulator.remove_recording(sec, loc)
 
 
     def remove_all_recordings(self):
@@ -859,6 +899,8 @@ class Model():
     def run(self, duration=300):
         self.simulator.run(duration)
 
+    def plot(self, *args, **kwargs):
+        self.simulator.plot(*args, **kwargs)
 
     # ========================================================================
     # MORPHOLOGY
@@ -867,7 +909,7 @@ class Model():
     def remove_subtree(self, sec):
         self.sec_tree.remove_subtree(sec)
         self.sec_tree.sort()
-        self.remove_empty()
+        self._remove_empty()
 
 
     def merge_domains(self, domain_names: List[str]):
@@ -928,17 +970,50 @@ class Model():
     def standardize_channel():
         ...
 
+    # ========================================================================
+    # PLOTTING
+    # ========================================================================
+
+    def plot_param(self, param_name, ax=None):
+        """
+        Plot the distribution of a parameter in the model.
+        """
+        if ax is None:
+            fig, ax = plt.subplots(figsize=(10, 2))
+
+        values = [(seg.path_distance(), seg.get_param_value(param_name)) for seg in self.seg_tree]
+        colors = [DOMAINS_TO_COLORS[seg.domain] for seg in self.seg_tree]
+
+        valid_values = [(x, y) for (x, y), color in zip(values, colors) if not pd.isna(y)]
+        nan_values = [(x, 0) for (x, y), color in zip(values, colors) if pd.isna(y)]
+        valid_colors = [color for (x, y), color in zip(values, colors) if not pd.isna(y)]
+        nan_colors = [color for (x, y), color in zip(values, colors) if pd.isna(y)]
+
+        if valid_values:
+            ax.scatter(*zip(*valid_values), c=valid_colors)
+        if nan_values:
+            ax.scatter(*zip(*nan_values), c=nan_colors, marker='x', alpha=0.5, label='NaN', zorder=0)
+
+        ax.set_xlabel('Path distance')
+        ax.set_ylabel(param_name)
+        ax.set_title(f'{param_name} distribution')
+        if nan_values:
+            ax.legend()
+
+        
+        
+
 
     # ========================================================================
     # FILE EXPORT
     # ========================================================================
 
-    def export_morphology(self, version):
+    def export_morphology(self, version='modified'):
         """
         Write the SWC tree to an SWC file.
         """
         name = self.name + '_' + version
-        path_to_file = self.path_manager.get_file_path('morphology', name, extension='csv')
+        path_to_file = self.path_manager.get_file_path('morphology', name, extension='swc')
         
         self.point_tree.to_swc(path_to_file)
 
@@ -982,13 +1057,18 @@ class Model():
         self.domains_to_mechs = {
             domain: set(mechs) for domain, mechs in data['domains'].items()
         }
+        print('Inserting mechanisms...')
         for domain_name, mechs in self.domains_to_mechs.items():
             for mech_name in mechs:
-                self.insert_mechanism(mech_name, domain_name)
+                self.insert_mechanism(mech_name, domain_name, distribute=False)
+        # print('Distributing parameters...')
+        # self.distribute_all()
 
         # Groups
+        print('Adding groups...')
         self._groups = [SegmentGroup.from_dict(group) for group in data['groups']]
 
+        print('Distributing parameters...')
         # Parameters
         self.params = {
             param_name: {
@@ -998,6 +1078,7 @@ class Model():
             for param_name, distributions in data['params'].items()
         }
 
+        print('Setting segmentation...')
         if self.sec_tree is not None:
             d_lambda = self.d_lambda
             self.set_segmentation(d_lambda=d_lambda)

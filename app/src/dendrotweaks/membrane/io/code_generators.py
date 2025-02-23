@@ -76,7 +76,7 @@ class PythonCodeGenerator(CodeGenerator):
             'functions': self._generate_functions(ast),
             'procedures': self._generate_procedures(ast),
             'procedure_calls': self._generate_procedure_calls(ast),
-            'E_ion': EQUILIBRIUM_POTENTIALS[ast.ion]
+            'E_ion': EQUILIBRIUM_POTENTIALS.get(ast.ion, None)
         }
 
         # Render the template with the variables
