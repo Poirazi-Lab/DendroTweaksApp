@@ -3,7 +3,7 @@ Distributing Parameters
 
 In this tutorial, we will learn how to distribute parameters across the cell.
 
-In the quickstart :doc:`tutorial</tutorials/tutorial_quickstart>`, we learned how to create a cell model and assign parameters 
+In the quick start :doc:`tutorial</tutorials/tutorial_quickstart>`, we learned how to create a cell model and assign parameters 
 to it. 
 However, for many parameters, we need to set different values across various 
 parts of the cell. Ion channels, for instance, are often distributed non-uniformly 
@@ -48,7 +48,7 @@ while the end segments might not.
     :width: 80%
     :alt: Domains vs. groups
 
-    *Figure 2: Domains vs. groups*
+    *Figure 1: Domains vs. groups*
 
 The figure above illustrates various examples of segment groups.
 These groups can span across multiple domains (:code:`apical`), 
@@ -123,7 +123,7 @@ and returns the value of the parameter at that segment.
     :width: 80%
     :alt: Mapping from groups to distributions
 
-    *Figure 3: Mapping from groups to distributions for a given parameter*
+    *Figure 2: Mapping from groups to distributions for a given parameter*
 
 A distribution function takes as an argument the segment distance from the root of the tree 
 and returns the value of the parameter at that segment.
@@ -188,8 +188,19 @@ We can access the parameters and their distributions using the :code:`params` at
 .. code-block:: python
 
     >>> model.params['cm']
-    {'all': Distribution("constant", 1), 'somatic': Distribution("constant", 2)}
+    {'all': constant({'value': 1}), 'somatic': constant({'value': 2})}
 
+
+For a more neat representation, we can use the :code:`df_params` property:
+
+.. code-block:: python
+
+    >>> model.df_params
+    
+.. figure:: ../_static/df_params.png
+    :align: center
+    :width: 50%
+    :alt: Model parameters as a DataFrame
 
     
 

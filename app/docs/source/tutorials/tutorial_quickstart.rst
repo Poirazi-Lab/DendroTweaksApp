@@ -35,6 +35,7 @@ see using the :code:`model.print_directory_tree()` method.
                 ├── Nav.mod
                 └── Kv.mod
 
+More on the directory structure and how to load existing models you can learn in the :doc:`tutorial</tutorials/tutorial_io>` on loading and saving models.
 
 Load the morphology
 ------------------------------------------
@@ -82,16 +83,20 @@ Biophysical properties of the model depend on the membrane mechanisms
 that are present in the membrane.
 These mechanisms are defined in MOD files as a set of equations and their parameters, which are compiled and loaded into NEURON.
 
+We will add the default mechanisms to the model wich include the leak channel and synaptic mechanisms.
+
 .. code-block:: python
 
     >>> model.add_default_mechanisms(recompile=False)
 
+We can see the available mechanisms with the :code:`list_mechanisms` method.
+
 .. code-block:: python
 
     >>> model.list_mechanisms()
-    ['Leak', 'Nav', 'Kv']
+    ['Nav', 'Kv']
 
-We will add the default and user-defined mechanisms to the model and distribute their parameters across the cell.
+Next we will add user-defined mechanisms to the model and distribute their parameters across the cell.
 
 .. code-block:: python
 
@@ -122,7 +127,7 @@ We can see the parameters of the mechanisms with the :code:`params` attribute.
 
 .. warning::
 
-    Note that the parameters stored withing the mechanisms are the default values from the MOD files.
+    Note that the parameters stored within the mechanisms are the default values from the MOD files.
     The actual values of the parameters used for the simulation are stored in the model object!
 
 We can see the parameters of the mechanisms in the model with the :code:`params` attribute.
@@ -228,16 +233,14 @@ We can see the parameters of the mechanisms inserted in the model with the :code
      'ek': {'all': constant({'value': -77})},
      }
 
-As we can see, all the parameters are set to their defaul value across all segments of the cell, and for some 
+As we can see, all the parameters are set to their default value across all segments of the cell, and for some 
 of the parameters the value is 0.0. We need to set the values of the parameters to the desired, more realisitc
 values before running the simulation and we will learn how to do that in the next step.
 
 Set model parameters
 ------------------------------------------
 
-We can set the value
-of the parameters
-of the mechanisms inserted in the model using the :code:`set_param` method.
+We can set the value of a parameter using the :code:`set_param` method.
 As an example, let's set the conductance of the leak channel to 0.0001 S/cm^2.
 
 .. code-block:: python
@@ -246,7 +249,7 @@ As an example, let's set the conductance of the leak channel to 0.0001 S/cm^2.
 
 
 
-However, in real neurons, some properties, such as the conductance of ion channels, can vary across different regions of the cell. 
+That being said, in real neurons, some properties, such as the conductance of ion channels, can vary across different regions of the cell. 
 To distribute parameters across the cell, we need to specify **where** and **how** the parameter will be distributed.
 
 To select the segments **where** a given distribution will be applied, we will use the segment groups.
@@ -295,7 +298,7 @@ We can set other parameters, such as reversal potentials, temperature, and initi
     >>> model.set_param('temperature', value=37) # degC
     >>> model.set_param('v_init', value=-70) # mV
 
-We can again access the model parameters with the :code:`params` attribute.
+Now, we can access the model parameters again and see that the values have been updated.
 
 .. code-block:: python
 
@@ -354,7 +357,7 @@ Now we are ready to run the simulation.
 
 .. code-block:: python
 
-    >>> model.run(300) # ms
+    >>> t, v, _ = model.run(300) # ms
 
 For more complex stimuli, such as synaptic inputs, refer to the :doc:`tutorial</tutorials/tutorial_synapses>`.
 

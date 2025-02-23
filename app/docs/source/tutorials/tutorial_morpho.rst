@@ -132,12 +132,37 @@ Besides automatic validation, we can visualize the tree using the :code:`plot` m
 
     *Figure 2: Visualizing the section tree (sections are annotated with their indexes)*
 
+
+.. code-block:: python
+
+    >>> model.sec_tree.topology()
+    parent |   idx
+    ---------------
+        -1 |   •0
+         0 |   ├─•1
+         0 |   ├─•2
+         0 |   ├─•3
+         0 |   ├─•4
+         0 |   ├─•5
+         0 |   ├─•6
+         6 |   │ ├─•7
+         6 |   │ └─•8
+         0 |   └─•9
+         9 |     ├─•10
+        10 |     │ ├─•11
+        11 |     │ │ ├─•12
+        11 |     │ │ └─•13
+        10 |     │ └─•14
+        14 |     │   ├─•15
+        14 |     │   └─•16
+         9 |     └─•17
+        ...
     
-Nodes and their properties
+Tree nodes and their properties
 --------------------------------
 
-
-We will select a section and explore its properties starting with its place in the tree graph.
+Points, sections, and segments are all nodes in the tree graphs, and they share common properties and methods.
+We will select a section from the section tree and explore its properties.
 
 .. code-block:: python
 
@@ -171,13 +196,13 @@ Section geometry
 
 Besides the topological properties, the section has a geometry that is represented by the points that define it.
 
-
 .. code-block:: python
 
     >>> sec.points
     [•427, •428, •429, •430, ...]
 
-Each point is a node in the corresponding point tree that has additional properties:
+Each point is a node in the corresponding point tree that has 
+additional properties such as coordinates and radii.
 
 .. code-block:: python
 
@@ -185,21 +210,21 @@ Each point is a node in the corresponding point tree that has additional propert
     >>> pt.domain, pt.x, pt.y, pt.z, pt.r
     ('apic', 9.074, 36.225, 4.2, 0.365)
 
-From the point's coordinates and radii, we can calculate the section's geometric properties such as length:
-
-.. code-block:: python
-
-    >>> sec.length
-    34.876
-
-We can also calculate the distances between the points of the section.
+We can calculate the (cumulative) euclidean distances between the points of the section.
 
 .. code-block:: python
 
     >>> sec.distances
     [0.0, 2.508, 2.968, 5.034, ..., 34.876]
 
-The section's geometry can be visualized using the :code:`plot_points` method.
+From the distances, we get the length of the section as the final element in the list.
+
+.. code-block:: python
+
+    >>> sec.length
+    34.876
+
+The section's geometry can be visualized using the :code:`plot` method.
 
 .. code-block:: python
 
@@ -214,30 +239,36 @@ The section's geometry can be visualized using the :code:`plot_points` method.
 
     *Figure 3: Visualizing a section (section — blue, parent - orange)*
 
-In addition to the geometry, we can calculate the path distance from a given point of the 
-section to the root section, which will become extremely important when we will
+In addition to the shape of the section, we can calculate the path distance 
+from a given point of the section to the root of the tree, 
+which will become extremely important when we will
 distribute biophysical properties along the morphology.
 
 .. code-block:: python
 
-    >>> sec.path_distance(0)
+    >>> sec.path_distance(0, within_domain=False)
     40.787
 
-To calculate the distance only within a given domain (e.g., for an oblique dendrite to the place it meets the trunk, instead of all the way to the soma),
+To calculate the distance only within a given domain 
+(e.g., for an oblique dendrite up to the place it meets the trunk, 
+instead of all the way to the soma),
 we can pass the :code:`within_domain` parameter as True.
 
 Section segmentation
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Our custom section object acts as a wrapper around the simulator's object (for details see the :doc:`tutorial</tutorials/tutorial_referencing>`).
-To access the corresponding section object in the NEURON simulator, we can use the :code:`_ref` attribute.
+Our custom section object acts as a wrapper around the simulator's object 
+(for details see the :doc:`tutorial</tutorials/tutorial_referencing>`).
+To access the corresponding section object in the NEURON simulator, 
+we can use the :code:`_ref` attribute.
 
 .. code-block:: python
 
     >>> sec._ref
     __nrnsec_0x2dcd5c10
 
-In order to perform simulations, we need to discretize the sections into segments.
+In order to perform simulations, we need to discretize the sections 
+into segments.
 
 .. code-block:: python
 
@@ -260,7 +291,11 @@ The segment object has the following properties:
     >>> seg._ref
     __nrnsec_0x2dcd5c10(0.5)
 
-For more details on working with neuronal morphologies in DendroTweaks, refer to the :doc:`tutorial</tutorials/tutorial_swc>` on refining neuronal morphology.
+For more details on working with neuronal morphologies in DendroTweaks,
+refer to the :doc:`tutorial</tutorials/tutorial_swc>` on refining neuronal morphology.
 
-Creating the segmentation tree requires us to set the passive properties of the sections. 
-Therefore, in the next tutorial, we will discuss how we can define properties in our model.
+The segmentation tree highly depends on the passive properties of the sections. 
+Therefore, in the next tutorial, we will discuss how we can set and update model parameters
+including membrane capacitance and axial resistance.
+We will return to the segmentation tree in :doc:`one</tutorials/tutorial_segmentation>` of the following tutorials, 
+where we will discuss how to set the spatial discretization of the model.

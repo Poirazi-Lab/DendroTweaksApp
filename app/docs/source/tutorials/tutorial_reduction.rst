@@ -1,5 +1,5 @@
-Reducing neuronal morphology
+Simplifying Neuronal Morphology
 ==========================================
 
-Reading SWC files
-------------------------------------------
+This tutorial is currently being developed. 
+Please check back later.
