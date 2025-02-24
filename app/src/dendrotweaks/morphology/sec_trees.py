@@ -155,6 +155,7 @@ class Section(Node):
     def length(self):
         return self.distances[-1]
 
+    @property
     def area(self):
         """
         Calculate the area of the section using the formula for a frustum.
@@ -663,3 +664,32 @@ class SectionTree(Tree):
 
         df = pd.DataFrame(data)
         df.to_csv(path_to_file, sep=' ', index=False, header=False)
+
+    @property
+    def df(self):
+        data = {
+            'idx': [],
+            'domain': [],
+            'x': [],
+            'y': [],
+            'z': [],
+            'r': [],
+            'parent_idx': [],
+            'section_idx': [],
+            'parent_section_idx': [],
+        }
+
+        for sec in self.sections:
+            points = sec.points if sec.parent is None or sec.parent.parent is None else sec.points[1:]
+            for pt in points:
+                data['idx'].append(pt.idx)
+                data['domain'].append(pt.domain)
+                data['x'].append(pt.x)
+                data['y'].append(pt.y)
+                data['z'].append(pt.z)
+                data['r'].append(pt.r)
+                data['parent_idx'].append(pt.parent_idx)
+                data['section_idx'].append(sec.idx)
+                data['parent_section_idx'].append(sec.parent_idx)
+
+        return pd.DataFrame(data)

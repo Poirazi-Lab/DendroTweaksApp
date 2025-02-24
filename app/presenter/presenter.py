@@ -355,7 +355,7 @@ class Presenter(IOMixin, NavigationMixin,
     @log
     def _toggle_kinetic_plots(self, mech_name):
 
-        if mech_name in ['Independent', 'Leak']:
+        if mech_name in ['Independent', 'Leak', 'CaDyn']:
             self.view.widgets.buttons['standardize'].visible = False
             self.view.figures['inf_log'].visible = False
             self.view.figures['inf'].visible = False

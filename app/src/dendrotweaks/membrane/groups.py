@@ -127,7 +127,7 @@ class SegmentGroup:
         segment_value = self._get_segment_value(segment)
         return (
             (self.min_value is None or segment_value > self.min_value) and
-            (self.max_value is None or segment_value < self.max_value)
+            (self.max_value is None or segment_value <= self.max_value)
         )
 
     def __repr__(self):

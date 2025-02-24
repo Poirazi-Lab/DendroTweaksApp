@@ -1180,16 +1180,16 @@ view.widgets.buttons['set_segmentation'].on_event(ButtonClick, p.build_seg_tree_
 view.widgets.sliders['duration'] = Slider(value=300, start=100, end=1000, step=100, title='Duration, ms', width=200, format='0[.]0')
 view.widgets.sliders['duration'].js_link('value', view.widgets.sliders['iclamp_duration'], 'end')
 view.widgets.sliders['dt'] = Slider(value=0.025, start=0.025, end=0.1, step=0.025, title='dt, ms', width=200, format='0[.]000')
-view.widgets.sliders['celsius'] = Slider(value=37, start=0, end=45, step=0.1, title='Temperature, °C', width=200, format='0[.]0')
+view.widgets.sliders['temperature'] = Slider(value=37, start=0, end=45, step=0.1, title='Temperature, °C', width=200, format='0[.]0')
 view.widgets.sliders['v_init'] = Slider(value=-70, start=-100, end=100, step=0.5, title='V init, mV', width=200, format='0[.]0')
 
 view.widgets.sliders['dt'].on_change('value_throttled', p.update_dt_callback)
-view.widgets.sliders['celsius'].on_change('value_throttled', p.update_celsius_callback)
+view.widgets.sliders['temperature'].on_change('value_throttled', p.update_temperature_callback)
 view.widgets.sliders['v_init'].on_change('value_throttled', p.update_v_init_callback)
 
 view.widgets.sliders['duration'].on_change('value_throttled', p.voltage_callback_on_change)
 view.widgets.sliders['dt'].on_change('value_throttled', p.voltage_callback_on_change)
-view.widgets.sliders['celsius'].on_change('value_throttled', p.voltage_callback_on_change)
+view.widgets.sliders['temperature'].on_change('value_throttled', p.voltage_callback_on_change)
 view.widgets.sliders['v_init'].on_change('value_throttled', p.voltage_callback_on_change)
 
 
@@ -1206,7 +1206,7 @@ tab_sim = TabPanel(
         Div(text='<hr style="width:18.5em; margin-top:3em">'), 
         view.widgets.sliders['duration'],
         view.widgets.sliders['dt'],
-        view.widgets.sliders['celsius'],
+        view.widgets.sliders['temperature'],
         view.widgets.sliders['v_init'],
         row(view.widgets.switches['real_time'], Div(text='Real-time update')),
         view.widgets.buttons['run'],
@@ -1283,7 +1283,7 @@ view.widgets.tabs['simulation'] = Tabs(tabs=[tab_io,
 #                    view.widgets.multichoice['mod_files_std'],
 #                    view.widgets.sliders['duration'],
 #                    view.widgets.sliders['dt'],
-#                    view.widgets.sliders['celsius'],
+#                    view.widgets.sliders['temperature'],
 #                    view.widgets.sliders['v_init'],
 #                    name='left_menu')
 

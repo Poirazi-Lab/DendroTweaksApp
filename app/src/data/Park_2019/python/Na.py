@@ -54,6 +54,7 @@ class Na(IonChannel):
         self.ion = "na"
         self.current_name = "i_na"
         self.independent_var_name = "v"
+        self.temperature = 37
 
     def __getitem__(self, item):
         return self.params[item]

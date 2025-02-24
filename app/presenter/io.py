@@ -63,6 +63,7 @@ class IOMixin():
         Callback for the selectors['stimuli'] widget.
         """
         self.model.load_stimuli(new)
+        self.update_simulation_widgets()
 
         # MISC --------------------------------------------------------
         self._attach_download_js() # needed to update the names of the files to download
@@ -75,6 +76,19 @@ class IOMixin():
 
         self.view.DOM_elements['status'].text = 'Stimuli loaded.'
 
+    def update_simulation_widgets(self):
+        """
+        Updates the simulation panel based on the loaded stimuli.
+        """
+        with remove_callbacks(self.view.widgets.sliders['duration']):
+            self.view.widgets.sliders['duration'].value = self.model.simulator._duration
+        with remove_callbacks(self.view.widgets.sliders['dt']):
+            self.view.widgets.sliders['dt'].value = self.model.simulator.dt
+        with remove_callbacks(self.view.widgets.sliders['temperature']):
+            self.view.widgets.sliders['temperature'].value = self.model.simulator.temperature
+        with remove_callbacks(self.view.widgets.sliders['v_init']):
+            self.view.widgets.sliders['v_init'].value = self.model.simulator.v_init
+        
 
 
     # =========================================================================
@@ -256,7 +270,8 @@ class IOMixin():
         logger.info(f'Model exported.')
         
     def to_swc_callback(self, event):
-        self.model.export_morphology()
+        version = self.view.widgets.text['model_version'].value
+        self.model.export_morphology(version=version)
         self.view.DOM_elements['status'].text = 'SWC file exported.'
 
 

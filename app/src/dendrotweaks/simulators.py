@@ -62,6 +62,7 @@ class NEURONSimulator(Simulator):
         
         self.temperature = temperature
         self.v_init = v_init * mV
+        self._duration = 300
 
         self.dt = dt
         self._cvode = cvode
@@ -102,7 +103,7 @@ class NEURONSimulator(Simulator):
         h.frecord_init()
 
     def run(self, duration=300):
-
+        self._duration = duration
 
 
         # vs = list(self.recordings.values())
@@ -142,12 +143,14 @@ class NEURONSimulator(Simulator):
             'temperature': self.temperature,
             'v_init': self.v_init,
             'dt': self.dt,
+            'duration': self._duration
         }
 
     def from_dict(self, data):
         self.temperature = data['temperature']
         self.v_init = data['v_init']
         self.dt = data['dt']
+        self._duration = data['duration']
 
 
 class JaxleySimulator(Simulator):

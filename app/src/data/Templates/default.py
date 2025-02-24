@@ -44,6 +44,7 @@ class {{ class_name }}(IonChannel):
         self.ion = "{{ ion }}"
         self.current_name = "i_{{ ion }}"
         self.independent_var_name = "{{ independent_var_name }}"
+        self.temperature = 37
 
     def __getitem__(self, item):
         return self.params[item]

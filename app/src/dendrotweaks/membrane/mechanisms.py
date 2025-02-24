@@ -33,16 +33,6 @@ class Mechanism():
         return f"<Mechnaism({self.name})>"
 
 
-class CaDynamics(Mechanism):
-
-    def __init__(self):
-        super().__init__('CaDyn')
-        self.params = {
-            'tau_rise': 5,
-            'tau_decay': 40,
-            'ca_inf': 50e-6,
-            'depth': 0.1,
-        }
 
 
 class IonChannel(Mechanism):
@@ -65,6 +55,7 @@ class IonChannel(Mechanism):
                 x = np.logspace(-6, 2, 100)
         
         self.set_tadj(temperature)
+        self.temperature = temperature
         states = self.compute_kinetic_variables(x)
         data = {
             state_name: {
@@ -269,3 +260,21 @@ class LeakChannel(Mechanism):
         super().__init__(name='Leak')
         self.params = {'gbar': 0.0, 'e': -70}
         self.range_params = {'gbar': 0.0, 'e': -70}
+
+
+class CaDynamics(Mechanism):
+
+    def __init__(self):
+        super().__init__('CaDyn')
+        self.params = {
+            'depth': 0.1,  # um: Depth of calcium shell
+            'tau': 80,    # ms: Time constant for calcium removal
+            'cainf': 1e-4, # mM: Steady-state calcium concentration
+            'gamma': 0.05
+        }
+        self.range_params = {
+            'depth': 0.1,
+            'tau': 80,
+            'cainf': 1e-4,
+            'gamma': 0.05
+        }

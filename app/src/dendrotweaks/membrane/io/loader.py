@@ -1,13 +1,14 @@
 import os
 import shutil
 import neuron
+from neuron import h
 
 from pprint import pprint
 
 class MODFileLoader():
 
     def __init__(self):
-        self._loaded_mechanisms = []
+        self._loaded_mechanisms = set()
               
     # LOADING METHODS
 
@@ -61,8 +62,11 @@ class MODFileLoader():
         else:
             print(f'Using precompiled mechanism "{mechanism_name}"')
 
-        neuron.load_mechanisms(mechanism_dir)
-        self._loaded_mechanisms.append(mechanism_name)
+        if hasattr(h, mechanism_name):
+            print(f'Mechanism "{mechanism_name}" already exists in hoc')
+        else:
+            neuron.load_mechanisms(mechanism_dir)
+        self._loaded_mechanisms.add(mechanism_name)
         print(f'Loaded mechanism "{mechanism_name}"')
 
     # HELPER METHODS

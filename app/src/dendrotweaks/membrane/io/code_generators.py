@@ -102,6 +102,7 @@ class PythonCodeGenerator(CodeGenerator):
             for name in [function.name for function in ast.functions if function != function]:
                 body_str = re.sub(r'\b' + re.escape(name) + r'\b', f"self.{name}", body_str)
             body_str = re.sub(r'\b' + re.escape('tadj') + r'\b', f"self.tadj", body_str)
+            body_str = re.sub(r'\b' + re.escape('celsius') + r'\b', f"self.temperature", body_str)
             body_str += f"return {function.name}"
             body_str = '\n'.join(' ' * indent + line
                                  for line in body_str.splitlines())
@@ -139,6 +140,7 @@ class PythonCodeGenerator(CodeGenerator):
             for name in [function.name for function in ast.functions]:
                 body_str = re.sub(r'\b' + re.escape(name) + r'\b', f"self.{name}", body_str)
             body_str = re.sub(r'\b' + re.escape('tadj') + r'\b', f"self.tadj", body_str)
+            body_str = re.sub(r'\b' + re.escape('celsius') + r'\b', f"self.temperature", body_str)
             body_str += 'return ' + ', '.join([f"{state_var}Inf, {state_var}Tau"
                                               for state_var in ast.state_vars])
             body_str = '\n'.join(' ' * indent + line

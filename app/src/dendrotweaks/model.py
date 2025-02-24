@@ -8,7 +8,7 @@ from dendrotweaks.morphology.sec_trees import Section, SectionTree, Domain
 from dendrotweaks.morphology.seg_trees import Segment, SegmentTree
 from dendrotweaks.simulators import NEURONSimulator
 from dendrotweaks.membrane.groups import SectionGroup, SegmentGroup
-from dendrotweaks.membrane.mechanisms import Mechanism, LeakChannel
+from dendrotweaks.membrane.mechanisms import Mechanism, LeakChannel, CaDynamics
 from dendrotweaks.membrane.io import MechanismFactory
 from dendrotweaks.membrane.io import MODFileLoader
 from dendrotweaks.morphology.io import TreeFactory
@@ -70,6 +70,7 @@ class Model():
 
         # Metadata
         self._name = name or os.path.basename(os.path.normpath(path))
+        self.morphology_name = ''
         self.version = ''
         self.path_manager = PathManager(path_to_data, model_name=name)
         self.simulator_name = simulator_name
@@ -301,6 +302,7 @@ class Model():
             The name of the SWC file to read.
         """
         # self.name = file_name.split('.')[0]
+        self.morphology_name = file_name.replace('.swc', '')
         path_to_swc_file = self.path_manager.get_file_path('morphology', file_name, extension='swc')
         point_tree = self.tree_factory.create_point_tree(path_to_swc_file)
         point_tree.remove_overlaps()
@@ -420,7 +422,10 @@ class Model():
         leak = LeakChannel()
         self.mechanisms[leak.name] = leak
 
-        self.load_mechanisms('default_mod', recompile=False)
+        cadyn = CaDynamics()
+        self.mechanisms[cadyn.name] = cadyn
+
+        self.load_mechanisms('default_mod', recompile=recompile)
 
 
     def add_mechanisms(self, dir_name:str = 'mod', recompile=True) -> None:
@@ -993,6 +998,7 @@ class Model():
             ax.scatter(*zip(*valid_values), c=valid_colors)
         if nan_values:
             ax.scatter(*zip(*nan_values), c=nan_colors, marker='x', alpha=0.5, label='NaN', zorder=0)
+        plt.axhline(y=0, color='k', linestyle='--')
 
         ax.set_xlabel('Path distance')
         ax.set_ylabel(param_name)
@@ -1012,7 +1018,7 @@ class Model():
         """
         Write the SWC tree to an SWC file.
         """
-        name = self.name + '_' + version
+        name = self.morphology_name + '_' + version
         path_to_file = self.path_manager.get_file_path('morphology', name, extension='swc')
         
         self.point_tree.to_swc(path_to_file)
