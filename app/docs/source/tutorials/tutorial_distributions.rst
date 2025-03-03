@@ -203,5 +203,16 @@ For a more neat representation, we can use the :code:`df_params` property:
     :alt: Model parameters as a DataFrame
 
     
+We can also plot the distribution of a parameter 
+as a function of the distance from the soma using the :code:`plot_param` method
+for visual inspection.
 
+.. code-block:: python
+
+    >>> model.plot_param('gbar_Na')
+
+.. figure:: ../_static/param_distribution.png
+    :align: center
+    :width: 80%
+    :alt: Distribution of the gbar_Na parameter
     

@@ -2,6 +2,8 @@ Neuronal morphologies
 ==========================================
 
 In this tutorial, we will discuss how to represent neuronal morphologies in DendroTweaks.
+You will learn about SWC files, the three representations of neuronal morphologies in DendroTweaks,
+and how to create a morphology from an SWC file.
 
 What are SWC files?
 -------------------
@@ -127,7 +129,7 @@ Besides automatic validation, we can visualize the tree using the :code:`plot` m
 
 .. figure:: ../_static/sec_tree.png
     :align: center
-    :width: 50%
+    :width: 70%
     :alt: Visualizing the section tree 
 
     *Figure 2: Visualizing the section tree (sections are annotated with their indexes)*
@@ -228,16 +230,17 @@ The section's geometry can be visualized using the :code:`plot` method.
 
 .. code-block:: python
 
-    >>> fig, ax = plt.subplots(2, 2, figsize=(6, 6))
-    >>> sec.plot(ax=ax, plot_parent=True, remove_ticks=True)
+    >>> sec = model.sec_tree[22]
+    >>> fig, ax = plt.subplots(2, 2, figsize=(12, 6))
+    >>> sec.plot(ax=ax, plot_parent=True)
     >>> plt.tight_layout()
 
 .. figure:: ../_static/sec_extended.png
     :align: center
-    :width: 50%
+    :width: 80%
     :alt: Visualizing a section
 
-    *Figure 3: Visualizing a section (section — blue, parent - orange)*
+    *Figure 3: Visualizing a section (section — blue, parent - gray)*
 
 In addition to the shape of the section, we can calculate the path distance 
 from a given point of the section to the root of the tree, 

@@ -31,14 +31,14 @@ Typically we should check:
 Creating a point tree
 ------------------------------------------
 
-To create a point tree from the DataFrame, we can use a factory class that 
+To create a point tree from the DataFrame, we can use the :code:`create_point_tree` method
+that
 separates tree creation from usage.
 
 .. code-block:: python
 
-    >>> from dendrotweaks.morphology.io import TreeFactory
-    >>> factory = TreeFactory()
-    >>> point_tree = factory.create_point_tree(df)
+    >>> from dendrotweaks.morphology.io import create_point_tree
+    >>> point_tree = create_point_tree(df)
 
 
 .. tip:: 
@@ -148,7 +148,8 @@ Now we can create a section tree using the point tree.
 
 .. code-block:: python
 
-    >>> sec_tree = factory.create_sec_tree(point_tree, extend=True)
+    >>> from dendrotweaks.morphology.io import create_section_tree
+    >>> sec_tree = create_sec_tree(point_tree)
 
 This method partitions the point tree by assigning each node to a section. The algorithm for sectioning is shown in the figure below.
 

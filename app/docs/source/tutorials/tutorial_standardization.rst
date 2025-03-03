@@ -3,47 +3,71 @@ Standardizing channel models
 
 .. warning::
 
-    Only voltage-gated ion channels can be standardized. The standardization process is not applicable to other mechanisms.
+    Only voltage-gated ion channels with Hodgkin-Huxley formalism
+    can be standardized. The standardization process is not applicable to other mechanisms.
 
 DendroTweaks provides a simple way to standardize voltage-gated ion channel models.
 In the previous :doc:`tutorial </tutorials/tutorial_mod>`, we learned how to load and create ion channels from MOD files.
 
+A standard channel can be created directly from a MOD file.
+This method can be used to convert the original MOD file to a standard channel model as it exports the standard channel to a MOD file
+using the specified template.
+
 .. code-block:: python
 
-    >>> model.add_mechanism(
-    ...     channel_name='Nav', 
-    ...     archive_name='Park_2019',
+    >>> from dendrotweaks.membrane.io import create_standard_channel
+    >>> std_nav = create_standard_channel(
+    ...     path_to_mod_file='path/to/original/mod/file',
+    ...     path_to_python_file='path/to/python/file',
+    ...     path_to_python_template='path/to/python/template',
+    ...     path_to_mod_template='path/to/mod/template',
+    ...     path_to_standard_mod_file='path/to/standard/mod/file',
     ... )
 
-Assuming that the channel models are already loaded into the model, 
-we can standardize the voltage-gated sodium ion channel model with just a single line of code.
-The standard channel is created to replace the original channel model in the model's :code:`mechanisms` dictionary.
-This method also exports the standard channel model to a MOD file which is immediately loaded into the NEURON simulator.
+If we already have an instance of a custom channel created before and we 
+want to standardize it, we can use the :code:`standardize_channel` function.
 
 .. code-block:: python
 
-    >>> model.standardize_channel(name='Nav')
-    >>> model.mechanisms['sNav'].plot_kinetics()
+    >>> from dendrotweaks.membrane.io import standardize_channel
+    >>> standardize_channel(
+    ...     custom_channel,
+    ...     path_to_mod_template='path/to/mod/template',
+    ...     path_to_standard_mod_file='path/to/standard/mod/file'
+    ... )
+
+
+Assuming that we have an instance of a model with a custom sodium channel `Na` created before,
+we can standardize it with :code:`model.standardize_channel` method.
+The standard channel with the name `sNa` (standard-Na) and very similar kinetics to the original channel model
+is created to replace the original channel model.
+This method also exports the standard channel model to a MOD file which is immediately loaded into the NEURON simulator.
+
+
+.. code-block:: python
+
+    >>> fig, ax = plt.subplots(1, 2, figsize=(10, 5))
+    >>> model.mechanisms['Na'].plot_kinetics(ax=ax)
+    >>> model.standardize_channel('Na', remove_old=True)
+    >>> model.mechanisms['sNa'].plot_kinetics(ax=ax, linestyle='--')
 
 .. figure:: ../_static/kinetics_standard.png
     :align: center
     :width: 80%
     :alt: Channel kinetics
 
-    *Figure 2: Visualization of channel kinetics (dashed line represents the original channel model)*
+    *Figure 1: Visualization of channel kinetics (dashed lines represent the standard channel)*
     
-For some use cases, a standard channel can be created directly using the :code:`MechanismFactory` class.
-This method can also be used to convert the original MOD file to a standard channel model as it exports the standard channel to a MOD file
-using the specified template.
+We can also plot the voltage trace of the standard channel model 
+to compare it with the trace produced by the original channel model.
 
-.. code-block:: python
+.. figure:: ../_static/voltage_trace_standard.png
+    :align: center
+    :width: 80%
+    :alt: Voltage trace
 
-    >>> std_nav = factory.create_standard_channel(
-    ...    channel_name='Nav', 
-    ...    archive_name='Park_2019',
-    ...    mod_template_name='standard_channel', 
-    ...    load=True
-    ... )   
+    *Figure 2: Voltage trace of the standard channel model (dashed line represents the standard channel)*
+    
 
 
 
@@ -53,6 +77,19 @@ How does it work?
 -------------------------------------------------------------
 
 Below we provide a brief overview of the standardization process for voltage-gated ion channels.
+
+The standardization process is based on the Hodgkin-Huxley formalism, which describes the dynamics of ion channels.
+The Hodgkin-Huxley model is a system of ordinary differential equations that describes the behavior of voltage-gated ion channels.
+The model consists of a set of state variables that represent the open probability of the channel and the time constants of the channel kinetics.
+
+We can derive kinetic curves (shown in Figure 1) from the 
+model equations. 
+The curves represent the steady-state open probability and 
+the time constant of the channel kinetics as a function of the membrane potential.
+We can use the derived curves to fit the parameters of the standard channel model equations. 
+
+We can define the following equations for the standard channel model:
+
 
 Current for a given ion channel:
 
@@ -88,15 +125,19 @@ where:
     \alpha'(V) = K \times \exp \left({\dfrac{\delta \times (V - V_{half})}{\sigma}}\right)
 
 .. math::
-    \beta'(V) = K \times \exp \left({\dfrac{-(1 -\delta) \times (V_{half} - V)}{\sigma}}\right)
+    \beta'(V) = K \times \exp \left({\dfrac{-(1 -\delta) \times (V_{half} - V)}{\sigma}}\right) 
 
 where:
 
-- :math:`V` — the membrane potential in :math:`mV`
-- :math:`V_{half}` — the half-activation potential in :math:`mV`
-- :math:`\sigma` — the inverse slope in :math:`mV`
+- :math:`V` — the membrane potential (in :math:`mV`)
+- :math:`V_{half}` — the half-activation potential (in :math:`mV`)
+- :math:`\sigma` — the inverse slope (in :math:`mV`)
 - :math:`\delta` — the skew parameter of the time constant curve (unitless)
-- :math:`K` — the maximum rate parameter in :math:`ms^{-1}`
-- :math:`\tau_0` — the rate-limiting factor (minimum time constant) in :math:`ms`
+- :math:`K` — the maximum rate parameter (in :math:`ms^{-1}`)
+- :math:`\tau_0` — the rate-limiting factor (minimum time constant) (in :math:`ms`)
 
+These parameters are fitted to the kinetic curves derived from the original channel model.
 
+We perform simultaneous fitting of the steady-state and time constant curves to the Hodgkin-Huxley model equations.
+In order to better reproduce the voltage trace of the original channel model we perform a second fit 
+on the steady-state curve alone.

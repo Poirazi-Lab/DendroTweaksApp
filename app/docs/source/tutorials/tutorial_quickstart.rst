@@ -266,7 +266,7 @@ of a segment group for the apical nexus region and a Gaussian distribution funct
     :width: 80%
     :alt: Distribution of parameters across the cell
 
-    *Figure 1: Distribution of parameters across the cell*
+    *Figure 2: Distribution of parameters across the cell*
 
 We can set the value of the parameters of the mechanisms inserted in the model using the :code:`set_param` method
 by specifying the group name and the distribution type.
@@ -351,13 +351,16 @@ in pikoAmperes.
 
 .. code-block:: python
 
-    >>> model.add_iclamp(sec=soma, loc=0.5, dur=100, delay=100, amp=150)
+    >>> model.add_iclamp(sec=soma, loc=0.5, dur=900, delay=50, amp=0.162)
 
 Now we are ready to run the simulation.
 
 .. code-block:: python
 
-    >>> t, v, _ = model.run(300) # ms
+    >>> model.run(1000) # ms
+
+We can access the recorded voltage data using the :code:`model.simulator.vs` attribute
+and the time points using the :code:`model.simulator.t` attribute.
 
 For more complex stimuli, such as synaptic inputs, refer to the :doc:`tutorial</tutorials/tutorial_synapses>`.
 
@@ -368,7 +371,20 @@ Finally, we can analyze the results of the simulation using some of the built-in
 
 .. code-block:: python
 
-    >>> voltage_trace = model.simulator.recordings[0]
-    >>> spike_data = dd.validation.count_spikes(voltage_trace)
+    >>> fig, ax = plt.subplots(1, 1, figsize=(10, 4))
+    >>> model.simulator.plot_voltage(ax=ax)
+    >>> spike_data = detect_somatic_spikes(model)
+    >>> plot_spikes(spike_data, ax, show_metrics=True)
+    Detected 7 spikes
+    Average spike width: 0.97 ms
+    Average spike amplitude: 79.08 mV
+    Spike frequency: 7.78 Hz
+
+.. figure:: ../_static/voltage_trace.png
+    :align: center
+    :width: 80%
+    :alt: Voltage trace
+
+    *Figure 3: Voltage trace with detected spikes*
 
 More on this in the :doc:`tutorial</tutorials/tutorial_validation>` on analyzing simulation results.

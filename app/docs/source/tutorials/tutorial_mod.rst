@@ -169,20 +169,6 @@ It utilizes the :code:`neuron.load_mechanisms` `method <https://nrn.readthedocs.
 Creating ion channels
 ------------------------------------------
 
-The :code:`MechanismFactory` class provides a convenient way to create ion channels from MOD files.
-The available archives of MOD files can be listed using the :code:`list_archives` method.
-
-.. code-block:: python
-
-    >>> from dendrotweaks.membrane.io.factory import MechanismFactory
-    >>> factory = MechanismFactory()
-    >>> factory.list_archives()
-    Available archives:
-    ├── Base/
-    │   └── Leak
-    └── Park_2019/
-        ├── Nav
-        └── Kv
 
 The :code:`create_channel` method can be used to create an ion channel from a specific archive.
 For example, we can create a sodium channel. 
@@ -193,22 +179,37 @@ Additionally, we can choose to load the channel immediately into the NEURON simu
 
 .. code-block:: python
 
-    >>> nav = factory.create_channel(
+    >>> from dendrotweaks.membrane.io import create_channel
+    >>> nav = create_channel(
     ...     path_to_mod_file="path/to/mod_file.mod",
     ...     path_to_python_file='path/to/python_file.py',
     ...     path_to_python_template='path/to/python_template.py',
-    ...     load=True
     ... )
 
-On the :code:`model` level, we can create an ion channel using the :code:`create_channel` method.
+On the :code:`model` level, we can create an ion channel using 
+the :code:`add_mechanism` method.
 
 .. code-block:: python
 
     >>> model.add_mechanism(
-    ...     channel_name='Nav', 
-    ...     archive_name='Park_2019',
-    ...     template_name='default',
+    ...     mechanism_name='Nav', 
+    ...     python_template_name='default',
+    ...     load=True, 
+    ...     dir_name='mod', 
+    ...     recompile=True
     ... )
+
+
+The :code:`mechanism_name` parameter specifies the name of 
+the mechanism being added, such as `'Nav'`. 
+The :code:`python_template_name` parameter indicates the 
+template name to be used for the mechanism. 
+The :code:`load` parameter is a boolean that determines if 
+the mechanism should be loaded to NEURON. 
+The :code:`dir_name` parameter specifies the directory 
+where the mechanism files are located. 
+Lastly, the :code:`recompile` parameter is a boolean 
+that indicates if the MOD file should be recompiled.
 
 
 Visualizing channel kinetics
@@ -223,7 +224,8 @@ To obtain the data for plotting, specify a range of membrane potentials and a te
     >>> data = nav.get_data(v_range, temperature=23)
     Got data for v in range -200.0 to 200.0 mV at 23°C
 
-The `plot_kinetics` method generates a plot of the channel kinetics. It internally calls the `get_data` method to retrieve the data, so it accepts the same arguments.
+The `plot_kinetics` method generates a plot of the channel kinetics.
+It internally calls the `get_data` method to retrieve the data, so it accepts the same arguments.
 Here, it is called with the default parameters.
 
 .. code-block:: python
@@ -239,18 +241,5 @@ Here, it is called with the default parameters.
 
     *Figure 2: Visualization of channel kinetics*
 
-
-
-Creating other mechanisms
-------------------------------------------
-
-Certain mechanisms have specialized methods for their creation. 
-For instance, the leak channel and calcium dynamics mechanisms:
-
-.. code-block:: python
-
-    >>> leak = factory.create_leak_channel()
-    >>> cadyn = factory.create_ca_dynamics()
-    
 
 
