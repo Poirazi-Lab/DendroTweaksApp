@@ -57,12 +57,14 @@ class IonChannel(Mechanism):
         self.set_tadj(temperature)
         self.temperature = temperature
         states = self.compute_kinetic_variables(x)
+        # TODO: Fix the issue with returning state as a constant
+        # for some channels (e.g. tau in Poirazi Na_soma)
         data = {
             state_name: {
-                'inf': states[i], 
-                'tau': states[i + 1]
+                'inf': np.full_like(x, states[i]) if np.isscalar(states[i]) else states[i],
+                'tau': np.full_like(x, states[i + 1]) if np.isscalar(states[i + 1]) else states[i + 1]
                 }
-            for i, state_name in zip(range(0, len(states), 2), 
+            for i, state_name in zip(range(0, len(states), 2),
                                      self.states)
         }
         data.update({'x': x})
@@ -138,8 +140,8 @@ class StandardIonChannel(IonChannel):
 
         self._state_powers = state_powers
 
-        self.range_params = [f'{param}_{state}' for state in state_powers
-                    for param in self.STANDARD_PARAMS]
+        # self.range_params = [f'{param}_{state}' for state in state_powers
+        #             for param in self.STANDARD_PARAMS]
 
         self.params = {
             f'{param}_{state}': None
@@ -149,6 +151,7 @@ class StandardIonChannel(IonChannel):
         self.params.update({
             'gbar': 0.0,
         })
+        self.range_params = self.params.copy()
 
         self.temperature = 37
 
@@ -230,6 +233,8 @@ class StandardIonChannel(IonChannel):
 
             for param in ['k', 'delta', 'tau0', 'vhalf', 'sigma']:
                 self.params[f'{param}_{state}'] = fit_result.params[param]
+
+        self.range_params = self.params.copy()
     
     
     def to_dict(self):

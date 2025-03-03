@@ -9,14 +9,16 @@ from dendrotweaks.morphology.seg_trees import Segment, SegmentTree
 from dendrotweaks.simulators import NEURONSimulator
 from dendrotweaks.membrane.groups import SectionGroup, SegmentGroup
 from dendrotweaks.membrane.mechanisms import Mechanism, LeakChannel, CaDynamics
-from dendrotweaks.membrane.io import MechanismFactory
+# from dendrotweaks.membrane.io import MechanismFactory
+from dendrotweaks.membrane.io import create_channel, standardize_channel, create_standard_channel
 from dendrotweaks.membrane.io import MODFileLoader
-from dendrotweaks.morphology.io import TreeFactory
+# from dendrotweaks.morphology.io import TreeFactory
+from dendrotweaks.morphology.io import create_point_tree, create_section_tree, create_segment_tree
 from dendrotweaks.stimuli.iclamps import IClamp
 from dendrotweaks.membrane.distributions import Distribution
 from dendrotweaks.stimuli.populations import Population
 from dendrotweaks.utils import calculate_lambda_f, dynamic_import
-from dendrotweaks.utils import DOMAINS_TO_COLORS
+from dendrotweaks.utils import DOMAINS_TO_COLORS, timeit
 
 from collections import OrderedDict, defaultdict
 from numpy import nan
@@ -74,10 +76,11 @@ class Model():
         self.version = ''
         self.path_manager = PathManager(path_to_data, model_name=name)
         self.simulator_name = simulator_name
+        self._verbose = False
 
         # File managers
-        self.tree_factory = TreeFactory()
-        self.mechanism_factory = MechanismFactory()
+        # self.tree_factory = TreeFactory()
+        # self.mechanism_factory = MechanismFactory()
         self.mod_loader = MODFileLoader()
 
         # Morphology
@@ -131,6 +134,20 @@ class Model():
     def name(self, name):
         self._name = name
         self.path_manager.update_paths(name)
+
+
+    @property
+    def verbose(self):
+        return self._verbose
+
+    @verbose.setter
+    def verbose(self, value):
+        self._verbose = value
+        self.mod_loader.verbose = value
+        # self.mechanism_factory.verbose = value
+        # self.tree_factory.verbose = value
+        # self.simulator.verbose = value
+
 
     @property
     def domains(self):
@@ -252,8 +269,8 @@ class Model():
                         'Mechanism': mech_name,
                         'Parameter': param,
                         'Group': group_name,
-                        'Distribution': distribution.function_name,
-                        'Distribution params': distribution.parameters,
+                        'Distribution': distribution if isinstance(distribution, str) else distribution.function_name,
+                        'Distribution params': {} if isinstance(distribution, str) else distribution.parameters,
                     })
         df = pd.DataFrame(data)
         return df
@@ -292,7 +309,7 @@ class Model():
     # MORPHOLOGY
     # ========================================================================
 
-    def load_morphology(self, file_name, soma_notation='3PS'):
+    def load_morphology(self, file_name, soma_notation='3PS', align=True):
         """
         Read an SWC file and build the SWC and section trees.
 
@@ -304,21 +321,22 @@ class Model():
         # self.name = file_name.split('.')[0]
         self.morphology_name = file_name.replace('.swc', '')
         path_to_swc_file = self.path_manager.get_file_path('morphology', file_name, extension='swc')
-        point_tree = self.tree_factory.create_point_tree(path_to_swc_file)
+        point_tree = create_point_tree(path_to_swc_file)
         point_tree.remove_overlaps()
         point_tree.change_soma_notation(soma_notation)
         point_tree.sort()
-        # point_tree.shift_coordinates_to_soma_center()
-        # point_tree.align_apical_dendrite()
-        # point_tree.round_coordinates(5)
+        if align:    
+            point_tree.shift_coordinates_to_soma_center()
+            point_tree.align_apical_dendrite()
+            point_tree.round_coordinates(8)
         self.point_tree = point_tree
 
-        sec_tree = self.tree_factory.create_sec_tree(point_tree)
+        sec_tree = create_section_tree(point_tree)
         sec_tree.sort()
         self.sec_tree = sec_tree
 
         self.create_and_reference_sections_in_simulator()
-        seg_tree = self.tree_factory.create_seg_tree(sec_tree)
+        seg_tree = create_segment_tree(sec_tree)
         self.seg_tree = seg_tree
 
         self._add_default_segment_groups()
@@ -333,12 +351,12 @@ class Model():
         """
         Create and reference sections in the simulator.
         """
-        print(f'Building sections in {self.simulator_name}...')
+        if self.verbose: print(f'Building sections in {self.simulator_name}...')
         for sec in self.sec_tree.sections:
             sec.create_and_reference(self.simulator_name)
         n_sec = len([sec._ref for sec in self.sec_tree.sections 
                     if sec._ref is not None])
-        print(f'{n_sec} sections created.')
+        if self.verbose: print(f'{n_sec} sections created.')
 
         
 
@@ -402,9 +420,8 @@ class Model():
                 lambda_f = calculate_lambda_f(sec._ref.diam, sec._ref.Ra, sec._ref.cm, f)
             nseg = int((sec._ref.L / (d_lambda * lambda_f) + 0.9) / 2) * 2 + 1
             sec._ref.nseg = nseg
-
         # Rebuild the segment tree
-        self.seg_tree = self.tree_factory.create_seg_tree(self.sec_tree)
+        self.seg_tree = create_segment_tree(self.sec_tree)
 
         # Redistribute parameters
         for param_name in self.params:
@@ -464,14 +481,14 @@ class Model():
             mechanism_name, 
             python_template_name=python_template_name
         )
-        mech = self.mechanism_factory.create_channel(**paths)
+        mech = create_channel(**paths)
         # Add the mechanism to the model
         self.mechanisms[mech.name] = mech
         # Update the global parameters
 
         if load:
             self.load_mechanism(mechanism_name, dir_name, recompile)
-        print(f'Mechanism {mech.name} added to model.')
+        
 
 
     def load_mechanisms(self, dir_name: str = 'mod', recompile=True) -> None:
@@ -507,7 +524,47 @@ class Model():
         self.mod_loader.load_mechanism(
             path_to_mod_file=path_to_mod_file, recompile=recompile
         )
-        print(f'Mechanism {mechanism_name} loaded to NEURON.\n')
+
+
+    def standardize_channel(self, channel_name, 
+        python_template_name=None, mod_template_name=None, remove_old=True):
+
+        # Get data to transfer
+        channel = self.mechanisms[channel_name]
+        channel_domain_names = [domain_name for domain_name, mechs 
+            in self.domains_to_mechs.items() if channel_name in mechs]
+        gbar_name = f'gbar_{channel_name}'
+        gbar_distributions = self.params[gbar_name]
+        # Kinetic variables cannot be transferred
+
+        # Uninsert the old channel
+        for domain_name in self.domains:
+            if channel_name in self.domains_to_mechs[domain_name]:
+                self.uninsert_mechanism(channel_name, domain_name)
+
+        # Remove the old channel
+        if remove_old:
+            self.mechanisms.pop(channel_name)
+              
+        # Create, add and load a new channel
+        paths = self.path_manager.get_standard_channel_paths(
+            channel_name, 
+            mod_template_name=mod_template_name
+        )
+        standard_channel = standardize_channel(channel, **paths)
+        
+        self.mechanisms[standard_channel.name] = standard_channel
+        self.load_mechanism(standard_channel.name, recompile=True)
+
+        # Insert the new channel
+        for domain_name in channel_domain_names:
+            self.insert_mechanism(standard_channel.name, domain_name)
+
+        # Transfer data
+        gbar_name = f'gbar_{standard_channel.name}'
+        for group_name, distribution in gbar_distributions.items():
+            self.set_param(gbar_name, group_name, 
+                distribution.function_name, **distribution.parameters)
 
 
     # ========================================================================
@@ -674,7 +731,8 @@ class Model():
             sec.uninsert_mechanism(mech.name)
         self.domains_to_mechs[domain_name].remove(mech.name)
 
-        if not mech.is_inserted():
+        if not self.mechs_to_domains.get(mech.name):
+            warnings.warn(f'Mechanism {mech.name} is not inserted in any domain and will be removed.')
             self._remove_mechanism_params(mech)
 
     
@@ -726,7 +784,7 @@ class Model():
         max_value : float, optional
             The maximum value of the
         """
-        print(f'Adding group {name}...')
+        if self.verbose: print(f'Adding group {name}...')
         group = SegmentGroup(name, domains, select_by, min_value, max_value)
         self._groups.append(group)
         
@@ -785,26 +843,36 @@ class Model():
                          distr_type: str = 'constant',
                          **distr_params):
         
-        distribution = Distribution(distr_type, **distr_params)
+        if distr_type == 'inherit':
+            distribution = 'inherit'
+        else:
+            distribution = Distribution(distr_type, **distr_params)
         self.params[param_name][group_name] = distribution
 
+    @timeit
     def distribute_all(self):
         for param_name in self.params:
             self.distribute(param_name)
 
+    
     def distribute(self, param_name: str):
         if param_name == 'Ra':
             self._distribute_Ra()
             return
 
+        groups_to_segments = {group.name: [seg 
+            for seg in self.seg_tree if seg in group] 
+            for group in self._groups}
+
         for group_name, distribution in self.params[param_name].items():
             group = self.groups[group_name]
-            filtered_segments = [
-                seg for seg in self.seg_tree.segments 
-                if seg in group
-            ]
+            filtered_segments = groups_to_segments[group_name]
             for seg in filtered_segments:
-                value = distribution(seg.path_distance())
+                # TODO: would it slow down the process?
+                if distribution == 'inherit':
+                    value = seg.parent.get_param_value(param_name)
+                else:
+                    value = distribution(seg.path_distance())
                 seg.set_param_value(param_name, value)
 
 
@@ -904,6 +972,9 @@ class Model():
     def run(self, duration=300):
         self.simulator.run(duration)
 
+    def get_traces(self):
+        return self.simulator.get_traces()
+
     def plot(self, *args, **kwargs):
         self.simulator.plot(*args, **kwargs)
 
@@ -972,19 +1043,22 @@ class Model():
         # Remove intermediate points
   
 
-    def standardize_channel():
-        ...
+
+            
 
     # ========================================================================
     # PLOTTING
     # ========================================================================
 
-    def plot_param(self, param_name, ax=None):
+    def plot_param(self, param_name, ax=None, show_nan=True):
         """
         Plot the distribution of a parameter in the model.
         """
         if ax is None:
             fig, ax = plt.subplots(figsize=(10, 2))
+
+        if param_name not in self.params:
+            warnings.warn(f'Parameter {param_name} not found.')
 
         values = [(seg.path_distance(), seg.get_param_value(param_name)) for seg in self.seg_tree]
         colors = [DOMAINS_TO_COLORS[seg.domain] for seg in self.seg_tree]
@@ -996,15 +1070,13 @@ class Model():
 
         if valid_values:
             ax.scatter(*zip(*valid_values), c=valid_colors)
-        if nan_values:
-            ax.scatter(*zip(*nan_values), c=nan_colors, marker='x', alpha=0.5, label='NaN', zorder=0)
+        if nan_values and show_nan:
+            ax.scatter(*zip(*nan_values), c=nan_colors, marker='x', alpha=0.5, zorder=0)
         plt.axhline(y=0, color='k', linestyle='--')
 
         ax.set_xlabel('Path distance')
         ax.set_ylabel(param_name)
         ax.set_title(f'{param_name} distribution')
-        if nan_values:
-            ax.legend()
 
         
         
@@ -1035,19 +1107,19 @@ class Model():
         """
         return {
             'metadata': {
-                'name': self.name,
+            'name': self.name,
             },
             'd_lambda': self.d_lambda,
             'domains': {domain: list(mechs) for domain, mechs in self.domains_to_mechs.items()},
             'groups': [
-                group.to_dict() for group in self._groups
+            group.to_dict() for group in self._groups
             ],
             'params': {
-                param_name: {
-                    group_name: distribution.to_dict()
-                    for group_name, distribution in distributions.items()
-                }
-                for param_name, distributions in self.params.items()
+            param_name: {
+                group_name: distribution if isinstance(distribution, str) else distribution.to_dict()
+                for group_name, distribution in distributions.items()
+            }
+            for param_name, distributions in self.params.items()
             },
         }
 
@@ -1063,7 +1135,7 @@ class Model():
         self.domains_to_mechs = {
             domain: set(mechs) for domain, mechs in data['domains'].items()
         }
-        print('Inserting mechanisms...')
+        if self.verbose: print('Inserting mechanisms...')
         for domain_name, mechs in self.domains_to_mechs.items():
             for mech_name in mechs:
                 self.insert_mechanism(mech_name, domain_name, distribute=False)
@@ -1071,20 +1143,20 @@ class Model():
         # self.distribute_all()
 
         # Groups
-        print('Adding groups...')
+        if self.verbose: print('Adding groups...')
         self._groups = [SegmentGroup.from_dict(group) for group in data['groups']]
 
-        print('Distributing parameters...')
+        if self.verbose: print('Distributing parameters...')
         # Parameters
         self.params = {
             param_name: {
-                group_name: Distribution.from_dict(distribution)
+                group_name: distribution if isinstance(distribution, str) else Distribution.from_dict(distribution)
                 for group_name, distribution in distributions.items()
             }
             for param_name, distributions in data['params'].items()
         }
 
-        print('Setting segmentation...')
+        if self.verbose: print('Setting segmentation...')
         if self.sec_tree is not None:
             d_lambda = self.d_lambda
             self.set_segmentation(d_lambda=d_lambda)
@@ -1159,8 +1231,6 @@ class Model():
             'loc': [seg.x for seg in self.recordings],
             'n_per_seg': [1] * len(self.recordings)
         }
-
-        print(rec_data)
 
         iclamp_data = {
             'type': ['iclamp'] * len(self.iclamps),

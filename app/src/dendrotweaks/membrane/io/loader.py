@@ -9,6 +9,7 @@ class MODFileLoader():
 
     def __init__(self):
         self._loaded_mechanisms = set()
+        self.verbose = False
               
     # LOADING METHODS
 
@@ -30,7 +31,8 @@ class MODFileLoader():
         parent_dir = os.path.dirname(path_to_mod_file)
         return os.path.join(parent_dir, mechanism_name)
 
-    def load_mechanism(self, path_to_mod_file: str, recompile: bool = False) -> None:
+    def load_mechanism(self, path_to_mod_file: str, 
+                       recompile: bool = False) -> None:
         """
         Load a mechanism from the specified mod file.
 
@@ -45,29 +47,29 @@ class MODFileLoader():
         mechanism_dir = self._get_mechanism_dir(path_to_mod_file)
         x86_64_dir = os.path.join(mechanism_dir, 'x86_64')
 
-        print(f"{'=' * 60}\nAdding mechanism {mechanism_name} to model...\n{'=' * 60}")
+        if self.verbose: print(f"{'=' * 60}\nLoading mechanism {mechanism_name} to NEURON...\n{'=' * 60}")
 
         if mechanism_name in self._loaded_mechanisms:
-            print(f'Mechanism "{mechanism_name}" already loaded')
+            if self.verbose: print(f'Mechanism "{mechanism_name}" already loaded')
             return
 
         if recompile and os.path.exists(mechanism_dir):
             shutil.rmtree(mechanism_dir)
 
         if not os.path.exists(x86_64_dir):
-            print(f'Compiling mechanism "{mechanism_name}"...')
+            if self.verbose: print(f'Compiling mechanism "{mechanism_name}"...')
             os.makedirs(mechanism_dir, exist_ok=True)
             shutil.copy(path_to_mod_file, mechanism_dir)
             self._compile_files(mechanism_dir)
         else:
-            print(f'Using precompiled mechanism "{mechanism_name}"')
+            if self.verbose: print(f'Using precompiled mechanism "{mechanism_name}"')
 
         if hasattr(h, mechanism_name):
-            print(f'Mechanism "{mechanism_name}" already exists in hoc')
+            if self.verbose: print(f'Mechanism "{mechanism_name}" already exists in hoc')
         else:
             neuron.load_mechanisms(mechanism_dir)
         self._loaded_mechanisms.add(mechanism_name)
-        print(f'Loaded mechanism "{mechanism_name}"')
+        if self.verbose: print(f'Loaded mechanism "{mechanism_name}"')
 
     # HELPER METHODS
 
@@ -84,4 +86,4 @@ class MODFileLoader():
         os.chdir(path)
         os.system('nrnivmodl')
         os.chdir(cwd)
-        print(f'Compiled mod files from "{path}"')
+        if self.verbose: print(f'Compiled mod files from "{path}"')

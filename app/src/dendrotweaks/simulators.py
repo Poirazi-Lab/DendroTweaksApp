@@ -34,20 +34,22 @@ class Simulator:
     def __init__(self):
         self.vs = None
         self.t = None
+        self.dt = None
         self.recordings = {}
 
-    def plot_voltage(self, ax=None, segments=None):
+    def plot_voltage(self, ax=None, segments=None, **kwargs):
         if ax is None:
             fig, ax = plt.subplots()
         if segments is None:
             segments = self.recordings.keys()
-        if all(isinstance(seg, int) for seg in segments):
-            segments = [seg for seg in self.recordings.keys() if seg.idx in segments]
-        for seg in segments:
-            ax.plot(self.t, self.vs[seg.idx], label=f'{seg.domain} {seg.idx}')
+        for seg, v in self.vs.items():
+            if segments and seg not in segments:
+                continue
+            ax.plot(self.t, v, label=f'{seg.domain} {seg.idx}', **kwargs)
 
         if len(segments) < 10:
             ax.legend()
+        # ax.set_ylim(-100, 60)
         ax.set_xlabel('Time (ms)')
         ax.set_ylabel('Voltage (mV)')
         
@@ -130,13 +132,9 @@ class NEURONSimulator(Simulator):
 
         h.continuerun(duration * ms)
 
-        
         self.t = t.to_python()
-        self.vs = {seg.idx: v.to_python() for seg, v in self.recordings.items()}
+        self.vs = {seg: v.to_python() for seg, v in self.recordings.items()}
     
-        return [self.t] * len(self.vs), list(self.vs.values()), Is
-
-        
 
     def to_dict(self):
         return {

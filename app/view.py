@@ -53,6 +53,7 @@ DOMAINS_TO_COLORS = {
     'custom': '#D62728',
     'custom2': '#E377C2',
     'undefined': '#7F7F7F',
+    'glia': 'gray',
 }
 
 import colorcet as cc
@@ -393,6 +394,7 @@ PARAMS_TO_UNITS = {
               'diam': 'Diameter (μm)',
               'area': 'Area (μm²)',
               'subtree_size': 'Subtree size',
+              'section_diam': 'Diameter (μm)',
               'absolute_distance': 'Distance to soma (μm)',
               'domain_distance': 'Distance to parent domain (μm)',
               'Ra': 'Axial resistance (Ωcm)',
@@ -412,7 +414,7 @@ PARAMS_TO_UNITS = {
 
 PARAMS = {
     'Topology': ['domain', 'subtree_size'],
-    'Geometry': ['diam', 'area', 'absolute_distance', 'domain_distance'],
+    'Geometry': ['diam', 'section_diam', 'area', 'absolute_distance', 'domain_distance'],
     'Stimuli': ['iclamps'],
     'Recordings': ['recordings'],
     'Synapses': ['AMPA', 'NMDA', 'AMPA_NMDA', 'GABAa']

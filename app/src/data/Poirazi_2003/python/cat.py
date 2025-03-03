@@ -34,6 +34,7 @@ class cat(IonChannel):
         self.ion = "ca"
         self.current_name = "i_ca"
         self.independent_var_name = "cai"
+        self.temperature = 37
 
     def __getitem__(self, item):
         return self.params[item]
@@ -63,14 +64,14 @@ class cat(IonChannel):
     
     def ghk(self, v, ci, co):
         
-        f = KTF(celsius) / 2
+        f = KTF(self.temperature) / 2
         nu = v / f
         ghk = (-f * (1.0 - ((ci / co) * np.exp(nu)))) * efun(nu)
         return ghk
     
     def KTF(self, celsius):
         
-        KTF = (25.0 / 293.15) * (celsius + 273.15)
+        KTF = (25.0 / 293.15) * (self.temperature + 273.15)
         return KTF
     
     def efun(self, z):

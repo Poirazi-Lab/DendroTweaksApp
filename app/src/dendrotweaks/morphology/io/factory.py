@@ -160,7 +160,7 @@ class TreeFactory():
         # self.set_geom_nseg(d_lambda, f)
 
         segments = []  # To store Segment objects
-
+        # TODO: Refactor this to use a stack instead of recursion
         def add_segments(sec, parent_idx, idx_counter):
             segs = {seg: idx + idx_counter for idx, seg in enumerate(sec._ref)}
 

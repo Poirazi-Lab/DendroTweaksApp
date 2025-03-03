@@ -34,6 +34,7 @@ class h(IonChannel):
         self.ion = "None"
         self.current_name = "i_None"
         self.independent_var_name = "v"
+        self.temperature = 37
 
     def __getitem__(self, item):
         return self.params[item]

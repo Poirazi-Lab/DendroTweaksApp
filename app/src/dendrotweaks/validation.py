@@ -32,6 +32,18 @@ class MorphologicalValidation:
         return hist, edges
 
 
+def detect_spikes(trace, dt):
+    peaks, _ = find_peaks(trace, height=0, distance=10)
+    widths, heights, left_ips, right_ips = peak_widths(trace, peaks, rel_height=0.5)
+    widths = widths * dt
+    amplitudes = 2 * (trace[peaks] - heights)
+    spike_data = {
+        "peaks": peaks * dt,
+        "widths": widths,
+        "amplitudes": amplitudes
+    }
+    return spike_data
+
 class VoltageTraceValidation:
     def __init__(self, model):
         self.model = model

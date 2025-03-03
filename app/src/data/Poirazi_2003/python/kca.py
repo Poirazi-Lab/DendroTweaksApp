@@ -31,6 +31,7 @@ class kca(IonChannel):
         self.ion = "k"
         self.current_name = "i_k"
         self.independent_var_name = "cai"
+        self.temperature = 37
 
     def __getitem__(self, item):
         return self.params[item]
@@ -39,7 +40,7 @@ class kca(IonChannel):
         self.params[item] = value
 
     
-    def compute_kinetic_variables(self, v, cai):
+    def compute_kinetic_variables(self, cai):
         beta = self.params["beta"]
         cac = self.params["cac"]
         taumin = self.params["taumin"]

@@ -171,6 +171,10 @@ class Presenter(IOMixin, NavigationMixin,
             condition = lambda seg: seg.domain in domains and \
                         (min_val is None or seg.diam >= min_val) and \
                         (max_val is None or seg.diam <= max_val)
+        elif select_by == 'section_diam':
+            condition = lambda seg: seg.domain in domains and \
+                        (min_val is None or seg._section.diam >= min_val) and \
+                        (max_val is None or seg._section.diam <= max_val)
         
         segs = [seg for seg in self.model.seg_tree.segments if condition(seg)]
         seg_ids = [seg.idx for seg in segs]
@@ -398,6 +402,7 @@ class Presenter(IOMixin, NavigationMixin,
         tau_labels = []
 
         for state_name, state in data.items():
+            print(state_name)
             inf_values.append(state['inf'].tolist())
             inf_labels.append(f'{state_name}Inf')
             tau_values.append(state['tau'].tolist())
@@ -544,6 +549,11 @@ class Presenter(IOMixin, NavigationMixin,
         self.view.DOM_elements['distribution_widgets_panel'].visible = group_has_distribution
 
         if not group_has_distribution:
+            self.view.DOM_elements['distribution_widgets_panel'].children = []
+            return
+
+        if self.model.params[param_name][group_name] == 'inherit':
+            self.view.DOM_elements['distribution_widgets_panel'].visible = False
             self.view.DOM_elements['distribution_widgets_panel'].children = []
             return
             

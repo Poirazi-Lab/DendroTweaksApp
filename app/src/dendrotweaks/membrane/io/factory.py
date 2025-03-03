@@ -4,12 +4,8 @@ from typing import List, Tuple
 
 
 from dendrotweaks.membrane.io.converter import MODFileConverter
-from dendrotweaks.membrane.io.loader import MODFileLoader
 from dendrotweaks.membrane.io.code_generators import NMODLCodeGenerator
 from dendrotweaks.membrane.mechanisms import Mechanism, IonChannel, StandardIonChannel
-from dendrotweaks.membrane.mechanisms import CaDynamics, LeakChannel
-from dendrotweaks.utils import dynamic_import
-from dendrotweaks.utils import list_files, list_folders
 
 
 class MechanismFactory():
@@ -29,7 +25,7 @@ class MechanismFactory():
     def __init__(self):
 
         self.converter = MODFileConverter()
-
+        self.verbose = False
         self.class_map = {}
 
     # FACTORY METHODS
@@ -44,10 +40,10 @@ class MechanismFactory():
             The path to the Python file.
         """
         class_name, module_name, package_path = self._get_module_info(path_to_python_file)
-        print(f"Registering {class_name} from {module_name} in {package_path}")
+        if self.verbose: print(f"Registering {class_name} from {module_name} in {package_path}")
         if not package_path in sys.path:
             sys.path.append(package_path)
-        MechanismClass = dynamic_import(module_name, class_name)
+        MechanismClass = self.dynamic_import(module_name, class_name)
         self.class_map[class_name] = MechanismClass
 
     def _get_module_info(self, path_to_python_file: str) -> Tuple[str, str, str]:
@@ -58,6 +54,26 @@ class MechanismFactory():
 
     def _instantiate_mechanism(self, class_name) -> Mechanism:
         return self.class_map[class_name]()
+
+    def dynamic_import(self, module_name, class_name):
+        """
+        Dynamically import a class from a module.
+
+        Parameters
+        ----------
+        module_name : str
+            Name of the module to import.
+        class_name : str
+            Name of the class to import.
+        """
+
+        from importlib import import_module
+
+        import sys
+        sys.path.append('app/src')
+        if self.verbose: print(f"Importing class {class_name} from module {module_name}.py")
+        module = import_module(module_name)
+        return getattr(module, class_name)
             
     def create_channel(self, path_to_mod_file: str,
                        path_to_python_file: str,
@@ -155,24 +171,3 @@ class MechanismFactory():
 
         return standard_channel
 
-    def create_ca_dynamics(self, name) -> CaDynamics:
-        """
-        Create a CaDynamics mechanism.
-
-        Parameters
-        ----------
-        name : str
-            The name of the mechanism.
-        """
-        return CaDynamics(name=name)
-
-    def create_leak_channel(self, path_to_mod_file) -> StandardIonChannel:
-        """
-        Create a leak channel.
-
-        Parameters
-        ----------
-        name : str
-            The name of the channel.
-        """
-        return LeakChannel()

@@ -79,7 +79,7 @@ class MODFileReader():
         """
         suffix_pattern = r'SUFFIX\s+\w+'
         match = re.search(suffix_pattern, self.content)
-        print(f"Replacing {match.group()} with SUFFIX {self._file_name}")
+        # print(f"Replacing {match.group()} with SUFFIX {self._file_name}")
         self.content = re.sub(suffix_pattern, f'SUFFIX {self._file_name}', self.content)
         if overwirte:
             self._overwrite()
@@ -90,7 +90,7 @@ class MODFileReader():
         """
         with open(self._path_to_file, 'w') as f:
             f.write(self.content)
-        print(f"Overwritten {self._path_to_file}")
+        # print(f"Overwritten {self._path_to_file}")
 
     def remove_inline_comments(self) -> None:
         """

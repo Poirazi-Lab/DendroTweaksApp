@@ -34,6 +34,7 @@ class mykca(IonChannel):
         self.ion = "k"
         self.current_name = "i_k"
         self.independent_var_name = "cai"
+        self.temperature = 37
 
     def __getitem__(self, item):
         return self.params[item]
@@ -69,5 +70,5 @@ class mykca(IonChannel):
     
     def exp1(self, k, d, v):
         
-        exp1 = k * np.exp(((((((-2 * d) * FARADAY) * 0.001) * v) / R) / (273.15 + celsius)))
+        exp1 = k * np.exp(((((((-2 * d) * FARADAY) * 0.001) * v) / R) / (273.15 + self.temperature)))
         return exp1

@@ -71,32 +71,32 @@ class SectionGroup:
         return f'Group("{self.name}", {len(self.sections)})'
 
 
-@dataclass
-class Distribution:
-    name: str
-    domains: List[str] = field(default_factory=lambda: ['all'])
-    dist: Tuple[float, float] = None
-    diam: Tuple[float, float] = None
-    distr_type: str = 'constant'
-    distr_params: Dict = field(default_factory=dict)
+# @dataclass
+# class Distribution:
+#     name: str
+#     domains: List[str] = field(default_factory=lambda: ['all'])
+#     dist: Tuple[float, float] = None
+#     diam: Tuple[float, float] = None
+#     distr_type: str = 'constant'
+#     distr_params: Dict = field(default_factory=dict)
 
-    def __post_init__(self):
-        self.function = DistributionFunction(self.distr_type, **self.distr_params)
-        self.max_dist = self.dist[1] if self.dist else None
-        self.min_dist = self.dist[0] if self.dist else None
-        self.max_diam = self.diam[1] if self.diam else None
-        self.min_diam = self.diam[0] if self.diam else None
+#     def __post_init__(self):
+#         self.function = DistributionFunction(self.distr_type, **self.distr_params)
+#         self.max_dist = self.dist[1] if self.dist else None
+#         self.min_dist = self.dist[0] if self.dist else None
+#         self.max_diam = self.diam[1] if self.diam else None
+#         self.min_diam = self.diam[0] if self.diam else None
 
-    def to_dict(self) -> Dict:
-        return {
-            'name': self.name,
-            'function': self.function.to_dict(),
-            'domains': self.domains,
-            'max_dist': self.max_dist,
-            'min_dist': self.min_dist,
-            'max_diam': self.max_diam,
-            'min_diam': self.min_diam,
-        }
+#     def to_dict(self) -> Dict:
+#         return {
+#             'name': self.name,
+#             'function': self.function.to_dict(),
+#             'domains': self.domains,
+#             'max_dist': self.max_dist,
+#             'min_dist': self.min_dist,
+#             'max_diam': self.max_diam,
+#             'min_diam': self.min_diam,
+#         }
 
 
 
@@ -112,6 +112,8 @@ class SegmentGroup:
     def _get_segment_value(self, segment) -> Optional[float]:
         if self.select_by == 'diam':
             return segment.diam
+        elif self.select_by == 'section_diam':
+            return segment._section._ref.diam
         elif self.select_by == 'absolute_distance':
             return segment.path_distance()
         elif self.select_by == 'domain_distance':

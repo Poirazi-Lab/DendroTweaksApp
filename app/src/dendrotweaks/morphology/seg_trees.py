@@ -75,6 +75,7 @@ class Segment(Node):
         else:
             return np.nan
 
+
 class SegmentTree(Tree):
 
     def __init__(self, segments: list[Segment]) -> None:

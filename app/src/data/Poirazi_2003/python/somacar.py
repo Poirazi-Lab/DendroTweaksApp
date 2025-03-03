@@ -30,6 +30,7 @@ class somacar(IonChannel):
         self.ion = "ca"
         self.current_name = "i_ca"
         self.independent_var_name = "cai"
+        self.temperature = 37
 
     def __getitem__(self, item):
         return self.params[item]

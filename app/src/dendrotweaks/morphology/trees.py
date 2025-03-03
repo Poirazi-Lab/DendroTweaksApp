@@ -38,7 +38,8 @@ class Node():
         self.children = []
 
     def __repr__(self):
-        return f'•{self.idx}'
+        class_name = type(self).__name__
+        return f"{class_name}(idx={self.idx!r})"
 
     @property
     def parent(self):

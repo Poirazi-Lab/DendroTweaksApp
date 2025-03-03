@@ -43,6 +43,7 @@ class Na_dend(IonChannel):
         self.ion = "na"
         self.current_name = "i_na"
         self.independent_var_name = "v"
+        self.temperature = 37
 
     def __getitem__(self, item):
         return self.params[item]
@@ -81,7 +82,7 @@ class Na_dend(IonChannel):
         zetar = self.params["zetar"]
         vhalfr = self.params["vhalfr"]
         
-        alpr = np.exp(((((0.001 * zetar) * (v - vhalfr)) * 96480.0) / (8.315 * (273.16 + celsius))))
+        alpr = np.exp(((((0.001 * zetar) * (v - vhalfr)) * 96480.0) / (8.315 * (273.16 + self.temperature))))
         return alpr
     
     def betr(self, v):
@@ -89,5 +90,5 @@ class Na_dend(IonChannel):
         gmr = self.params["gmr"]
         vhalfr = self.params["vhalfr"]
         
-        betr = np.exp((((((0.001 * zetar) * gmr) * (v - vhalfr)) * 96480.0) / (8.315 * (273.16 + celsius))))
+        betr = np.exp((((((0.001 * zetar) * gmr) * (v - vhalfr)) * 96480.0) / (8.315 * (273.16 + self.temperature))))
         return betr

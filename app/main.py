@@ -695,7 +695,7 @@ def create_add_group_panel():
 
     view.widgets.multichoice['group_domains'].on_change('value', p.select_group_segments_callback)
 
-    view.widgets.selectors['select_by'] = Select(options=['absolute_distance', 'domain_distance', 'diam'],
+    view.widgets.selectors['select_by'] = Select(options=['absolute_distance', 'domain_distance', 'diam', 'section_diam'],
                                             value='absolute_distance',
                                             title='Select by',
                                             width=100)
@@ -827,7 +827,7 @@ def create_group_panel():
     view.widgets.selectors['distribution_type'] = Select(
         title='Distribution type',
         value='constant',
-        options=['constant', 'linear', 'exponential', 'sigmoid', 'sinusoidal', 'gaussian', 'step'],
+        options=['constant', 'linear', 'exponential', 'sigmoid', 'sinusoidal', 'gaussian', 'step', 'inherit'],
         width=150,
         visible=True
     )
@@ -890,8 +890,8 @@ def create_param_panel():
 def create_distribution_tab():
 
     view.widgets.selectors['mechanism'] = Select(title='Mechanism',
-                                                options=[],
-                                                value = None,
+                                                options=['Independent'],
+                                                value = 'Independent',
                                                 )
 
     view.widgets.selectors['mechanism'].on_change('value', p.select_mechanism_callback)

@@ -7,3 +7,4 @@ from dendrotweaks.membrane.io.code_generators import PythonCodeGenerator
 from dendrotweaks.membrane.io.code_generators import NMODLCodeGenerator
 
 from dendrotweaks.membrane.io.factory import MechanismFactory
+from dendrotweaks.membrane.io.utils import create_channel, create_standard_channel, standardize_channel

@@ -168,13 +168,15 @@ class PathManager:
         }
 
     def get_standard_channel_paths(self, mechanism_name: str,
-                                   python_template_name: str = "default",
-                                   mod_template_name: str = "default") -> Dict[str, str]:
+                                   python_template_name: str = None,
+                                   mod_template_name: str = None) -> Dict[str, str]:
         """
         Get all necessary paths for creating a standard channel.
         """
+        python_template_name = python_template_name or "default"
+        mod_template_name = mod_template_name or "standard_channel"
         return {
-            **self.get_channel_paths(mechanism_name, python_template_name),
+            # **self.get_channel_paths(mechanism_name, python_template_name),
             'path_to_mod_template': self.get_file_path('templates', mod_template_name, 'mod'),
             'path_to_standard_mod_file': self.get_file_path('mod', f"s{mechanism_name}", 'mod'),
         }

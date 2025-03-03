@@ -1,6 +1,8 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+from matplotlib.gridspec import GridSpec
+import matplotlib.colors as mcolors
 
 from typing import Callable, List
 from neuron import h
@@ -38,8 +40,6 @@ class Section(Node):
 
     # MAGIC METHODS
 
-    def __repr__(self):
-        return f'••{self.idx}'
 
     def __call__(self, x: float):
         """
@@ -93,9 +93,32 @@ class Section(Node):
         return pd.DataFrame({'idx': [self.idx],
                             'parent_idx': [self.parent_idx]})
 
+    # TODO: Figure out why this is different from NEURON's diam
+    # @property
+    # def diam(self):
+    #     """
+    #     Average diameter of the section calculated from
+    #     the radii and distances of the points.
+    #     """
+    #     distances = self.distances  # Cumulative distances
+    #     radii = self.radii  # Corresponding radii
+    #     total_length = distances[-1]  # Total section length
+        
+    #     if total_length == 0:
+    #         return 0  # Avoid division by zero for zero-length sections
+
+    #     segment_lengths = np.diff(distances)  # Lengths of frusta segments
+    #     segment_diameters = 2 * (np.array(radii[:-1]) + np.array(radii[1:])) / 2  # Mean diameter per segment
+
+    #     # Length-weighted average
+    #     avg_diameter = np.sum(segment_diameters * segment_lengths) / total_length
+
+    #     return avg_diameter
+
     @property
     def diam(self):
         return self._ref.diam
+        
 
     @property
     def L(self):
@@ -316,76 +339,230 @@ class Section(Node):
 
 
     # PLOTTING METHODS
-
-    def plot(self, ax=None, plot_parent=True, color='C0', 
-             set_aspect=True, remove_ticks=False):
+   
+    def plot(self, ax=None, plot_parent=True, section_color=None, parent_color='gray', 
+             show_labels=True, aspect_equal=True):
         """
-        Plot the nodes in the section.
+        Plot section morphology in 3D projections (XZ, YZ, XY) and radii distribution.
+        
+        Parameters
+        ----------
+        ax : list or array of matplotlib.axes.Axes, optional
+            Four axes for plotting (XZ, YZ, XY, radii). If None, creates a new figure with axes.
+        plot_parent : bool, optional
+            Whether to include parent section in the visualization.
+        section_color : str or None, optional
+            Color for the current section. If None, assigns based on section domain.
+        parent_color : str, optional
+            Color for the parent section.
+        show_labels : bool, optional
+            Whether to show axis labels and titles.
+        aspect_equal : bool, optional
+            Whether to set aspect ratio to 'equal' for the projections.
+            
+        Returns
+        -------
+        ax : list of matplotlib.axes.Axes
+            The axes containing the plots.
         """
+        # Create figure and axes if not provided
         if ax is None:
-            fig, ax = plt.subplots(2, 2)
+            fig = plt.figure(figsize=(10, 8))
+            gs = GridSpec(2, 3, width_ratios=[1, 1, 1.2], figure=fig)
+            
+            # Create the three projection axes and one radius axis
+            ax_xz = fig.add_subplot(gs[0, 0])
+            ax_yz = fig.add_subplot(gs[0, 1])
+            ax_xy = fig.add_subplot(gs[1, 0])
+            ax_radii = fig.add_subplot(gs[1, 1:])
+            ax = [ax_xz, ax_yz, ax_xy, ax_radii]
+        else:
+            # Use provided axes
+            if len(ax) != 4:
+                # flatten 
+                ax = [ai for a in ax for ai in a]
+            ax_xz, ax_yz, ax_xy, ax_radii = ax
+        
+        # Determine section color based on domain if not provided
+        if section_color is None:
+            section_color = DOMAINS_TO_COLORS.get(self.domain, 'gray')
+        
+        # Extract coordinates
+        xs = np.array([p.x for p in self.points])
+        ys = np.array([p.y for p in self.points])
+        zs = np.array([p.z for p in self.points])
+        
+        # Plot section projections
+        self._plot_projection(ax_xz, xs, zs, 'X', 'Z', 'XZ Projection', 
+                              section_color, show_labels, aspect_equal)
+        self._plot_projection(ax_yz, ys, zs, 'Y', 'Z', 'YZ Projection', 
+                              section_color, show_labels, aspect_equal)
+        self._plot_projection(ax_xy, xs, ys, 'X', 'Y', 'XY Projection', 
+                              section_color, show_labels, aspect_equal)
+        
+        # Plot radius distribution
+        self._plot_radii_distribution(ax_radii, plot_parent, section_color, parent_color)
+        
+        # Plot parent section if requested
+        if plot_parent and self.parent:
+            # Only plot parent projections, radii are handled in _plot_radii_distribution
+            parent_xs = np.array([p.x for p in self.parent.points])
+            parent_ys = np.array([p.y for p in self.parent.points])
+            parent_zs = np.array([p.z for p in self.parent.points])
+            
+            self.parent._plot_projection(ax_xz, parent_xs, parent_zs, None, None, None, 
+                                         parent_color, False, aspect_equal)
+            self.parent._plot_projection(ax_yz, parent_ys, parent_zs, None, None, None, 
+                                         parent_color, False, aspect_equal)
+            self.parent._plot_projection(ax_xy, parent_xs, parent_ys, None, None, None, 
+                                         parent_color, False, aspect_equal)
+        
+        # Add overall title if we created the figure
+        if ax is not None and show_labels:
+            fig = ax_xz.get_figure()
+            fig.suptitle(f"Section {self.idx} ({self.domain})", fontsize=14)
+            fig.tight_layout()
+        
+        return ax
+    
+    def _plot_projection(self, ax, x_coords, y_coords, x_label, y_label, title, 
+                         color, show_labels, aspect_equal):
+        """Helper method to plot a 2D projection of the section."""
+        ax.plot(x_coords, y_coords, 'o-', color=color, markerfacecolor=color, 
+                markeredgecolor='black', markersize=4, linewidth=1.5)
+        
+        if show_labels:
+            if x_label:
+                ax.set_xlabel(x_label)
+            if y_label:
+                ax.set_ylabel(y_label)
+            if title:
+                ax.set_title(title)
+        
+        if aspect_equal:
+            ax.set_aspect('equal')
+    
+    def _plot_radii_distribution(self, ax, plot_parent, section_color, parent_color):
+        """Helper method to plot radius distribution along the section."""
+        # Get section length for normalization
+        section_length = self.distances[-1] - self.distances[0]
+        
+        # Normalize distances to start at 0 and end at section_length
+        normalized_distances = self.distances - self.distances[0]
+        
+        # Plot section radii
+        ax.plot(normalized_distances, self.radii, 'o-', color=section_color, 
+                label=f"{self.domain} ({self.idx})", linewidth=2)
+        
+        # Plot reference NEURON segments if available
+        if hasattr(self, '_ref') and self._ref:
+            # Calculate normalized segment centers
+            normalized_seg_centers = np.array(self.seg_centers) - self.distances[0]
+            
+            # Extract radii from segments
+            seg_radii = np.array([seg.diam / 2 for seg in self._ref])
+            
+            # Use the specified bar width calculation from original code
+            bar_width = [self._ref.L / self._ref.nseg] * self._ref.nseg
+            
+            # Plot segment radii as bars
+            ax.bar(normalized_seg_centers, seg_radii, width=bar_width, 
+                   alpha=0.5, color=section_color, edgecolor='white',
+                   label=f"{self.domain} segments")
+        
+        # Plot parent section if requested
+        if plot_parent and self.parent:
+            parent_length = self.parent.distances[-1] - self.parent.distances[0]
+            
+            # Normalize parent distances to end at 0 (connecting to child)
+            # Parent section goes from -parent_length to 0
+            normalized_parent_distances = self.parent.distances - self.parent.distances[-1]
+            
+            # Plot parent radii
+            ax.plot(normalized_parent_distances, self.parent.radii, 'o-', 
+                    color=parent_color, linewidth=2,
+                    label=f"Parent {self.parent.domain} ({self.parent.idx})")
+            
+            # Plot parent reference segments if available
+            if hasattr(self.parent, '_ref') and self.parent._ref:
+                # Normalize parent segment centers to the same scale
+                normalized_parent_seg_centers = (np.array(self.parent.seg_centers) - 
+                                                self.parent.distances[-1])
+                
+                # Extract parent segment radii
+                parent_seg_radii = np.array([seg.diam / 2 for seg in self.parent._ref])
+                
+                # Use the specified bar width calculation for parent
+                parent_bar_width = [self.parent._ref.L / self.parent._ref.nseg] * self.parent._ref.nseg
+                
+                # Plot parent segment radii as bars
+                ax.bar(normalized_parent_seg_centers, parent_seg_radii, 
+                       width=parent_bar_width, alpha=0.5, color=parent_color, 
+                       edgecolor='white', label=f"Parent segments")
+        
+        # Set plot labels and legend
+        ax.set_xlabel('Distance (µm)')
+        ax.set_ylabel('Radius (µm)')
+        ax.set_title('Radius Distribution')
+        
+        # Ensure y-axis starts at 0
+        ax.set_ylim(bottom=0)
+        
+        # Adjust x-axis to show the full section(s)
+        if plot_parent and self.parent:
+            parent_length = self.parent.distances[-1] - self.parent.distances[0]
+            ax.set_xlim(-parent_length * 1.05, section_length * 1.05)
+        else:
+            ax.set_xlim(-section_length * 0.05, section_length * 1.05)
+        
+        # Add legend if we have multiple data series
+        if ((hasattr(self, '_ref') and self._ref) or 
+            (plot_parent and self.parent)):
+            ax.legend(loc='best', frameon=True, framealpha=0.8)
 
-        marker_style = 'o-' if plot_parent else 'o-'
-        titles = ['XZ', 'YZ', 'XY']
-        coords = [(self.xs, self.zs), (self.ys, self.zs), (self.xs, self.ys)]
-        labels = [('X', 'Z'), ('Y', 'Z'), ('X', 'Y')]
-
-        for i, (coord, title, label) in enumerate(zip(coords, titles, labels)):
-            row, col = divmod(i, 2)
-            ax[row][col].plot(*coord, marker_style, color=color, fillstyle='full' if plot_parent else 'none')
-            ax[row][col].set_title(title)
-            ax[row][col].set_xlabel(label[0])
-            ax[row][col].set_ylabel(label[1])
-            if set_aspect:
-                ax[row][col].set_aspect('equal')
-            if remove_ticks:
-                ax[row][col].set_xticks([])
-                ax[row][col].set_yticks([])
-
-
-        self.plot_radii(ax[1][1], plot_parent=plot_parent)
-
-
-        if plot_parent:
-            plt.suptitle(f'{self.idx} - {self.domain}')
-            if self.parent:
-                self.parent.plot(ax=ax, plot_parent=False, color='C1')
-
-        plt.tight_layout()
-
-    def plot_radii(self, ax=None, plot_parent=True):
+    def plot_radii(self, ax=None, include_parent=False, section_color=None, parent_color='gray'):
         """
-        Plot the radii in the section.
+        Plot just the radius distribution for the section.
+        
+        Parameters
+        ----------
+        ax : matplotlib.axes.Axes, optional
+            Axes to plot on. If None, creates a new figure and axes.
+        include_parent : bool, optional
+            Whether to include parent section in the plot.
+        section_color : str or None, optional
+            Color for current section. If None, assigns based on section domain.
+        parent_color : str, optional
+            Color for parent section if included.
+            
+        Returns
+        -------
+        ax : matplotlib.axes.Axes
+            The axes containing the plot.
         """
+        # Create new figure and axes if not provided
         if ax is None:
             fig, ax = plt.subplots(figsize=(10, 5))
-
-        if plot_parent and self.parent:
-            child_to_parent_distance = np.sqrt(
-                (self.points[0].x - self.parent.points[-1].x)**2 +
-                (self.points[0].y - self.parent.points[-1].y)**2 +
-                (self.points[0].z - self.parent.points[-1].z)**2
-            )
-            distances = self.distances + child_to_parent_distance
-        else: 
-            distances = self.distances - self.distances[-1]
-
-        ax.plot(distances, self.radii, 'o-', label='SWC radii', fillstyle='full' if plot_parent else 'none')
-
-        if self._ref:
-            avg_rs = [seg.diam / 2 for seg in self._ref]
-            bar_width = [self._ref.L / self._ref.nseg] * self._ref.nseg
-            if plot_parent and self.parent:
-                seg_centers = np.array(self.seg_centers) + child_to_parent_distance
-            else: 
-                seg_centers = np.array(self.seg_centers) - self.distances[-1]
-
-            ax.bar(seg_centers, avg_rs, width=bar_width, edgecolor='white', color='C1', label='Segment radii')
-
-        ax.set_title('Radius')
-        ax.set_xlabel('Distance')
-        ax.set_ylabel('Radius')
-        ax.set_ylim(0, max(self.radii) + 0.1 * max(self.radii))
+        
+        # Determine section color based on domain if not provided
+        if section_color is None:
+            domain_colors = {
+                'soma': 'black',
+                'axon': 'red',
+                'dend': 'blue',
+                'apic': 'green'
+            }
+            section_color = domain_colors.get(self.domain, 'purple')
+        
+        # Plot radius distribution
+        self._plot_radii_distribution(ax, include_parent, section_color, parent_color)
+        
+        # Add title if creating a standalone plot
+        if ax.get_figure().get_axes()[0] == ax:  # If this is the only axes in the figure
+            ax.set_title(f"Radius Distribution - Section {self.idx} ({self.domain})")
+            plt.tight_layout()
+        
+        return ax
 
 
 class SectionTree(Tree):
@@ -586,16 +763,18 @@ class SectionTree(Tree):
 
             # Plot section points and lines
             if show_points:
-                ax.plot(xs, ys, '.', color=color, markersize=5)
+                ax.plot(xs, ys, '.', color=color, markersize=7, markeredgecolor='black')
             if show_lines:
-                ax.plot(xs, ys, color=color)
+                ax.plot(xs, ys, color=color, zorder=0)
 
             # Annotate section index if needed
             if annotate:
                 mean_x, mean_y = np.mean(xs), np.mean(ys)
                 ax.annotate(
                     f'{sec.idx}', (mean_x, mean_y), fontsize=8,
-                    bbox=dict(facecolor='white', edgecolor='black', boxstyle='round,pad=0.3')
+                    color='white',
+                    bbox=dict(facecolor='black', edgecolor='white', 
+                    boxstyle='round,pad=0.3')
                 )
 
         ax.set_xlabel(projection[0])

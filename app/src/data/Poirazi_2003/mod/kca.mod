@@ -85,7 +85,7 @@ INITIAL {
         m = m_inf
 }
 
-PROCEDURE rates(v(mV), cai(mM)) {  LOCAL car
+PROCEDURE rates(cai(mM)) {  LOCAL car
         
         tadj = 3 ^ ((celsius-22.0)/10) 
 
