@@ -59,14 +59,15 @@ from bokeh_utils import AdjustableSpinner
 from view import CellView
 view = CellView()
 
+PATH_TO_DATA = 'app/data/'
 
-import sys
-sys.path.append('app/src')
 import dendrotweaks as dd
-model = dd.Model(name='model', path_to_data='app/src/data/')
+
+model = dd.Model(PATH_TO_DATA + '/Test')
+print(model.list_morphologies())
 
 from presenter.presenter import Presenter
-p = Presenter(view=view, model=model)
+p = Presenter(path_to_data=PATH_TO_DATA, view=view, model=model)
 
 
 
@@ -546,7 +547,6 @@ panel_simulation = row(
                        view.figures['tau'], 
                        view.figures['tau_log'],
                        name='panel_simulation', width=1200)
-
 
 
 curdoc().add_root(panel_simulation)
@@ -1097,7 +1097,7 @@ curdoc().add_root(right_menu)
 view.DOM_elements['status'] = Div(text='Select a model to start', width=242, styles={"color":"gold"})
 
 # Loading a model from JSON
-available_models = p.model.path_manager.list_models()
+available_models = p.list_models()
 view.widgets.selectors['model'] = Select(value='Select a model to load',
                                 options=['Select a model to load'] + available_models,
                                 title='Model',
@@ -1140,9 +1140,6 @@ view.widgets.buttons['export_model'].on_event(ButtonClick, p.export_model_callba
 view.widgets.buttons['export_swc'] = Button(label='Export morphology', button_type='primary')
 view.widgets.buttons['export_swc'].on_event(ButtonClick, p.to_swc_callback)
 
-view.widgets.text['model_version'] = TextInput(value=p.model.name, title='Model version', placeholder='Enter model name', width=242)
-view.widgets.text['model_version'].on_change('value_input', p.update_model_version_callback)
-
 # File import
 view.widgets.file_input['all'] = FileInput(accept='.swc, .asc, .mod', name='file', visible=True, width=242, disabled=False)
 view.widgets.file_input['all'].on_change('filename', p.import_file_callback)
@@ -1160,7 +1157,6 @@ tab_io = TabPanel(title='Import/Export',
                     view.widgets.selectors['stimuli'],
                     Div(text='<hr style="width:18.5em; margin-top:3em">'), 
                     view.widgets.file_input['all'],
-                    view.widgets.text['model_version'],
                     view.widgets.buttons['export_swc'],
                     view.widgets.buttons['export_model'],
                     Div(text='<hr style="width:18.5em; margin-top:3em">')

@@ -40,9 +40,6 @@ from presenter.graph_panel import GraphMixin
 from presenter.simulation_panel import SimulationMixin
 from presenter.channel_panel import ChannelMixin
 
-from presenter.temp import TempMixin
-
-
 # TODO: Remove this when dd installed through pip
 import sys
 sys.path.append('app/src')
@@ -50,11 +47,12 @@ from dendrotweaks.membrane import StandardIonChannel
 
 class Presenter(IOMixin, NavigationMixin, 
                 CellMixin, SectionMixin, GraphMixin, SimulationMixin, ChannelMixin, 
-                ValidationMixin, TempMixin):
+                ValidationMixin):
 
-    def __init__(self, view, model):
+    def __init__(self, path_to_data, view=None, model=None):
         logger.debug('Initializing Presenter')
         super().__init__()
+        self.path_to_data = path_to_data
         self.view = view
         self.model = model
 
@@ -241,7 +239,7 @@ class Presenter(IOMixin, NavigationMixin,
         Selects the segments in the graph that belong to group sections.
         """
         # GET MODEL
-        group_segments = self.model.get_segments(group_name)
+        group_segments = self.model.get_segments([group_name])
         logger.debug(f'Group {group_name} segments: {len(group_segments)}')
         seg_ids = [seg.idx for seg in group_segments]
         logger.debug(f'Selected segments: {seg_ids}')

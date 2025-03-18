@@ -35,7 +35,7 @@ class SimulationMixin():
 
         duration = self.view.widgets.sliders['duration'].value
         start = time.time()
-        ts, vs, Is = self.model.simulator.run(duration)
+        self.model.simulator.run(duration)
         self.view.DOM_elements['runtime'].text = f'✅ Runtime: {time.time() - start:.2f} s'
     
         ### Update color of voltage and current traces ###
@@ -44,18 +44,21 @@ class SimulationMixin():
             factors = [str(seg.idx) for seg in self.recorded_segments]
             color_mapper = CategoricalColorMapper(palette=cc.glasbey_cool, factors=factors)
             self.view.figures['sim'].renderers[0].glyph.line_color = {'field': 'label', 'transform': color_mapper}
-            if Is:
-                self.view.figures['curr'].renderers[0].glyph.line_color = {'field': 'label', 'transform': color_mapper}
+            # if Is:
+            #     self.view.figures['curr'].renderers[0].glyph.line_color = {'field': 'label', 'transform': color_mapper}
         else:
             factors = []
 
         # ts = [t[::25] for t in ts]
         # vs = [v[::25] for v in vs]
         # Is = [I[::25] for I in Is]
+        vs = self.model.simulator.vs
+        t = self.model.simulator.t
+        ts = [t for _ in range(len(vs))]
         logger.debug(f'Show traces from segments: {self.recorded_segments}')
         vs = [self.model.simulator.recordings[seg].to_python() for seg in self.recorded_segments]
         self.view.sources['sim'].data = {'xs': ts[:len(vs)], 'ys': vs, 'label': factors}
-        self.view.sources['curr'].data = {'xs': ts[:len(Is)], 'ys': Is, 'label': factors}
+        # self.view.sources['curr'].data = {'xs': ts[:len(Is)], 'ys': Is, 'label': factors}
     
         
         self.update_spike_times_data()

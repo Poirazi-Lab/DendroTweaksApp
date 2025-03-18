@@ -17,6 +17,10 @@ class IOMixin():
         logger.debug('IOMixin init')
         super().__init__()
 
+    def list_models(self):
+        path_to_data = self.path_to_data
+        return [f for f in os.listdir(path_to_data) if os.path.isdir(os.path.join(path_to_data, f)) and f not in ['Default', 'Templates']]
+
     # =========================================================================
     # INPUT METHODS
     # =========================================================================
@@ -25,8 +29,10 @@ class IOMixin():
         """
         Callback for the selectors['model'] widget.
         """
-        self.model.name = new
-        self.view.widgets.selectors['model'].options = self.model.path_manager.list_models()
+        path_to_model = os.path.join(self.path_to_data, new)
+        self.model = dd.Model(path_to_model=path_to_model)
+
+        self.view.widgets.selectors['model'].options = self.list_models()
         morphologies = self.model.path_manager.list_morphologies()
         self.view.widgets.selectors['morphology'].options = ['Select a morphology'] + morphologies
         membrane = self.model.path_manager.list_membrane()
@@ -102,7 +108,7 @@ class IOMixin():
         """     
         self.load_morphology(new)
 
-        self.view.widgets.text['model_version'].value = self.model.name
+        
         self.view.DOM_elements['status'].text = 'Morphology loaded.'
 
 
@@ -270,8 +276,6 @@ class IOMixin():
         logger.info(f'Model exported.')
         
     def to_swc_callback(self, event):
-        version = self.view.widgets.text['model_version'].value
-        self.model.export_morphology(version=version)
         self.view.DOM_elements['status'].text = 'SWC file exported.'
 
 
