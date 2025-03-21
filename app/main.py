@@ -54,6 +54,7 @@ from utils import get_sec_name, get_sec_type, get_sec_id
 from collections import defaultdict
 
 from bokeh_utils import AdjustableSpinner
+import json
 
 
 from view import CellView
@@ -250,7 +251,8 @@ hover = HoverTool(callback=graph_hover_callback, tooltips=[("ID", "@index"),
                                                            ("Domain", "@domain"), 
                                                            ("Area", "@area"), 
                                                            ("Diam", "@diam"), 
-                                                           ("Absolute dist", "@absolute_distance"), 
+                                                           ("Sec diam", "@section_diam"),
+                                                           ("Distance", "@distance"), 
                                                            ("Domain dist", "@domain_distance"),
                                                            ("Length", "@length"),
                                                            ("cm", "@cm"),
@@ -695,8 +697,8 @@ def create_add_group_panel():
 
     view.widgets.multichoice['group_domains'].on_change('value', p.select_group_segments_callback)
 
-    view.widgets.selectors['select_by'] = Select(options=['absolute_distance', 'domain_distance', 'diam', 'section_diam'],
-                                            value='absolute_distance',
+    view.widgets.selectors['select_by'] = Select(options=['distance', 'domain_distance', 'diam', 'section_diam'],
+                                            value='distance',
                                             title='Select by',
                                             width=100)
 

@@ -56,9 +56,10 @@ class GraphMixin():
                             cm = seg._ref.cm,
                             Ra = seg._section._ref.Ra,
                             diam = seg.diam,
+                            section_diam = seg._section.diam,
                             area = seg.area,
                             subtree_size = seg.subtree_size,
-                            absolute_distance = seg.path_distance(),
+                            distance = seg.path_distance(),
                             domain_distance = seg.path_distance(within_domain=True),
                             length=seg._section.length,
                             recordings='None',
@@ -241,7 +242,7 @@ class GraphMixin():
         from the model.
         Also updates the colors of the graph based on the parameter values.
         """
-        logger.info(f'Updating graph parameter {param_name}')
+        logger.info(f'Updating graph parameter {param_name}!')
 
         if not param_name == 'voltage':
             self.view.figures['graph'].renderers[0].node_renderer.data_source.data[param_name] = \
@@ -282,14 +283,17 @@ class GraphMixin():
             return 0
         
         # NORMAL PARAMS
-        elif param_name is 'Ra':
+        elif param_name == 'Ra':
             return seg._section._ref.Ra
-        elif param_name is 'domain_distance':
+        elif param_name == 'domain_distance':
             return seg.path_distance(within_domain=True)
-        elif param_name is 'absolute_distance':
+        elif param_name == 'distance':
             return seg.path_distance()
+        elif param_name == 'section_diam':
+            return seg._section._ref.diam
         else:
             return seg.get_param_value(param_name)
+
 
 
     # --------------------------------------------------------------------------------------------

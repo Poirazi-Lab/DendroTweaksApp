@@ -157,7 +157,7 @@ class Presenter(IOMixin, NavigationMixin,
         max_val = self.view.widgets.spinners['condition_max'].value
 
         # GET MODEL
-        if select_by == 'absolute_distance':
+        if select_by == 'distance':
             condition = lambda seg: seg.domain in domains and \
                         (min_val is None or seg.path_distance() >= min_val) and \
                         (max_val is None or seg.path_distance() <= max_val)
