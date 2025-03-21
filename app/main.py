@@ -60,7 +60,7 @@ import json
 from view import CellView
 view = CellView()
 
-PATH_TO_DATA = 'app/data/'
+PATH_TO_DATA = 'app/static/data/'
 
 import dendrotweaks as dd
 
@@ -645,26 +645,6 @@ widgets_section_vars = column([
 # GROUP TAB
 # =================================================================
 
-def create_domain_panel():
-
-    view.widgets.multichoice['mechanisms'] = MultiChoice(title='Inserted mechanisms', 
-                                                        options=['Leak'], 
-                                                        value=[],
-                                                        width=300)
-
-    view.widgets.multichoice['mechanisms'].on_change('value', p.update_group_mechanisms_callback)
-
-    insert_mech_panel = column([
-        view.widgets.selectors['domain'],
-        view.widgets.multichoice['mechanisms'],
-    ])
-
-    domain_panel = column([
-        insert_mech_panel
-    ])
-
-    return domain_panel
-
 
 def create_add_group_panel():
 
@@ -757,8 +737,6 @@ def create_select_group_panel():
 def create_groups_tab():
 
     panels = column([
-        # create_domain_panel(),
-        # Div(text='<hr style="width:30em; margin-top:3em">'),
         create_add_group_panel(),
         Div(text='<hr style="width:30em; margin-top:3em">'), 
         create_select_group_panel(),
@@ -775,6 +753,20 @@ def create_groups_tab():
 
 def create_mechanisms_tab():
 
+    view.widgets.multichoice['mechanisms'] = MultiChoice(title='Added mechanisms',
+                                                        options=[],
+                                                        value=[],
+                                                        visible=True,
+                                                        width=300)
+    view.widgets.multichoice['mechanisms'].on_change('value', p.add_mechanism_callback)
+
+    view.widgets.switches['recompile'] = Switch(active=False, 
+                                                name='recompile')
+    view.widgets.buttons['add_default_mechanisms'] = Button(label='Add default mechanisms', button_type='primary', width=100)
+    view.widgets.buttons['add_default_mechanisms'].on_event(ButtonClick, p.add_default_mechanisms_callback)
+
+                    
+
     view.widgets.selectors['mechanism_to_insert'] = Select(
         title='Mechanism',
         options=['Leak'],
@@ -783,7 +775,7 @@ def create_mechanisms_tab():
 
     view.widgets.selectors['mechanism_to_insert'].on_change('value', p.select_mechanism_to_insert_callback)
 
-    view.widgets.multichoice['domains'] = MultiChoice(title='Domains:',
+    view.widgets.multichoice['domains'] = MultiChoice(title='Domains where to insert:',
                                                               options=[],
                                                               value=[],
                                                               visible=True,
@@ -792,6 +784,9 @@ def create_mechanisms_tab():
     view.widgets.multichoice['domains'].on_change('value', p.insert_mechanism_callback)
 
     insert_panel = column([
+        row(view.widgets.switches['recompile'], Div(text='Recompile mod files')),
+        view.widgets.multichoice['mechanisms'],
+        view.widgets.buttons['add_default_mechanisms'],
         view.widgets.selectors['mechanism_to_insert'],
         view.widgets.multichoice['domains'],
     ])
@@ -1059,6 +1054,7 @@ view.widgets.tabs['section'] = Tabs(tabs=[tab_section_vars,
                                           create_distribution_tab(),
                                           tab_recordings,
                                           tab_stimuli])
+# view.widgets.tabs['section'].disabled = True                                          
 
 view.widgets.tabs['section'].on_change('active', p.switch_tab_callback)
 
@@ -1108,39 +1104,42 @@ view.widgets.selectors['model'] = Select(value='Select a model to load',
 view.widgets.selectors['model'].on_change('value', p.select_model_callback)
 view.widgets.selectors['model'].description = 'Select a neuronal model to load. To select another model, reload the page.'
 
-view.widgets.selectors['morphology'] = Select(value='Select a morphology',
+view.widgets.selectors['morphology'] = Select(value='Select morphology',
                                 options=['Select a morphology'],
                                 title='Morphology',
                                 width=242)
 
 view.widgets.selectors['morphology'].on_change('value', p.load_morphology_callback)
 
-view.widgets.selectors['membrane'] = Select(value='Select a membrane',
-                                options=['Select a membrane'],
-                                title='Membrane',
+view.widgets.selectors['membrane'] = Select(value='Select membrane config.',
+                                options=['Select membrane config.'],
+                                title='Membrane config.',
                                 width=242)
 
 view.widgets.selectors['membrane'].on_change('value', p.load_membrane_callback)
 
-view.widgets.selectors['stimuli'] = Select(value='Select an input',
-                                options=['Select an input'],
-                                title='Input',
+view.widgets.selectors['stimuli'] = Select(value='Select stimuli',
+                                options=['Select stimuli'],
+                                title='Stimuli',
                                 width=242)
 
 view.widgets.selectors['stimuli'].on_change('value', p.load_stimuli_callback)
 
-view.widgets.switches['recompile'] = Switch(active=False, 
-                                            name='recompile')
-view.widgets.buttons['load_mod'] = Button(label='Load mechanisms', button_type='primary', width=100)
-view.widgets.buttons['load_mod'].on_event(ButtonClick, p.load_mod_callback)
 
 
 # Export model
-view.widgets.buttons['export_model'] = Button(label='Export model', button_type='primary', disabled=False, width=242)
-view.widgets.buttons['export_model'].on_event(ButtonClick, p.export_model_callback)
+view.widgets.text['file_name'] = TextInput(value='', title='File name', width=242)
 
-view.widgets.buttons['export_swc'] = Button(label='Export morphology', button_type='primary')
-view.widgets.buttons['export_swc'].on_event(ButtonClick, p.to_swc_callback)
+view.widgets.buttons['export_model'] = Dropdown(label='Export model',
+                                                width=242,
+                                                button_type='default',
+                                                menu=[('Export morphology', 'morphology'), 
+                                                      ('Export membrane config', 'membrane'),
+                                                      ('Export stimuli', 'stimuli')])
+view.widgets.buttons['export_model'].on_event("menu_item_click", p.export_model_callback)
+
+view.widgets.buttons['download_model'] = Button(label='Download model as .zip', button_type='primary', width=242)
+view.widgets.buttons['download_model'].on_event(ButtonClick, p.download_model_callback)
 
 # File import
 view.widgets.file_input['all'] = FileInput(accept='.swc, .asc, .mod', name='file', visible=True, width=242, disabled=False)
@@ -1148,19 +1147,18 @@ view.widgets.file_input['all'].on_change('filename', p.import_file_callback)
 view.widgets.file_input['all'].on_change('value', p.import_file_callback)
 
 
-tab_io = TabPanel(title='Import/Export', 
+tab_io = TabPanel(title='I/O', 
                 child=column(
                     view.DOM_elements['status'],
                     view.widgets.selectors['model'],
                     view.widgets.selectors['morphology'],
-                    row(view.widgets.switches['recompile'], Div(text='Recompile mod files')),
-                    view.widgets.buttons['load_mod'],
                     view.widgets.selectors['membrane'],
                     view.widgets.selectors['stimuli'],
                     Div(text='<hr style="width:18.5em; margin-top:3em">'), 
-                    view.widgets.file_input['all'],
-                    view.widgets.buttons['export_swc'],
+                    # view.widgets.file_input['all'],
+                    view.widgets.text['file_name'],
                     view.widgets.buttons['export_model'],
+                    view.widgets.buttons['download_model'],
                     Div(text='<hr style="width:18.5em; margin-top:3em">')
                     )
                 )

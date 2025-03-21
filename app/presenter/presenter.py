@@ -105,12 +105,18 @@ class Presenter(IOMixin, NavigationMixin,
 
     def _update_multichoice_domain_widget(self):
         mech_name = self.view.widgets.selectors['mechanism_to_insert'].value
-        available_domains = list(self.model.domains.keys())
+        available_domains = list(self.model.domains.keys()) if self.model.sec_tree else []
         mech_domains = list(self.model.mechs_to_domains.get(mech_name, []))
         logger.debug(f'Available domains: {available_domains}, mech domains: {mech_domains}')
         with remove_callbacks(self.view.widgets.multichoice['domains']):
             self.view.widgets.multichoice['domains'].options = list(self.model.domains.keys())
             self.view.widgets.multichoice['domains'].value = mech_domains
+
+    def _update_multichoice_mechanisms_widget(self):
+        added_mechs = list(self.model.mechanisms)
+        with remove_callbacks(self.view.widgets.multichoice['mechanisms']):
+            self.view.widgets.multichoice['mechanisms'].options = added_mechs
+            self.view.widgets.multichoice['mechanisms'].value = added_mechs
 
     # =================================================================
     # GROUPS TAB

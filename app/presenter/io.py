@@ -39,7 +39,15 @@ class IOMixin():
         self.view.widgets.selectors['membrane'].options = ['Select a membrane'] + membrane
         stimuli = self.model.path_manager.list_stimuli()
         self.view.widgets.selectors['stimuli'].options = ['Select a stimuli'] + stimuli
+
+        self.view.widgets.multichoice['mechanisms'].options = self.model.list_mechanisms()
         
+        self.view.widgets.text['file_name'].value = self.model.name + '_modified'
+        self.view.widgets.selectors['model'].disabled = True
+        self.view.widgets.tabs['section'].disabled = True
+
+        self._attach_download_js()
+
         self.view.DOM_elements['status'].text = 'Select morphology, membrane mechanisms, and stimuli.'
         
 
@@ -60,6 +68,7 @@ class IOMixin():
 
         self._update_mechs_to_insert_widget()
         self._update_multichoice_domain_widget()
+        self._update_multichoice_mechanisms_widget()
 
         self.view.DOM_elements['status'].text = 'Membrane loaded.'
         
@@ -72,7 +81,7 @@ class IOMixin():
         self.update_simulation_widgets()
 
         # MISC --------------------------------------------------------
-        self._attach_download_js() # needed to update the names of the files to download
+        # self._attach_download_js() # needed to update the names of the files to download
 
         self.recorded_segments = [seg for seg in self.model.recordings]
         self.update_voltage()
@@ -109,6 +118,7 @@ class IOMixin():
         self.load_morphology(new)
 
         
+        self.view.widgets.tabs['section'].disabled = False
         self.view.DOM_elements['status'].text = 'Morphology loaded.'
 
 
@@ -140,6 +150,7 @@ class IOMixin():
         # self._attach_download_js()
 
         self.view.widgets.multichoice['domains'].options = list(self.model.domains.keys())
+        
 
 
     def _init_cell_widgets(self):
@@ -170,30 +181,43 @@ class IOMixin():
     # MECHANISMS
     # =========================================================================
 
-
-    def load_mod_callback(self, event):
+    def add_mechanism_callback(self, attr, old, new):
         """
-        Creates the cell and the renderers.
-        """     
-        self.load_mod()  
-
-        self.view.widgets.buttons['load_mod'].disabled = True
-        self.view.DOM_elements['status'].text = 'Mechanisms loaded.'
-
-    @log
-    def load_mod(self):
         """
-        Creates Mechanism object from an archive of mod files 
-        and adds them to model.mechanisms.
-        """
+        recompile = self.view.widgets.switches['recompile'].active
 
-        self.model.add_default_mechanisms(recompile=False)
-        self.model.add_mechanisms('mod', recompile=self.view.widgets.switches['recompile'].active)
-        # TODO: Verify that the mod files are loaded successfully
+        mechs_to_add = list(set(new).difference(set(old)))
+        mechs_to_remove = list(set(old).difference(set(new)))
+        
+        if mechs_to_add:
+            mech_name = mechs_to_add[0]
+            self.model.add_mechanism(mech_name, load=True, recompile=recompile)
+            self.view.DOM_elements['status'].text = f'Mechanism {mech_name} loaded.'
+        if mechs_to_remove:
+            self.view.DOM_elements['status'].text = 'Cannot remove mechanisms from NEURON.'
+            with remove_callbacks(self.view.widgets.multichoice['mechanisms']):
+                self.view.widgets.multichoice['mechanisms'].value = old
+            return
 
         self._update_mechs_to_insert_widget()
         self._update_multichoice_domain_widget()
-        logger.debug(f'Loaded mechanisms: {self.model.mechanisms.keys()}')
+
+        
+
+
+    def add_default_mechanisms_callback(self, event):
+        """
+        Creates the cell and the renderers.
+        """     
+        recompile = self.view.widgets.switches['recompile'].active
+        self.model.add_default_mechanisms(recompile=recompile)
+
+        self.view.widgets.buttons['add_default_mechanisms'].disabled = True
+
+        self._update_mechs_to_insert_widget()
+        self._update_multichoice_domain_widget()
+
+        self.view.DOM_elements['status'].text = 'Default mechanisms loaded.'
 
 
     # -------------------------------------------------------------------------
@@ -272,12 +296,27 @@ class IOMixin():
 
     @log
     def export_model_callback(self, event):        
-        self.model.export_data()
-        logger.info(f'Model exported.')
-        
-    def to_swc_callback(self, event):
-        self.view.DOM_elements['status'].text = 'SWC file exported.'
+        file_name = self.view.widgets.text['file_name'].value
+        if file_name == '':
+            self.view.DOM_elements['status'].text = 'Please enter a file name.'
+            return
+        if file_name == self.model.name:
+            self.view.DOM_elements['status'].text = f'Cannot overwrite the original {event.item}.'
+            return
+        if event.item == 'morphology':
+            self.model.export_morphology(file_name)
+            self.view.DOM_elements['status'].text = 'Morphology exported.'
+        elif event.item == 'membrane':
+            self.model.export_membrane(file_name)
+            self.view.DOM_elements['status'].text = 'Membrane configuration exported.'
+        elif event.item == 'stimuli':
+            self.model.export_stimuli(file_name)
+            self.view.DOM_elements['status'].text = 'Stimuli exported.'
 
+    def download_model_callback(self, event):
+        """
+        """
+        self.view.DOM_elements['status'].text = 'Model downloaded.'
 
     # MISC
 
@@ -292,7 +331,7 @@ class IOMixin():
             js_code = f"""
             var filename = '{file_path}';
             var xhr = new XMLHttpRequest();
-            xhr.open('GET', filename, true);
+            xhr.open('GET', '/' + filename, true);  // Ensure the path is absolute
             xhr.responseType = 'blob';
             xhr.onload = function(e) {{
                 if (this.status == 200) {{
@@ -301,15 +340,18 @@ class IOMixin():
                     link.href = window.URL.createObjectURL(blob);
                     link.download = filename.split('/').pop();
                     link.click();
+                }} else {{
+                    console.error('Failed to download file:', filename);
                 }}
             }};
+            xhr.onerror = function() {{
+                console.error('Error occurred while trying to download:', filename);
+            }};
             xhr.send();
-            console.log('Downloaded', filename);
+            console.log('Download initiated for', filename);
             """
             
             button.js_on_event('button_click', CustomJS(code=js_code))
 
-        attach_download_js(self.view.widgets.buttons['export_model'], 
-                           f'app/static/data/{self.model.name}_ephys.json')
-        attach_download_js(self.view.widgets.buttons['export_swc'], 
-                           f'app/static/data/{self.model.name}_3PS.swc')
+        attach_download_js(self.view.widgets.buttons['download_model'], 
+                           f'app/static/data/{self.model.name}/{self.model.name}.zip')
