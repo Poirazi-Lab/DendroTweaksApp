@@ -1,0 +1,17 @@
+{
+    "theme": "dark", 
+    "palettes": {
+        "parameters": {"name": "canopy", "vmin": 0, "vmax": "max"},
+        "domains": {"name": "default"},
+        "traces": {"name": "default"}
+    },
+    "graph_layout": "twopi",
+    "file_processing": {
+        "path_to_data": "app/static/data",
+        "recompile_MOD_files": true
+    },
+    "simulation": {
+        "run_on_interaction": true,
+        "simulator": "NEURON"
+    }
+}
