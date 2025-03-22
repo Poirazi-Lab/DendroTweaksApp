@@ -18,22 +18,8 @@ import numpy as np
 from matplotlib.colors import LinearSegmentedColormap
 import colorcet as cc
 
+from dendrotweaks.utils import get_domain_color
 
-DOMAINS_TO_COLORS = {
-    'soma': '#E69F00',       
-    'apic': '#0072B2',       
-    'dend': '#019E73',       
-    'basal': '#31A354',      
-    'axon': '#F0E442',       
-    'trunk': '#56B4E9',
-    'tuft': '#A55194',
-    'oblique': '#8C564B',
-    'perisomatic': '#D55E00',
-    'custom': '#D62728',
-    'custom2': '#E377C2',
-    'undefined': '#7F7F7F',
-    'glia': 'gray',
-}
 
 CANOPY_COLORS = {
     'negative':[
@@ -85,14 +71,12 @@ canopy = _insert_gray(canopy, 'gray')
 
 
 DARK_PALETTES = {
-    'domain': list(DOMAINS_TO_COLORS.values()),
     'trace': ["#fd7f6f", "#7eb0d5", "#b2e061", "#bd7ebe", "#ffb55a", "#ffee65", "#beb9db", "#fdcce5", "#8bd3c7"],
     'continuous': cc.glasbey_dark,
     'params': canopy,
 }
 
 LIGHT_PALETTES = {
-    'domain': list(DOMAINS_TO_COLORS.values()),
     'trace': ["#fd7f6f", "#7eb0d5", "#b2e061", "#bd7ebe", "#ffb55a", "#ffee65", "#beb9db", "#fdcce5", "#8bd3c7"],
     'continuous': cc.glasbey_light,
     'params': canopy,
@@ -107,7 +91,6 @@ class Theme:
         self.background_fill_color = background_fill_color
         self.palettes = palettes
         self.frozen = frozen
-        self.domains_to_colors = DOMAINS_TO_COLORS
 
 THEMES = {
     'dark_minimal': Theme('dark_minimal', '#f064ae', 'white', '#15191C', '#20262B', 'white', DARK_PALETTES),
@@ -176,7 +159,7 @@ class CellView():
         self._add_theme_callbacks()
         self._file_content = None
         self._filename = None
-        self.available_domains = list(DOMAINS_TO_COLORS.keys())
+        self.get_domain_color = get_domain_color
 
 
     def set_theme(self, theme_name):

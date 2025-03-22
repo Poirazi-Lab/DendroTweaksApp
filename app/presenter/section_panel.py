@@ -182,13 +182,11 @@ class SectionMixin():
         if not self.selected_secs: 
             logger.debug('No section selected')
             return
-        if self.model.cell.segments: del self.model.cell.segments
         selected_secs = self.selected_secs
-        self.view.widgets.selectors['section'].value = ''
         for sec in selected_secs:
             sec.nseg = new
-        self.create_graph_renderer()
-        self.add_lasso_callback()
+            
+        self._create_graph_renderer()
         self.update_section_panel()
 
     def length_callback(self, attr, old, new):

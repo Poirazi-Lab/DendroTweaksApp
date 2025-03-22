@@ -57,10 +57,13 @@ class IOMixin():
         Callback for the selectors['membrane'] widget.
         """
         self.model.load_membrane(new, recompile=self.view.widgets.switches['recompile'].active)
+
         d_lambda = self.model.d_lambda
         with remove_callbacks(self.view.widgets.sliders['d_lambda']):
             self.view.widgets.sliders['d_lambda'].value = d_lambda 
         self.build_seg_tree(d_lambda)
+        self._update_group_selector_widget()
+        self._update_graph_param_widget()
 
         # TODO: Maybe the following is not necessary, see above
         for param_name in self.model.params:
@@ -69,6 +72,8 @@ class IOMixin():
         self._update_mechs_to_insert_widget()
         self._update_multichoice_domain_widget()
         self._update_multichoice_mechanisms_widget()
+
+        self.view.widgets.buttons['add_default_mechanisms'].disabled = True
 
         self.view.DOM_elements['status'].text = 'Membrane loaded.'
         
@@ -140,10 +145,10 @@ class IOMixin():
         # self._update_mechs_to_insert_widget()
      
         
-        # SEGMENTATION --------------------------------------------
-        d_lambda = self.view.widgets.sliders['d_lambda'].value
-        self.build_seg_tree(d_lambda)
-        # self._update_group_selector_widget()
+        # GRAPH ------ --------------------------------------------
+        self._create_graph_renderer()
+        self._update_group_selector_widget()
+        self._update_graph_param_widget()
         
         
         # MISC ---------------------------------------------------
@@ -243,11 +248,14 @@ class IOMixin():
         logger.info(f'Total nseg: {len(self.model.seg_tree)}')
 
         self._create_graph_renderer()
+        
 
+    def _update_group_selector_widget(self):
         with remove_callbacks(self.view.widgets.selectors['group']):
             self.view.widgets.selectors['group'].options = list(self.model.groups.keys())
             self.view.widgets.selectors['group'].value = 'all'
 
+    def _update_graph_param_widget(self):
         with remove_callbacks(self.view.widgets.selectors['graph_param']):
             self.view.widgets.selectors['graph_param'].value = 'domain'
 

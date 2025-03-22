@@ -633,7 +633,7 @@ class Presenter(IOMixin, NavigationMixin,
 
         data = {'x': [seg.path_distance() for seg in selected_segs],
                 'y': [seg.get_param_value(param_name) for seg in selected_segs],
-                'color': [self.view.theme.domains_to_colors[seg.domain] for seg in selected_segs],
+                'color': [self.view.get_domain_color(seg.domain) for seg in selected_segs],
                 'label': [str(seg.idx) for seg in selected_segs]}
 
         self.view.sources['distribution'].data = data
@@ -646,7 +646,7 @@ class Presenter(IOMixin, NavigationMixin,
 
         data = {'x': [seg.path_distance() for seg in selected_segs],
                 'y': [seg.diam for seg in selected_segs],
-                'color': [self.view.theme.domains_to_colors[seg.domain] for seg in selected_segs],
+                'color': [self.view.get_domain_color(seg.domain) for seg in selected_segs],
                 'label': [str(seg.idx) for seg in selected_segs]}
 
         self.view.sources['diam_distribution'].data = data
@@ -965,60 +965,23 @@ class Presenter(IOMixin, NavigationMixin,
 
     @log
     def reduce_subtree_callback(self, event):
-        pass
-    #     sec = self.selected_sec
-    #     parent = sec.parentseg().sec
-    #     logger.debug(sec.parentseg())
-    #     segments_to_remove = [seg for sec in sec.subtree() for seg in sec]
-    #     # Remove the segments from channel groups
-    #     for ch in self.model.channels.values():
-    #         groups_to_remove = []
-    #         for group in ch.groups:
-    #             group.segments = [seg for seg in group.segments if seg not in segments_to_remove]
-    #             logger.debug(f'Group {group.name} has {len(group.segments)} segments')
-    #             if len(group.segments) == 0:
-    #                 groups_to_remove.append(group)
-    #         for group in groups_to_remove:
-    #             ch.remove_group(group)
-    #     # Remove the segments from capacitance the same way
-    #     groups_to_remove = []
-    #     for group in self.model.capacitance.groups:
-    #         group.segments = [seg for seg in group.segments if seg not in segments_to_remove]
-    #         if len(group.segments) == 0:
-    #             groups_to_remove.append(group)
-    #     for group in groups_to_remove:
-    #         self.model.capacitance.remove_group(group)
+        
+        sec = next(iter(self.selected_secs))
+        self.model.reduce_subtree(sec)
 
+        self._create_cell_renderer()
+        self._init_cell_widgets()
 
-    #     self.model.reduce_subtree(sec)
-
-    #     # Handle the out of group segments
-    #     out_of_group_segments = [seg for seg in sec]
-    #     for seg in out_of_group_segments:
-    #         # Create a group for each segment with a default constant distribution
-    #         for ch in self.model.channels.values():
-    #             ch.add_group([seg], f'gbar_{ch.suffix}', Distribution('constant', value=getattr(seg, f'gbar_{ch.suffix}')))
-            
-    #     # Assumes that the capacitance is the same for all segments in the subtree
-    #     self.model.capacitance.add_group(out_of_group_segments, 'cm', Distribution('constant', value=out_of_group_segments[0].cm))
-
-    #     self.selected_secs = set()
-    #     self.selected_segs = []
-    #     self.points = self.get_points()
-    #     if hasattr(self.model.cell, 'segments'):
-    #         del self.model.cell.segments
-    #     if hasattr(self.model.cell, 'sections'):
-    #         del self.model.cell.sections
-
-        # self.model.add_capacitance()        
-
-        # self.create_cell_renderer()
-        # self.create_graph_renderer()
-        # self.add_lasso_callback()
-
-        # self.view.widgets.selectors['section'].options=[''] + list(self.model.cell.sections.keys())
-        # logger.debug(f"Section selector value: {self.view.widgets.selectors['section'].value}")
-
+        self.view.widgets.multichoice['domains'].options = list(self.model.domains.keys())
+        
+        self._create_graph_renderer()
+        self._update_group_selector_widget()
+        self._update_graph_param_widget()
+        
+        self._update_multichoice_mechanisms_widget()
+        self._update_mechs_to_insert_widget()
+        self._update_multichoice_domain_widget()
+        
 
     # =================================================================
     # MISC

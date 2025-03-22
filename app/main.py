@@ -70,7 +70,13 @@ print(model.list_morphologies())
 from presenter.presenter import Presenter
 p = Presenter(path_to_data=PATH_TO_DATA, view=view, model=model)
 
-
+AVAILABLE_DOMAINS = [
+    'soma', 'perisomatic', 
+    'axon', 
+    'dend', 'basal', 
+    'apic', 'trunk', 'tuft', 'oblique', 
+    'custom_0', 'custom_1', 'custom_2', 'custom_3'
+]
 
 # =================================================================
 # FIGURES
@@ -580,7 +586,7 @@ view.widgets.selectors['domain'] = Select(options=[],
 view.widgets.selectors['domain'].on_change('value', p.select_domain_segments_callback)
 
 view.widgets.selectors['set_domain'] = Select(title='Set domain',
-                                        options=view.available_domains,
+                                        options=AVAILABLE_DOMAINS,
                                         value='soma',
                                         width=150)
 

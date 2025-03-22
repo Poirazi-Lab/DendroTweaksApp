@@ -46,7 +46,6 @@ class GraphMixin():
         # self.G = neuron_to_seg_graph(self.model.cell)
         self.G = nx.Graph()
         total_nseg = len(self.model.seg_tree)
-        domains_to_colors = {k: v for k, v in zip(self.view.available_domains, self.view.theme.palettes['domain'])}
         for seg in self.model.seg_tree:
             radius = int(200/np.sqrt(total_nseg)) if seg._section.domain == 'soma' else int(150/np.sqrt(total_nseg))
             self.G.add_node(seg.idx, 
@@ -65,7 +64,7 @@ class GraphMixin():
                             recordings='None',
                             iclamps=0,
                             radius=radius*0.0015,
-                            color=domains_to_colors.get(seg._section.domain, 'gray'),
+                            color=self.view.get_domain_color(seg._section.domain),
                             )
             if seg.parent is not None:
                 self.G.add_edge(seg.parent.idx, seg.idx)
@@ -171,8 +170,8 @@ class GraphMixin():
         graph_renderer.node_renderer.glyph.line_alpha = 0.3  # 0.3
         graph_renderer.node_renderer.glyph.line_width = 0.5
         graph_renderer.node_renderer.glyph.fill_alpha = 1
-        color_mapper = CategoricalColorMapper(palette=self.view.theme.palettes['domain'],
-                                              factors=self.view.available_domains)
+        color_mapper = CategoricalColorMapper(palette=[self.view.get_domain_color(domain) for domain in self.model.domains],
+                                              factors=[domain for domain in self.model.domains])
         graph_renderer.node_renderer.glyph.fill_color = {'field': 'domain', 'transform': color_mapper}
 
         graph_renderer.edge_renderer.glyph = MultiLine(line_color=self.view.theme.graph_line,
@@ -192,8 +191,8 @@ class GraphMixin():
         # graph_renderer.node_renderer.selection_glyph.line_alpha = 0.8
         graph_renderer.node_renderer.selection_glyph.fill_alpha = 1  # 1
         graph_renderer.node_renderer.selection_glyph.line_width = 1
-        color_mapper = CategoricalColorMapper(palette=self.view.theme.palettes['domain'],
-                                              factors=self.view.available_domains)
+        color_mapper = CategoricalColorMapper(palette=[self.view.get_domain_color(domain) for domain in self.model.domains],
+                                              factors=[domain for domain in self.model.domains])
         graph_renderer.node_renderer.selection_glyph.fill_color = {'field': 'domain', 'transform': color_mapper}
         # graph_renderer.node_renderer.selection_glyph.line_width = int(G.nodes[1]['size']) * 0.1
         # graph_renderer.node_renderer.selection_glyph.line_color = view.theme.graph_line
@@ -208,8 +207,8 @@ class GraphMixin():
         # graph_renderer.node_renderer.nonselection_glyph = graph_renderer.node_renderer.glyph
         # graph_renderer.node_renderer.nonselection_glyph = graph_renderer.node_renderer.glyph
         graph_renderer.node_renderer.nonselection_glyph.fill_alpha = 0.3
-        color_mapper = CategoricalColorMapper(palette=self.view.theme.palettes['domain'],
-                                              factors=self.view.available_domains)
+        color_mapper = CategoricalColorMapper(palette=[self.view.get_domain_color(domain) for domain in self.model.domains],
+                                              factors=[domain for domain in self.model.domains])
         graph_renderer.node_renderer.nonselection_glyph.fill_color = {'field': 'domain', 'transform': color_mapper}
         graph_renderer.node_renderer.nonselection_glyph.line_width = 0.3
         # graph_renderer.node_renderer.nonselection_glyph.fill_alpha = 0.5 #0.7
@@ -325,8 +324,8 @@ class GraphMixin():
 
         if param == 'domain': 
             color_mapper = CategoricalColorMapper(
-                palette=self.view.theme.palettes['domain'], 
-                factors=self.view.available_domains
+                palette=[self.view.get_domain_color(domain) for domain in self.model.domains], 
+                factors=[domain for domain in self.model.domains]
             )
             self.view.widgets.sliders['graph_param_high'].visible = False
         elif param == 'recordings':
