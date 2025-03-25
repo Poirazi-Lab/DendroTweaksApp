@@ -78,6 +78,15 @@ AVAILABLE_DOMAINS = [
     'custom_0', 'custom_1', 'custom_2', 'custom_3'
 ]
 
+view.DOM_elements['status'] = Div(text='Select a model to start', width=242, styles={"color":"gold"})
+
+def add_message(widget, message, callback_type='on_change'):
+    callback = CustomJS(args=dict(status=view.DOM_elements['status']), 
+                        code=f"status.text = '{message}';")
+    if callback_type == 'on_change':
+        widget.js_on_change('value', callback)
+    elif callback_type == 'on_click':
+        widget.js_on_click(callback)
 # =================================================================
 # FIGURES
 # =================================================================
@@ -604,6 +613,7 @@ view.widgets.sliders['n_seg'].on_change('value_throttled', p.nseg_callback)
 
 view.widgets.buttons['reduce'] = Button(label='Reduce subtree', button_type='warning')
 
+add_message(view.widgets.buttons['reduce'], 'Reducing the subtree. Please wait...', callback_type='on_click')
 view.widgets.buttons['reduce'].on_event(ButtonClick, p.reduce_subtree_callback)
 view.widgets.buttons['reduce'].on_event(ButtonClick, p.voltage_callback_on_event)
 
@@ -906,6 +916,8 @@ def create_distribution_tab():
                                                 styles={"padding-top":"20px"}
                                                 )
 
+    add_message(view.widgets.buttons['standardize'], 'Standardizing. Please wait...', callback_type='on_click')
+    
     view.widgets.buttons['standardize'].on_event(ButtonClick, p.standardize_callback)
     view.widgets.buttons['standardize'].on_event(ButtonClick, p.voltage_callback_on_event)
     
@@ -1096,7 +1108,6 @@ curdoc().add_root(right_menu)
 ## I/O TAB
 # ------------------------------------------------------------------------------------
 
-view.DOM_elements['status'] = Div(text='Select a model to start', width=242, styles={"color":"gold"})
 
 # Loading a model from JSON
 available_models = p.list_models()
@@ -1113,6 +1124,7 @@ view.widgets.selectors['morphology'] = Select(value='Select morphology',
                                 title='Morphology',
                                 width=242)
 
+add_message(view.widgets.selectors['morphology'], 'Loading morphology. Please wait...', callback_type='on_change')
 view.widgets.selectors['morphology'].on_change('value', p.load_morphology_callback)
 
 view.widgets.selectors['membrane'] = Select(value='Select membrane config.',
@@ -1120,6 +1132,7 @@ view.widgets.selectors['membrane'] = Select(value='Select membrane config.',
                                 title='Membrane config.',
                                 width=242)
 
+add_message(view.widgets.selectors['membrane'], 'Loading membrane config. Please wait...', callback_type='on_change')
 view.widgets.selectors['membrane'].on_change('value', p.load_membrane_callback)
 
 view.widgets.selectors['stimuli'] = Select(value='Select stimuli',
@@ -1127,6 +1140,7 @@ view.widgets.selectors['stimuli'] = Select(value='Select stimuli',
                                 title='Stimuli',
                                 width=242)
 
+add_message(view.widgets.selectors['stimuli'], 'Loading stimuli. Please wait...', callback_type='on_change')
 view.widgets.selectors['stimuli'].on_change('value', p.load_stimuli_callback)
 
 
@@ -1153,7 +1167,7 @@ view.widgets.file_input['all'].on_change('value', p.import_file_callback)
 
 tab_io = TabPanel(title='I/O', 
                 child=column(
-                    view.DOM_elements['status'],
+                    # view.DOM_elements['status'],
                     view.widgets.selectors['model'],
                     view.widgets.selectors['morphology'],
                     view.widgets.selectors['membrane'],
@@ -1287,7 +1301,10 @@ view.widgets.tabs['simulation'] = Tabs(tabs=[tab_io,
 #                    view.widgets.sliders['v_init'],
 #                    name='left_menu')
 
-left_menu = column(view.widgets.tabs['simulation'], name='left_menu')
+left_menu = column([
+    view.DOM_elements['status'],
+    view.widgets.tabs['simulation']
+    ], name='left_menu')
 
 curdoc().add_root(left_menu)
 

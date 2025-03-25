@@ -935,6 +935,8 @@ class Presenter(IOMixin, NavigationMixin,
         self._update_multichoice_mechanisms_widget()
         self._update_mechs_to_insert_widget()
         self._update_multichoice_domain_widget()
+
+        self.view.DOM_elements['status'].text = f'Subtree has been reduced.'
         
 
     # =================================================================

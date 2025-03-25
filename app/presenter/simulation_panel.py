@@ -36,7 +36,8 @@ class SimulationMixin():
         duration = self.view.widgets.sliders['duration'].value
         start = time.time()
         self.model.simulator.run(duration)
-        self.view.DOM_elements['runtime'].text = f'✅ Runtime: {time.time() - start:.2f} s'
+        runtime = time.time() - start
+        self.view.DOM_elements['runtime'].text = f'✅ Runtime: {runtime} s'
     
         ### Update color of voltage and current traces ###
         if self.model.simulator.recordings.keys():
@@ -62,6 +63,8 @@ class SimulationMixin():
     
         
         self.update_spike_times_data()
+
+        self.view.DOM_elements['status'].text = f'✅ Simulation finished in {runtime:.2f} s'
     
     @log
     @timeit
