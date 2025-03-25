@@ -271,9 +271,13 @@ class GraphMixin():
 
         elif param_name in ['AMPA', 'NMDA', 'GABAa', 'AMPA_NMDA']:
             relevant_populations = self.model.populations[param_name]
+            if not relevant_populations:
+                return np.nan
+            if not any(seg in pop.segments for pop in relevant_populations.values()):
+                return np.nan
             return sum(pop.n_per_seg[seg] 
                        for pop in relevant_populations.values()
-                       if seg in pop.segments) if relevant_populations else np.nan
+                       if seg in pop.segments)
 
         elif param_name == 'weights':
             if self.model.synapses.get(seg) is not None:
@@ -345,13 +349,13 @@ class GraphMixin():
             if param == 'iclamps':
                 color_mapper = LinearColorMapper(palette=['red'], high=1, nan_color=self.view.theme.graph_fill)
             elif param == 'AMPA':
-                color_mapper = LinearColorMapper(palette=cc.kr[50:-50], low=0, nan_color=self.view.theme.graph_fill)
+                color_mapper = LinearColorMapper(palette=['gray'] + cc.kr[50:-30], low=0, nan_color=self.view.theme.graph_fill)
             elif param == 'GABAa':
-                color_mapper = LinearColorMapper(palette=cc.kb[50:-50], low=0, nan_color=self.view.theme.graph_fill)
+                color_mapper = LinearColorMapper(palette=['gray'] + cc.kb[50:-30], low=0, nan_color=self.view.theme.graph_fill)
             elif param == 'NMDA':
-                color_mapper = LinearColorMapper(palette=cc.kg[50:-50], low=0, nan_color=self.view.theme.graph_fill)
+                color_mapper = LinearColorMapper(palette=['gray'] + cc.kg[50:-30], low=0, nan_color=self.view.theme.graph_fill)
             elif param == 'AMPA_NMDA':
-                color_mapper = LinearColorMapper(palette=cc.fire[50:-50], low=0, nan_color=self.view.theme.graph_fill)
+                color_mapper = LinearColorMapper(palette=['gray'] + cc.fire[50:-30], low=0, nan_color=self.view.theme.graph_fill)
             elif param == 'weights':
                 low = min(graph_renderer.node_renderer.data_source.data[param])
                 high = max(graph_renderer.node_renderer.data_source.data[param])

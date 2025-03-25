@@ -777,12 +777,12 @@ class Presenter(IOMixin, NavigationMixin,
 
         def make_kinetic_param_slider_callback(slider_title):
             def slider_callback(attr, old, new):
-                population.update_kinetic_params({slider_title: new})
+                population.update_kinetic_params(**{slider_title: new})
             return slider_callback
 
         def make_input_param_slider_callback(slider_title):
             def slider_callback(attr, old, new):
-                population.update_input_params({slider_title: new})
+                population.update_input_params(**{slider_title: new})
             return slider_callback
 
         
