@@ -339,6 +339,13 @@ class Presenter(IOMixin, NavigationMixin,
         """
         mech_name = new
         self._select_mechanism(mech_name)
+        if self.view.widgets.switches['show_kinetics'].active:
+            self.view.sources['inf_orig'].data = {'xs': [], 'ys': [], 'label': [], 'color': []}
+            self.view.sources['tau_orig'].data = {'xs': [], 'ys': [], 'label': [], 'color': []}
+            self.view.sources['inf_fit'].data = {'xs': [], 'ys': [], 'label': [], 'color': []}
+            self.view.sources['tau_fit'].data = {'xs': [], 'ys': [], 'label': [], 'color': []}
+            self._toggle_kinetic_plots(mech_name)
+            
 
 
     @log
@@ -346,8 +353,6 @@ class Presenter(IOMixin, NavigationMixin,
         logger.debug(f'Selected mechanism: {mech_name}')
 
         self._update_param_selector_widget(mech_name)
-        if self.view.widgets.switches['show_kinetics'].active:
-            self._toggle_kinetic_plots(mech_name)
 
 
     @log
@@ -378,9 +383,11 @@ class Presenter(IOMixin, NavigationMixin,
         # 3. Enable/ disable the standardize button
         if isinstance(mech, StandardIonChannel):
             ch_type = 'fit'
+            factor = 2
             self.view.widgets.buttons['standardize'].visible = False
         else:
             ch_type = 'orig'
+            factor = 1
             self.view.widgets.buttons['standardize'].visible = True
 
         # 4. Adjust the x-axis scale based on the independent variable
@@ -398,43 +405,27 @@ class Presenter(IOMixin, NavigationMixin,
         # 5. Get the data for the mechanism
         data = mech.get_data()
         logger.debug(f'Updating kinetic plots for {mech.name} with data: {data}')
-        xs = data.pop('x').tolist()
+        x = data.pop('x').tolist()
 
-        inf_values = []
-        inf_labels = []
-        tau_values = []
-        tau_labels = []
 
-        for state_name, state in data.items():
-            print(state_name)
-            inf_values.append(state['inf'].tolist())
-            inf_labels.append(f'{state_name}Inf')
-            tau_values.append(state['tau'].tolist())
-            tau_labels.append(f'{state_name}Tau')
-
-        color_inf = [Bokeh[8][2*i+1] for i in range(len(inf_labels))]
-        color_tau = [Bokeh[8][2*i+1] for i in range(len(tau_labels))]
+        inf_data = {'xs': [x for _ in range(len(data))],
+                    'ys': [state['inf'] for state in data.values()],
+                    'label': [state for state in data.keys()],
+                    'color': [Bokeh[8][2*i+factor] for i in range(len(data))]
+        }
+        tau_data = {'xs': [x for _ in range(len(data))],
+                    'ys': [state['tau'] for state in data.values()],
+                    'label': [state for state in data.keys()],
+                    'color': [Bokeh[8][2*i+factor] for i in range(len(data))]
+        }
 
         # 6. Update the figures
-        self.view.sources[f'inf_{ch_type}'].data = {
-            'xs': [xs] * len(inf_values), 
-            'ys': inf_values, 
-            'label': inf_labels,
-            'color': color_inf
-        }
-
-        self.view.sources[f'tau_{ch_type}'].data = {
-            'xs': [xs] * len(tau_values), 
-            'ys': tau_values, 
-            'label': tau_labels,
-            'color': color_tau
-        }
+        self.view.sources[f'inf_{ch_type}'].data = inf_data
+        self.view.sources[f'tau_{ch_type}'].data = tau_data
 
         self.view.figures[f'inf'].title.text = f'Steady state, {mech.name}'
         self.view.figures[f'tau'].title.text = f'Time constant, {mech.name}'
 
-        self.view.sources['inf_fit'].data = {'xs': [], 'ys': [], 'label': [], 'color': []}
-        self.view.sources['tau_fit'].data = {'xs': [], 'ys': [], 'label': [], 'color': []}
     
     # -----------------------------------------------------------------
     # PARAMETERS
@@ -637,6 +628,7 @@ class Presenter(IOMixin, NavigationMixin,
                 'label': [str(seg.idx) for seg in selected_segs]}
 
         self.view.sources['distribution'].data = data
+        
 
     @log
     def _update_diam_distribution_plot(self):
@@ -898,45 +890,7 @@ class Presenter(IOMixin, NavigationMixin,
             self.view.figures['graph'].renderers[0].node_renderer.data_source.selected.indices = seg_ids
         else:
             self.view.figures['graph'].renderers[0].node_renderer.data_source.selected.indices = []
-
-
-    # =================================================================
-    # CHANNELS TAB
-    # =================================================================
-
-
-    @property
-    def selected_channel(self):
-        if self.view.widgets.selectors['channel'].visible:
-            ch_name = self.view.widgets.selectors['channel'].value
-            return self.model.channels.get(ch_name, None)
-        else:
-            suffix = self.selected_param_name.replace('gbar_', '')
-            chs = [ch for ch in self.model.channels.values() if ch.suffix == suffix]
-            return chs[0] if chs else self.model.capacitance
-
-    @log
-    def select_channel_callback(self, attr, old, new):
-        self.toggle_channel_panel()
-
-    def toggle_channel_panel(self):
-        logger.debug(f'Toggling channel')
-        ch = self.selected_channel
-        panel = self.create_channel_panel(ch)
-        # delete previous widgets:
-        for child in self.view.DOM_elements['channel_menu'].children[-1].children:
-            logger.debug(f'Child {child}')
-            if hasattr(child, 'children'):
-                for ch in child.children:
-                    logger.debug(f'Ch {ch}')
-                    if hasattr(ch, 'children'):
-                        for c in ch.children:
-                            logger.debug(f'C {c}')
-                            c.destroy()
-                    ch.destroy()
-            child.destroy()
-        self.view.DOM_elements['channel_menu'].children[-1] = panel
-        
+       
 
     # =================================================================
     # MORPHOLOGY TAB
@@ -977,7 +931,7 @@ class Presenter(IOMixin, NavigationMixin,
         self._create_graph_renderer()
         self._update_group_selector_widget()
         self._update_graph_param_widget()
-        
+
         self._update_multichoice_mechanisms_widget()
         self._update_mechs_to_insert_widget()
         self._update_multichoice_domain_widget()
@@ -1015,6 +969,8 @@ class Presenter(IOMixin, NavigationMixin,
                 self.view.widgets.selectors['mechanism'].options = list(self.model.mechs_to_params.keys())
                 self.view.widgets.selectors['mechanism'].value = 'Independent'
             self._select_mechanism('Independent')
+            if self.view.widgets.switches['show_kinetics'].active:
+                self._toggle_kinetic_plots('Independent')
         elif new == 4:
             logger.debug('Switching to Recordings tab')
             self.view.widgets.selectors['graph_param'].options = {**self.view.params}

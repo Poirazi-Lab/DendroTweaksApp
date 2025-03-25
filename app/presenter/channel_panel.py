@@ -93,91 +93,43 @@ class ChannelMixin():
         self.view.sources['inf_fit'].data = {'xs': [], 'ys': [], 'label': [], 'color': []}
         self.view.sources['tau_fit'].data = {'xs': [], 'ys': [], 'label': [], 'color': []}
 
-    @log
-    def create_channel_panel(self, ch):
-        
-        if not 'standard' in ch.name:
-            button = Button(label=f'Standardize {ch.name}')
-            button.on_click(self.standardize_callback)
-            button.on_click(self.voltage_callback_on_event)
-
-        if hasattr(ch, 'cai'):
-            button.disabled = True
-
-        def make_slider_callback(slider_title):
-            def slider_callback(attr, old, new):
-                
-                setattr(ch, slider_title, new)
-                # ch.update(np.linspace(-100, 100, 1000))
-
-                for seg in self.model.cell.segments.values():
-                    setattr(seg, f'{slider_title}_{ch.suffix}', new)
-
-            return slider_callback
-
-        sliders = []
-        for var in ch.range_params:
-            if var == 'gbar': continue
-            logger.info(f'Creating slider for {var}')
-            slider = AdjustableSpinner(title=var, value=getattr(ch, var))
-            slider.on_change('value_throttled', make_slider_callback(slider.title))
-            slider.on_change('value_throttled', self.states_callback)
-            slider.on_change('value_throttled', self.voltage_callback_on_change)
-            sliders.append(slider.get_widget())
-            
-        ch.sliders = sliders
-        
-        if sliders:
-            if 'standard' in ch.name:
-                return column([*sliders])
-            else:
-                return column([button, *sliders])
-        else:
-           return column([button, Div(text='No sliders to display. Try declaring some RANGE variables in the mod file (requires reuploading the file).<br>Note that recording current from the channel is possible only if <code>i</code> is declared as a RANGE variable in the mod file.')])
-                   
-        # return panel
+    
 
 
     @log
     def standardize_callback(self, event):
-        custom_ch = self.selected_channel
-        copy_of_groups = custom_ch.to_dict()["groups"]
 
-        self.model.standardize_channel(custom_ch)
-        logger.info(f'Standardized {custom_ch.name}')
+        ch_name = self.view.widgets.selectors['mechanism'].value
         
-        # logger.debug(f'Avaliable groups before: {len(custom_ch.to_dict()["groups"])}')
-        self.view.widgets.multichoice['mod_files'].value = [v for v in self.view.widgets.multichoice['mod_files'].value if v != custom_ch.name]
-        # logger.debug(f'Avaliable groups after: {len(custom_ch.to_dict()["groups"])}')
-        self.view.widgets.multichoice['mod_files_std'].value = self.view.widgets.multichoice['mod_files_std'].value + [f'{custom_ch.name}_standard']
-        
+        self.model.standardize_channel(ch_name)
 
-        # open the new chanel's tab
-        # with remove_callbacks(self.view.widgets.selectors['channel']):
-        self.view.widgets.selectors['channel'].value = f'{custom_ch.name}_standard'
+        self._update_multichoice_domain_widget()
+        self._update_mechs_to_insert_widget()
+        self._update_multichoice_mechanisms_widget()
         
-
-        standard_ch = self.model.channels[f'{custom_ch.name}_standard']
-        v_range = np.linspace(-100, 100, 1000)
-        standard_ch.update(v_range)
+        self._update_mechanism_selector_widget()
+        self._select_mechanism(f'std{ch_name}')
+        self.view.widgets.buttons['standardize'].visible = False
+        
+        standard_ch = self.model.mechanisms[f'std{ch_name}']
+        data = standard_ch.get_data()
+        x = data.pop('x')
+        # data is of the form {'state_var': {'inf': [], 'tau': []}}
 
         
-        for group in copy_of_groups:
-            segments = [self.model.cell.segments[seg_name] for seg_name in group['seg_names']]
-            standard_ch.add_group(segments, 
-                                  param_name=f"{group['param_name']}s", 
-                                  distribution=Distribution.from_dict(group['distribution']))
-        self._update_graph_param(f"{group['param_name']}s")
-
-        inf_fit_data = {'xs': [v_range.tolist() for _ in range(len(standard_ch.state_vars))],
-                        'ys': [getattr(standard_ch, standard_ch.state_vars[state]['inf']).tolist() for state in standard_ch.state_vars],
-                        'label': list(standard_ch.state_vars.keys()),
-                        'color': [Bokeh[8][2*i+2] for i in range(len(standard_ch.state_vars))]
+        inf_fit_data = {'xs': [x for _ in range(len(data))],
+                        'ys': [state['inf'] for state in data.values()],
+                        'label': [state for state in data.keys()],
+                        'color': [Bokeh[8][2*i+2] for i in range(len(data))]
                         }
-        tau_fit_data = {'xs': [v_range.tolist() for _ in range(len(standard_ch.state_vars))],
-                        'ys': [getattr(standard_ch, standard_ch.state_vars[state]['tau']).tolist() for state in standard_ch.state_vars],
-                        'color': [Bokeh[8][2*i+2] for i in range(len(standard_ch.state_vars))],
-                        'label': list(standard_ch.state_vars.keys())} 
+        tau_fit_data = {'xs': [x for _ in range(len(data))],
+                        'ys': [state['tau'] for state in data.values()],
+                        'label': [state for state in data.keys()],
+                        'color': [Bokeh[8][2*i+2] for i in range(len(data))]
+                        }
+                        
 
         self.view.sources['inf_fit'].data = inf_fit_data
         self.view.sources['tau_fit'].data = tau_fit_data
+
+        self.view.DOM_elements['status'].text = f'{ch_name} channel standardized.'

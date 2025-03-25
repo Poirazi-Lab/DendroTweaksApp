@@ -900,13 +900,14 @@ def create_distribution_tab():
     view.widgets.selectors['mechanism'].on_change('value', p.select_mechanism_callback)
 
     view.widgets.buttons['standardize'] = Button(label='Standardize',
-                                                button_type='primary',
+                                                button_type='warning',
                                                 visible=False,
                                                 width=100,
                                                 styles={"padding-top":"20px"}
                                                 )
 
     view.widgets.buttons['standardize'].on_event(ButtonClick, p.standardize_callback)
+    view.widgets.buttons['standardize'].on_event(ButtonClick, p.voltage_callback_on_event)
     
     view.widgets.selectors['param'] = Select(title='Parameter',
                                             options=[],
@@ -1065,9 +1066,6 @@ view.widgets.tabs['section'] = Tabs(tabs=[tab_section_vars,
 view.widgets.tabs['section'].on_change('active', p.switch_tab_callback)
 
 
-view.widgets.selectors['channel'] = Select(title='Channel', options=[], visible=False)
-view.widgets.selectors['channel'].on_change('value', p.select_channel_callback)
-view.widgets.selectors['channel'].on_change('value', p.states_callback)
 view.widgets.buttons['record_current'] = Button(label='Record current', button_type='primary', visible=False)
 view.widgets.buttons['record_current'].on_event(ButtonClick, p.record_current_callback)
 
