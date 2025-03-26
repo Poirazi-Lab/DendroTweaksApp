@@ -97,12 +97,12 @@ class SimulationMixin():
         self.view.DOM_elements['runtime'].text = f'Runtime: ⏳'
     
     def voltage_callback_on_change(self, attr, old, new):
-        if self.view.widgets.switches['real_time'].active:
+        if self.view.widgets.switches['run_on_interaction'].active:
             self.update_voltage()
 
    
     def voltage_callback_on_event(self, event):
-        if self.view.widgets.switches['real_time'].active:
+        if self.view.widgets.switches['run_on_interaction'].active:
             self.update_voltage()
 
     def voltage_callback_on_click(self, event):

@@ -77,15 +77,15 @@
 });
 
 
-    document.addEventListener('DOMContentLoaded', function() {
-        console.log('DOMContentLoaded');
-        const themeSelect = Bokeh.documents[0].get_model_by_name('theme_select');
-        console.log(themeSelect);
-        themeSelect.connect(themeSelect.properties.value.change, function() {
-            document.body.className = themeSelect.value;
-            console.log('Theme changed to: ' + themeSelect.value);
-        });
-    });
+    // document.addEventListener('DOMContentLoaded', function() {
+    //     console.log('DOMContentLoaded');
+    //     const themeSelect = Bokeh.documents[0].get_model_by_name('theme_select');
+    //     console.log(themeSelect);
+    //     themeSelect.connect(themeSelect.properties.value.change, function() {
+    //         document.body.className = themeSelect.value;
+    //         console.log('Theme changed to: ' + themeSelect.value);
+    //     });
+    // });
 
 
 </script>

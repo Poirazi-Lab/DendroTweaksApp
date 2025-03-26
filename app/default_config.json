@@ -1,0 +1,27 @@
+{
+    "appearence": {
+        "theme": "dark_minimal", 
+        "palettes": {
+            "parameters": {"name": "canopy", "vmin": 0, "vmax": "max"},
+            "domains": {"name": "default"},
+            "traces": {"name": "default"}
+        },
+        "plots": {
+            "voltage_plot": {
+                "ymin": -100,
+                "ymax": 50
+            },
+            "graph_plot": {
+                "layout":"twopi"
+            }
+        }
+    },
+    "data": {
+        "path_to_data": "app/static/data",
+        "recompile_MOD_files": true
+    },
+    "simulation": {
+        "simulator": "NEURON",
+        "run_on_interaction": true
+    }
+}

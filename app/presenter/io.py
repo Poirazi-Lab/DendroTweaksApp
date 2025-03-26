@@ -30,7 +30,7 @@ class IOMixin():
         Callback for the selectors['model'] widget.
         """
         path_to_model = os.path.join(self.path_to_data, new)
-        self.model = dd.Model(path_to_model=path_to_model)
+        self.model = dd.Model(path_to_model=path_to_model, simulator_name=self._simulator)
 
         self.view.widgets.selectors['model'].options = self.list_models()
         morphologies = self.model.path_manager.list_morphologies()
@@ -44,7 +44,6 @@ class IOMixin():
         
         self.view.widgets.text['file_name'].value = self.model.name + '_modified'
         self.view.widgets.selectors['model'].disabled = True
-        self.view.widgets.tabs['section'].disabled = True
 
         self._attach_download_js()
 
@@ -137,7 +136,6 @@ class IOMixin():
         self.load_morphology(new)
 
         
-        self.view.widgets.tabs['section'].disabled = False
         self.update_status_message('Morphology loaded.', status='success')
         
 

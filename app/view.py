@@ -90,9 +90,9 @@ DARK_STATUS_COLORS = {
 }
 
 LIGHT_STATUS_COLORS = {
-    'info': 'brown',
+    'info': '#85643a',
     'success': 'green',
-    'warning': 'orange',
+    'warning': 'brown',
     'error': 'red',
 }
 
@@ -118,7 +118,7 @@ class Theme:
 
 THEMES = {
     'dark_minimal': Theme('dark_minimal', '#f064ae', DARK_GRAPH_COLORS, '#20262B', DARK_STATUS_COLORS, 'white', DARK_PALETTES),
-    'light_minimal': Theme('contrast', '#f064ae', LIGHT_GRAPH_COLORS, 'white', LIGHT_STATUS_COLORS, 'black', LIGHT_PALETTES),
+    'light_minimal': Theme('light_minimal', '#f064ae', LIGHT_GRAPH_COLORS, 'white', LIGHT_STATUS_COLORS, 'black', LIGHT_PALETTES),
 }
 
 
@@ -172,8 +172,8 @@ class WidgetManager():
 
 class CellView():
     
-    def __init__(self):
-        self.theme = THEMES['dark_minimal']
+    def __init__(self, theme='dark_minimal'):
+        self.theme = THEMES[theme]
         self.figures = {}
         self.sources = {}
         self.renderers = {}
@@ -197,10 +197,10 @@ class CellView():
 
         if len(self.figures['graph'].renderers):
             renderer = self.figures['graph'].renderers[0]
-            renderer.node_renderer.glyph.line_color = self.theme.graph_line
-            renderer.node_renderer.selection_glyph.line_color = self.theme.graph_line
-            renderer.node_renderer.nonselection_glyph.line_color = self.theme.graph_line
-            renderer.edge_renderer.glyph.line_color = self.theme.graph_line
+            renderer.node_renderer.glyph.line_color = self.theme.graph_colors['edge']
+            renderer.node_renderer.selection_glyph.line_color = self.theme.graph_colors['edge']
+            renderer.node_renderer.nonselection_glyph.line_color = self.theme.graph_colors['edge']
+            renderer.edge_renderer.glyph.line_color = self.theme.graph_colors['edge']
 
         self.DOM_elements['status'].styles = {'color': self.theme.status_colors['info']}
         self.DOM_elements['status'].text = f'<span style="color: {self.theme.status_colors["success"]}">Theme changed to: {theme_name}</span>'

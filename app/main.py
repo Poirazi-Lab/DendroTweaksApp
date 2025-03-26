@@ -56,19 +56,11 @@ from collections import defaultdict
 from bokeh_utils import AdjustableSpinner
 import json
 
-
-from view import CellView
-view = CellView()
-
-PATH_TO_DATA = 'app/static/data/'
-
 import dendrotweaks as dd
 
-model = dd.Model(PATH_TO_DATA + '/Test')
-print(model.list_morphologies())
-
-from presenter.presenter import Presenter
-p = Presenter(path_to_data=PATH_TO_DATA, view=view, model=model)
+# =================================================================
+# CONSTANTS
+# =================================================================
 
 AVAILABLE_DOMAINS = [
     'soma', 'perisomatic', 
@@ -77,6 +69,34 @@ AVAILABLE_DOMAINS = [
     'apic', 'trunk', 'tuft', 'oblique', 
     'custom_0', 'custom_1', 'custom_2', 'custom_3'
 ]
+
+# =================================================================
+# LOAD CONFIG
+# =================================================================
+with open('app/default_config.json', 'r') as f:
+    default_config = json.load(f)
+
+with open('app/user_config.json', 'r') as f:
+    user_config = json.load(f)
+
+default_config.update(**user_config)
+config = default_config
+
+theme_name = config['appearance']['theme']
+path_to_data = config['data']['path_to_data']
+simulator = config['simulation']['simulator']
+
+
+# =================================================================
+# INITIALIZATION
+# =================================================================
+
+from view import CellView
+view = CellView(theme=theme_name)
+
+from presenter.presenter import Presenter
+p = Presenter(path_to_data=path_to_data, view=view, model=None, simulator=simulator)
+
 
 view.DOM_elements['status'] = Div(text='Select a model to start', width=242, styles={'color': view.theme.status_colors['info']})
 
@@ -90,6 +110,7 @@ def add_message(widget, message, callback_type='on_change', status='info'):
         widget.js_on_change('value', callback)
     elif callback_type == 'on_click':
         widget.js_on_click(callback)
+
 
 # =================================================================
 # FIGURES
@@ -780,7 +801,7 @@ def create_mechanisms_tab():
                                                         width=300)
     view.widgets.multichoice['mechanisms'].on_change('value', p.add_mechanism_callback)
 
-    view.widgets.switches['recompile'] = Switch(active=False, 
+    view.widgets.switches['recompile'] = Switch(active=config['data']['recompile_MOD_files'], 
                                                 name='recompile')
     view.widgets.buttons['add_default_mechanisms'] = Button(label='Add default mechanisms', button_type='primary', width=100)
     view.widgets.buttons['add_default_mechanisms'].on_event(ButtonClick, p.add_default_mechanisms_callback)
@@ -1072,15 +1093,14 @@ tab_recordings = TabPanel(title='Recordings',
 tab_stimuli = TabPanel(title='Stimuli', 
                        child=widgets_stimuli)
 
-view.widgets.tabs['section'] = Tabs(tabs=[tab_section_vars, 
+view.widgets.tabs['right_menu'] = Tabs(tabs=[tab_section_vars, 
                                           create_mechanisms_tab(),
                                           create_groups_tab(),
                                           create_distribution_tab(),
                                           tab_recordings,
-                                          tab_stimuli])
-# view.widgets.tabs['section'].disabled = True                                          
+                                          tab_stimuli])                                         
 
-view.widgets.tabs['section'].on_change('active', p.switch_tab_callback)
+view.widgets.tabs['right_menu'].on_change('active', p.switch_tab_callback)
 
 
 view.widgets.buttons['record_current'] = Button(label='Record current', button_type='primary', visible=False)
@@ -1090,7 +1110,7 @@ view.DOM_elements['channel_panel'] = column([Div(text='Select a channel')], widt
 
 
 right_menu = column(
-    view.widgets.tabs['section'], 
+    view.widgets.tabs['right_menu'], 
     align='center',
     name='right_menu_section'
 )
@@ -1212,10 +1232,10 @@ view.widgets.sliders['temperature'].on_change('value_throttled', p.voltage_callb
 view.widgets.sliders['v_init'].on_change('value_throttled', p.voltage_callback_on_change)
 
 
-view.widgets.switches['real_time'] = Switch(active=True)
+view.widgets.switches['run_on_interaction'] = Switch(active=config['simulation']['run_on_interaction'])
 def enable_run_button(attr, old, new):
     view.widgets.buttons['run'].disabled = new
-view.widgets.switches['real_time'].on_change('active', enable_run_button)
+view.widgets.switches['run_on_interaction'].on_change('active', enable_run_button)
 
 tab_sim = TabPanel(
     title='Simulation',
@@ -1227,7 +1247,7 @@ tab_sim = TabPanel(
         view.widgets.sliders['dt'],
         view.widgets.sliders['temperature'],
         view.widgets.sliders['v_init'],
-        row(view.widgets.switches['real_time'], Div(text='Real-time update')),
+        row(view.widgets.switches['run_on_interaction'], Div(text='Run on interaction')),
         view.widgets.buttons['run'],
         view.DOM_elements['runtime'],
         )
@@ -1365,7 +1385,11 @@ def update_background_color(attr, old, new):
 view.widgets.color_pickers['color_picker'].on_change('color', update_background_color)
 
 view.widgets.sliders['voltage_plot_x_range'] = RangeSlider(start=0, end=1000, value=(0, 300), step=1, title='Voltage plot x range', width=200)
-view.widgets.sliders['voltage_plot_y_range'] = RangeSlider(start=-200, end=200, value=(-100, 100), step=1, title='Voltage plot y range', width=200)
+view.widgets.sliders['voltage_plot_y_range'] = RangeSlider(
+    start=-200, 
+    end=200, 
+    value=(config['appearance']['plots']['voltage_plot']['ymin'], config['appearance']['plots']['voltage_plot']['ymax']),
+    step=1, title='Voltage plot y range', width=200)
 
 view.widgets.switches['enable_record_from_all'] = Switch(active=False, name='enable_record_from_all')
 
@@ -1389,8 +1413,18 @@ view.widgets.sliders['voltage_plot_y_range'].on_change('value_throttled', update
 
 view.widgets.selectors['graph_layout'] = Select(title='Graph layout', 
     options=['kamada-kawai', 'dot', 'neato', 'twopi'], 
-    value='twopi',
+    value=config['appearance']['plots']['graph_plot']['layout'],
 )
+
+# Simulation
+
+view.widgets.selectors['simulator'] = Select(title='Simulator',
+                                            value=config['simulation']['simulator'],
+                                            options=['NEURON', 'Jaxley'],
+                                            width=200)
+
+view.widgets.buttons['save_preferences'] = Button(label='Save preferences', button_type='warning', width=200)
+view.widgets.buttons['save_preferences'].on_event(ButtonClick, p.save_preferences_callback)
 
 settings_panel = column(view.widgets.selectors['theme'],
                         # view.widgets.selectors['output_format'],
@@ -1400,6 +1434,8 @@ settings_panel = column(view.widgets.selectors['theme'],
                         view.widgets.sliders['voltage_plot_y_range'],
                         row(view.widgets.switches['enable_record_from_all'], Div(text='Enable record from all')),
                         view.widgets.selectors['graph_layout'],
+                        view.widgets.selectors['simulator'],
+                        view.widgets.buttons['save_preferences'],
                         view.DOM_elements['controller'],
                         name='settings_panel')
 
@@ -1428,10 +1464,17 @@ for name, fig in view.figures.items():
 # for slider in view.widgets.sliders.values():
 #     slider.background = None
 
-curdoc().theme = 'dark_minimal'
+# ====================================================================================
+# ON LOAD
+# ====================================================================================
 
+curdoc().theme = theme_name
+curdoc().on_event('document_ready', lambda event: setattr(view.widgets.selectors['theme'], 'value', theme_name))
+curdoc().on_event('document_ready', lambda event: setattr(view.widgets.tabs['right_menu'], 'disabled', True))
 
-
+curdoc().js_on_event('document_ready', CustomJS(code="""
+    console.log('Document ready');
+"""))
 
 # custom_js = CustomJS(args=dict(), code="""
 #     console.log('Before');

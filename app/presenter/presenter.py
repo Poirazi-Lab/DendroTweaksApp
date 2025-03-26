@@ -49,12 +49,13 @@ class Presenter(IOMixin, NavigationMixin,
                 CellMixin, SectionMixin, GraphMixin, SimulationMixin, ChannelMixin, 
                 ValidationMixin):
 
-    def __init__(self, path_to_data, view=None, model=None):
+    def __init__(self, path_to_data, view=None, model=None, simulator='NEURON'):
         logger.debug('Initializing Presenter')
         super().__init__()
         self.path_to_data = path_to_data
         self.view = view
         self.model = model
+        self._simulator = simulator
 
     @property
     def selected_mech_name(self):
@@ -951,8 +952,8 @@ class Presenter(IOMixin, NavigationMixin,
 
     def switch_tab_callback(self, attr, old, new):
     
-        if self.model.sec_tree is None:
-            return
+        if self.model is None: return
+        if self.model.sec_tree is None: return
         if new == 0:
             logger.debug('Switching to Morphology tab')
             self.view.widgets.selectors['graph_param'].options = {**self.view.params}
@@ -1015,3 +1016,37 @@ class Presenter(IOMixin, NavigationMixin,
         self.view.DOM_elements['status_bar'].text = output
         with remove_callbacks(self.view.DOM_elements['console']):
             self.view.DOM_elements['console'].value = ''
+
+
+    def save_preferences_callback(self, event):
+
+        import json
+        
+        preferences = {
+            "appearance": {
+                "theme": self.view.theme.name,
+                "plots": {
+                    "graph_plot":{
+                        "layout": self.view.widgets.selectors['graph_layout'].value,
+                    },
+                    "voltage_plot": {
+                        "ymin": self.view.widgets.sliders['voltage_plot_y_range'].value[0],
+                        "ymax": self.view.widgets.sliders['voltage_plot_y_range'].value[1],
+                    }
+                }
+            },
+            "data": {
+                "path_to_data": self.path_to_data,
+                "recompile_MOD_files": self.view.widgets.switches['recompile'].active,
+            },
+            "simulation": {
+                "simulator": self.view.widgets.selectors['simulator'].value,
+                "run_on_interaction": self.view.widgets.switches['run_on_interaction'].active,
+            }
+        }
+
+        with open('app/user_config.json', 'w') as f:
+            json.dump(preferences, f, indent=4)
+
+        self.update_status_message('Preferences saved.', status='success')
+        

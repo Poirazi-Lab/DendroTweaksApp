@@ -1,0 +1,22 @@
+{
+    "appearance": {
+        "theme": "dark_minimal",
+        "plots": {
+            "graph_plot": {
+                "layout": "twopi"
+            },
+            "voltage_plot": {
+                "ymin": -100,
+                "ymax": 100
+            }
+        }
+    },
+    "data": {
+        "path_to_data": "app/static/data",
+        "recompile_MOD_files": true
+    },
+    "simulation": {
+        "simulator": "NEURON",
+        "run_on_interaction": true
+    }
+}
