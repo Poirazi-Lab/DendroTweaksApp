@@ -82,19 +82,43 @@ LIGHT_PALETTES = {
     'params': canopy,
 }
 
+DARK_STATUS_COLORS = {
+    'info': 'gold',
+    'success': 'lawngreen',
+    'warning': 'salmon',
+    'error': 'red',
+}
+
+LIGHT_STATUS_COLORS = {
+    'info': 'brown',
+    'success': 'green',
+    'warning': 'orange',
+    'error': 'red',
+}
+
+DARK_GRAPH_COLORS = {
+    'edge': 'white',
+    'node_fill': '#15191C'
+}
+
+LIGHT_GRAPH_COLORS = {
+    'edge': 'black',
+    'node_fill': 'white'
+}
+
 class Theme:
-    def __init__(self, name, selected_sec, graph_edge_line, graph_fill, background_fill_color, frozen, palettes):
+    def __init__(self, name, selected_sec, graph_colors, background_fill_color, status_colors, frozen, palettes):
         self.name = name
         self.selected_sec = selected_sec
-        self.graph_line = graph_edge_line
-        self.graph_fill = graph_fill
+        self.graph_colors = graph_colors
         self.background_fill_color = background_fill_color
         self.palettes = palettes
+        self.status_colors = status_colors
         self.frozen = frozen
 
 THEMES = {
-    'dark_minimal': Theme('dark_minimal', '#f064ae', 'white', '#15191C', '#20262B', 'white', DARK_PALETTES),
-    'light_minimal': Theme('contrast', '#f064ae', 'black', 'white', 'white', 'black', LIGHT_PALETTES),
+    'dark_minimal': Theme('dark_minimal', '#f064ae', DARK_GRAPH_COLORS, '#20262B', DARK_STATUS_COLORS, 'white', DARK_PALETTES),
+    'light_minimal': Theme('contrast', '#f064ae', LIGHT_GRAPH_COLORS, 'white', LIGHT_STATUS_COLORS, 'black', LIGHT_PALETTES),
 }
 
 
@@ -178,7 +202,8 @@ class CellView():
             renderer.node_renderer.nonselection_glyph.line_color = self.theme.graph_line
             renderer.edge_renderer.glyph.line_color = self.theme.graph_line
 
-   
+        self.DOM_elements['status'].styles = {'color': self.theme.status_colors['info']}
+        self.DOM_elements['status'].text = f'<span style="color: {self.theme.status_colors["success"]}">Theme changed to: {theme_name}</span>'
 
     def _add_theme_callbacks(self):
 

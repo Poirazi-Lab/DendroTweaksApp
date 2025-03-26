@@ -56,6 +56,12 @@ class IOMixin():
         """
         Callback for the selectors['membrane'] widget.
         """
+        if self.model.sec_tree is None:
+            with remove_callbacks(self.view.widgets.selectors['membrane']):
+                self.view.widgets.selectors['membrane'].value = 'Select a membrane'
+            self.update_status_message('Please load a morphology first.', status='warning')
+            return
+
         self.model.load_membrane(new, recompile=self.view.widgets.switches['recompile'].active)
 
         d_lambda = self.model.d_lambda
@@ -75,13 +81,20 @@ class IOMixin():
 
         self.view.widgets.buttons['add_default_mechanisms'].disabled = True
 
-        self.view.DOM_elements['status'].text = 'Membrane loaded.'
+        self.update_status_message('Membrane loaded.', status='success')
+        
         
 
     def load_stimuli_callback(self, attr, old, new):
         """
         Callback for the selectors['stimuli'] widget.
         """
+        if self.model.sec_tree is None:
+            with remove_callbacks(self.view.widgets.selectors['stimuli']):
+                self.view.widgets.selectors['stimuli'].value = 'Select stimuli'
+            self.update_status_message('Please load a morphology first.', status='warning')
+            return
+
         self.model.load_stimuli(new)
         self.update_simulation_widgets()
 
@@ -94,7 +107,8 @@ class IOMixin():
         for param_name in ['AMPA', 'NMDA', 'GABAa', 'AMPA_NMDA', 'recordings', 'iclamps']:
             self._update_graph_param(param_name, update_colors=False)
 
-        self.view.DOM_elements['status'].text = 'Stimuli loaded.'
+        self.update_status_message('Stimuli loaded.', status='success')
+        
 
     def update_simulation_widgets(self):
         """
@@ -124,7 +138,8 @@ class IOMixin():
 
         
         self.view.widgets.tabs['section'].disabled = False
-        self.view.DOM_elements['status'].text = 'Morphology loaded.'
+        self.update_status_message('Morphology loaded.', status='success')
+        
 
 
     @log
@@ -197,9 +212,9 @@ class IOMixin():
         if mechs_to_add:
             mech_name = mechs_to_add[0]
             self.model.add_mechanism(mech_name, load=True, recompile=recompile)
-            self.view.DOM_elements['status'].text = f'Mechanism {mech_name} loaded.'
+            self.update_status_message(f'Mechanism "{mech_name}" added.', status='success')
         if mechs_to_remove:
-            self.view.DOM_elements['status'].text = 'Cannot remove mechanisms from NEURON.'
+            self.update_status_message(f'Mechanisms cannot be removed from NEURON.', status='warning')
             with remove_callbacks(self.view.widgets.multichoice['mechanisms']):
                 self.view.widgets.multichoice['mechanisms'].value = old
             return
@@ -222,7 +237,7 @@ class IOMixin():
         self._update_mechs_to_insert_widget()
         self._update_multichoice_domain_widget()
 
-        self.view.DOM_elements['status'].text = 'Default mechanisms loaded.'
+        self.update_status_message('Default mechanisms added.', status='success')
 
 
     # -------------------------------------------------------------------------
@@ -306,25 +321,26 @@ class IOMixin():
     def export_model_callback(self, event):        
         file_name = self.view.widgets.text['file_name'].value
         if file_name == '':
-            self.view.DOM_elements['status'].text = 'Please enter a file name.'
+            self.update_status_message('Please provide a file name.', status='warning')
             return
         if file_name == self.model.name:
-            self.view.DOM_elements['status'].text = f'Cannot overwrite the original {event.item}.'
+            self.update_status_message('Cannot overwrite the original model.', status='warning')
             return
         if event.item == 'morphology':
             self.model.export_morphology(file_name)
-            self.view.DOM_elements['status'].text = 'Morphology exported.'
+            self.update_status_message('Morphology exported.', status='success')
         elif event.item == 'membrane':
             self.model.export_membrane(file_name)
-            self.view.DOM_elements['status'].text = 'Membrane configuration exported.'
+            self.update_status_message('Membrane exported.', status='success')
         elif event.item == 'stimuli':
             self.model.export_stimuli(file_name)
-            self.view.DOM_elements['status'].text = 'Stimuli exported.'
+            self.update_status_message('Stimuli exported.', status='success')
 
     def download_model_callback(self, event):
         """
         """
-        self.view.DOM_elements['status'].text = 'Model downloaded.'
+        pass
+        self.update_status_message('Downloaded.', status='success')
 
     # MISC
 

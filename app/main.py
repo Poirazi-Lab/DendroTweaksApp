@@ -78,15 +78,19 @@ AVAILABLE_DOMAINS = [
     'custom_0', 'custom_1', 'custom_2', 'custom_3'
 ]
 
-view.DOM_elements['status'] = Div(text='Select a model to start', width=242, styles={"color":"gold"})
+view.DOM_elements['status'] = Div(text='Select a model to start', width=242, styles={'color': view.theme.status_colors['info']})
 
-def add_message(widget, message, callback_type='on_change'):
-    callback = CustomJS(args=dict(status=view.DOM_elements['status']), 
-                        code=f"status.text = '{message}';")
+def add_message(widget, message, callback_type='on_change', status='info'):
+    
+    color = view.theme.status_colors[status]
+
+    callback = CustomJS(args=dict(status=view.DOM_elements['status']),
+                        code=f"status.text = '<span style=\"color:{color}\">{message}</span>'")
     if callback_type == 'on_change':
         widget.js_on_change('value', callback)
     elif callback_type == 'on_click':
         widget.js_on_click(callback)
+
 # =================================================================
 # FIGURES
 # =================================================================
@@ -1015,6 +1019,7 @@ view.widgets.spinners['N_syn'] = NumericInput(value=1, title='N syn', width=100)
 view.widgets.buttons['add_population'] = Button(label='Add population', 
                                                 button_type='primary', 
                                                 disabled=False)
+add_message(view.widgets.buttons['add_population'], 'Adding population. Please wait...', callback_type='on_click')
 view.widgets.buttons['add_population'].on_event(ButtonClick, 
                                                 p.add_population_callback)
 view.widgets.buttons['add_population'].on_event(ButtonClick, 

@@ -132,4 +132,5 @@ class ChannelMixin():
         self.view.sources['inf_fit'].data = inf_fit_data
         self.view.sources['tau_fit'].data = tau_fit_data
 
-        self.view.DOM_elements['status'].text = f'{ch_name} channel standardized.'
+        self.update_status_message(f'Channel {ch_name} standardized', status='success')
+        

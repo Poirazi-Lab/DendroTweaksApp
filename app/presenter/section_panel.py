@@ -18,7 +18,7 @@ class SectionMixin():
     def update_section_panel(self):
         self.update_section_data()
         self.update_section_widgets()
-        self.update_status_message()
+        self.update_section_message()
 
     def update_section_data(self):
         self.update_section_nseg_data()
@@ -153,7 +153,7 @@ class SectionMixin():
             self.view.widgets.buttons['parent'].disabled = True
             self.view.widgets.buttons['sibling'].disabled = True
 
-    def update_status_message(self):
+    def update_section_message(self):
         if len(self.selected_secs) == 1:
             preformatted_string = pprint.pformat(self.selected_sec._ref.psection(), 
                                                     indent=4,

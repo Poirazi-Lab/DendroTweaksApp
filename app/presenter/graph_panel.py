@@ -174,7 +174,7 @@ class GraphMixin():
                                               factors=[domain for domain in self.model.domains])
         graph_renderer.node_renderer.glyph.fill_color = {'field': 'domain', 'transform': color_mapper}
 
-        graph_renderer.edge_renderer.glyph = MultiLine(line_color=self.view.theme.graph_line,
+        graph_renderer.edge_renderer.glyph = MultiLine(line_color=self.view.theme.graph_colors['edge'],
                                                        line_alpha=0.5, 
                                                        line_width=1)
 
@@ -201,7 +201,7 @@ class GraphMixin():
         graph_renderer.node_renderer.nonselection_glyph = Circle(radius='radius', 
                                                             radius_units='data',
                                                             fill_color='color', 
-                                                            line_color=self.view.theme.graph_line, 
+                                                            line_color=self.view.theme.graph_colors['edge'], 
                                                             line_alpha='line_alpha', 
                                                             line_width='line_width')
         # graph_renderer.node_renderer.nonselection_glyph = graph_renderer.node_renderer.glyph
@@ -339,7 +339,7 @@ class GraphMixin():
             color_mapper = CategoricalColorMapper(
                 palette=cc.glasbey_cool[:len(recorded_seg_ids)], 
                 factors=factors,
-                nan_color=self.view.theme.graph_fill
+                nan_color=self.view.theme.graph_colors['node_fill']
             )
             self.view.widgets.sliders['graph_param_high'].visible = False
         elif param == 'voltage':
@@ -347,15 +347,15 @@ class GraphMixin():
             self.view.widgets.sliders['time_slice'].visible = True
         else:
             if param == 'iclamps':
-                color_mapper = LinearColorMapper(palette=['red'], high=1, nan_color=self.view.theme.graph_fill)
+                color_mapper = LinearColorMapper(palette=['red'], high=1, nan_color=self.view.theme.graph_colors['node_fill'])
             elif param == 'AMPA':
-                color_mapper = LinearColorMapper(palette=['gray'] + cc.kr[50:-30], low=0, nan_color=self.view.theme.graph_fill)
+                color_mapper = LinearColorMapper(palette=['gray'] + cc.kr[100:-10], low=0, nan_color=self.view.theme.graph_colors['node_fill'])
             elif param == 'GABAa':
-                color_mapper = LinearColorMapper(palette=['gray'] + cc.kb[50:-30], low=0, nan_color=self.view.theme.graph_fill)
+                color_mapper = LinearColorMapper(palette=['gray'] + cc.kb[100:-10], low=0, nan_color=self.view.theme.graph_colors['node_fill'])
             elif param == 'NMDA':
-                color_mapper = LinearColorMapper(palette=['gray'] + cc.kg[50:-30], low=0, nan_color=self.view.theme.graph_fill)
+                color_mapper = LinearColorMapper(palette=['gray'] + cc.kg[100:-10], low=0, nan_color=self.view.theme.graph_colors['node_fill'])
             elif param == 'AMPA_NMDA':
-                color_mapper = LinearColorMapper(palette=['gray'] + cc.fire[50:-30], low=0, nan_color=self.view.theme.graph_fill)
+                color_mapper = LinearColorMapper(palette=['gray'] + cc.fire[100:-10], low=0, nan_color=self.view.theme.graph_colors['node_fill'])
             elif param == 'weights':
                 low = min(graph_renderer.node_renderer.data_source.data[param])
                 high = max(graph_renderer.node_renderer.data_source.data[param])
@@ -375,7 +375,7 @@ class GraphMixin():
                     palette=self.view.theme.palettes['params'] + null_color,
                     low=-val, 
                     high=val, 
-                    nan_color=self.view.theme.graph_fill
+                    nan_color=self.view.theme.graph_colors['node_fill']
                     )  #rainbow4
 
                 self._update_colormap_max_widget(values)

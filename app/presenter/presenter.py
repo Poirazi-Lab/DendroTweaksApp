@@ -118,6 +118,10 @@ class Presenter(IOMixin, NavigationMixin,
             self.view.widgets.multichoice['mechanisms'].options = added_mechs
             self.view.widgets.multichoice['mechanisms'].value = added_mechs
 
+    def update_status_message(self, message, status='info'):
+        color = self.view.theme.status_colors[status]
+        self.view.DOM_elements['status'].text = f'<span style="color: {color};">{message}</span>'
+
     # =================================================================
     # GROUPS TAB
     # =================================================================
@@ -746,6 +750,8 @@ class Presenter(IOMixin, NavigationMixin,
         self.view.widgets.selectors['population'].options = options
         self.view.widgets.selectors['population'].value = options[-1]
 
+        self.update_status_message(f'{syn_type} population added.', status='success')
+
 
     def remove_population_callback(self, event):
         
@@ -936,7 +942,7 @@ class Presenter(IOMixin, NavigationMixin,
         self._update_mechs_to_insert_widget()
         self._update_multichoice_domain_widget()
 
-        self.view.DOM_elements['status'].text = f'Subtree has been reduced.'
+        self.update_status_message(message='Subtree reduced.', status='success')
         
 
     # =================================================================
