@@ -1,145 +1,307 @@
-body {
-    background-color: #000000;
-    color: #ffffff;
+$primary-color: #5db4ff;
+$secondary-color: #00ff00;
+$tertiary-color: #0000ff;
 
-    .app {
-        background-color: #15191C;
+$primary-background-color: #15191cff;
+$secondary-background-color: #20252bff;
+$tertiary-background-color: rgb(56, 62, 70);
+
+$top-row-height: 65%;
+$bottom-row-height: 100% - $top-row-height;
+
+$left-menu-width: 300px;
+$right-menu-width: 500px;
+$workspace-width: calc(100vw - #{$left-menu-width} - #{$right-menu-width});
+
+$graph-width: 60%;
+$cell-width: 100% - $graph-width;
+
+
+
+
+html {
+
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    min-height: 100vh;
+    overflow-x: hidden;
+    background-color: $primary-background-color;
+
+    body {
+        margin: 0;
+        padding: 0;
+        background-color: $primary-background-color;
         color: #ffffff;
         display: flex;
-        justify-content: space-between;
-        height: 100vh;
-        width: 100vw;
-        flex-wrap: nowrap !important;
+        flex-direction: column;
+        width: 100%;
+        height: 100%;
+        min-height: 100vh;
+        overflow-x: hidden;
 
-        .left-menu {
-            background-color: rgb(32,38,43);
-            color: #5db4ff;
-            width: 15%;
-            height: 100%;
-            padding: 0 10px;
-        }
+        .nav-bar {
+            min-height: 3%;
+            width: 100%;
+            display: none;
+            z-index: 9999;
 
-        .left-menu.hidden {
-            width: 2%;
-            overflow: hidden;
-        }
+            #collapse-button {
+                position: fixed;
+                top: 0;
+                left: 0;
+                height: 3%;
 
-        .main {
-            background-color: #15191C;
-            color: #ffffff;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0 10px;
-
-            .row {
-                display: flex;
-                flex-direction: row;
-                justify-content: space-around;
-                align-items: top;
-                flex-wrap: nowrap;
-
-                div {
-                    // flex: 1;
-                    min-width: 100px;
-                    
-                }
-
-                #cell {
-                    width: 400px;
-                    height: 500px;
-                    // background-color: rgba(0, 255, 136, 0.05);
-                }
-
-                #graph {
-                    width: 800px;
-                    height: 500px;
-                    // background-color: rgba(247, 0, 255, 0.05);
-                }
-
-                #simulation {
-                    width: 1200px;
-                    height: 350px;
-                    // background-color: rgba(4, 0, 255, 0.05);
-                }
-
-                #section {
-                    width: 300px;
-                    height: 500px;
-                    // background-color: rgba(0, 255, 21, 0.05);
-                }
             }
         }
 
-        .right-menu {
-            background-color: rgb(32,38,43);
-            color: #57b1ff;
-            width: 20%;
-            height: 100%;
-            padding: 0 20px;
-        }
-    }
-
-    .settings {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100vw;
-        height: 100vh;
-        background-color: rgba(32, 38, 43, 0.8);
-        z-index: 9999; /* Add this line */
-
-        .settings-content {
-            position: fixed;
-            top: 10vh;
-            left: 10vw;
-            width: 80vw;
-            height: 80vh;
-            background-color: rgba(32, 38, 43, 1);
+        .app {
+            flex-grow: 1;
+            background-color: $primary-background-color;
             color: #ffffff;
             display: flex;
-            justify-content: center;
-            align-items: center;
-            border: 1px solid #ffffff;
+            flex-direction: row;
+            justify-content: space-between;
+            height: 100%;
+            width: 100%;
+            flex-wrap: nowrap;
+            overflow-x: hidden;
+
+            .left-menu {
+                background-color: $secondary-background-color;
+                color: #5db4ff;
+                width: $left-menu-width;
+                height: 100%;
+                padding: 0 10px;
+                display: flex;
+                flex-direction: column;
+                justify-content: space-between;
+                align-items: center;
+                position: relative;
+                z-index: 9997;
+
+                &.collapsed {
+                    display: none;
+                }
+
+                #logo {
+                    width: 60%;
+                    margin: 1em 0;
+                }
+
+                #settings-button {
+                    width: 80%;
+                    margin: 1em 0;
+                    padding: 10px;
+                    background-color: #696969;
+                    color: #fff;
+                    border: none;
+                    border-radius: 5px;
+                    cursor: pointer;
+
+                    &:hover {
+                        background-color: #727272;
+                    }
+
+                    &:active {
+                        background-color: #8b8b8b;
+                    }
+                }
+            }
+
+            .workspace {
+                background-color: $primary-background-color;
+                width: $workspace-width;
+                color: #ffffff;
+                display: flex;
+                flex-direction: column;
+                justify-content: flex-start;
+                align-items: center;
+                padding: 0 10px;
+
+                .row {
+                    display: flex;
+                    flex-direction: row;
+                    justify-content: space-around;
+                    align-items: top;
+                    flex-wrap: nowrap;
+                    width: 100%;
+
+                    &#top-row {
+                        height: $top-row-height;
+                    }
+
+                    &#bottom-row {
+                        height: $bottom-row-height;
+                    }
+
+                    div {
+                        min-width: 100px;
+                    }
+
+                    #cell {
+                        width: $cell-width;
+                        height: 100%;
+                    }
+
+                    #graph {
+                        width: $graph-width;
+                        height: 100%;
+                    }
+
+                    #simulation {
+                        width: 100%;
+                        height: 100%;
+                    }
+
+                    #section {
+                        width: 300px;
+                        height: 500px;
+                    }
+                }
+            }
+
+            .right-menu {
+                background-color: $secondary-background-color;
+                color: #57b1ff;
+                width: $right-menu-width;
+                height: 100%;
+                padding: 0 20px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+            }
+        }
+
+        .settings {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: rgba(32, 38, 43, 0.8);
+            z-index: 9999;
+
+            .settings-content {
+                position: fixed;
+                top: 10vh;
+                left: 10vw;
+                width: 80vw;
+                height: 80vh;
+                background-color: rgba(32, 38, 43, 1);
+                color: #ffffff;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                border: 1px solid #ffffff;
+            }
+        }
+
+        .settings.hidden {
+            display: none;
         }
     }
-
-    .settings.hidden {
-        display: none;
-    }
 }
-
 
 .dark_minimal {
-    // background-color: rgb(32,38,43) !important;
-    background-color: #20262B !important;
-    color: #ffffff !important;
-}
+    background-color: #20262b;
+    color: #ffffff;
 
-.dark_minimal .main {
-    background-color: #15191C !important;
-    color: #ffffff !important;
+    .workspace {
+        background-color: #15191c;
+        color: #ffffff;
+    }
 }
 
 .light_minimal {
-    background-color: #D8D2D0 !important;
-    color: #000000 !important;
-}
+    background-color: #d8d2d0;
+    color: #000000;
 
-.light_minimal .main {
-    background-color: #EBE6E4 !important;
-    color: #000000 !important;
+    .workspace {
+        background-color: #ebe6e4;
+        color: #000000;
+    }
 }
-
 
 /* Hide scrollbar for Chrome, Safari and Opera */
+
 body::-webkit-scrollbar {
     display: none;
 }
+.app::-webkit-scrollbar {
+    display: none;
+}
 
-// /* Hide scrollbar for IE, Edge and Firefox */
-// body {
-//   -ms-overflow-style: none;  /* IE and Edge */
-//   scrollbar-width: none;  /* Firefox */
-// }
+/* Test 1: Body-level media query */
+@media screen and (max-width: 1500px) {
+    html {
+        body {
+            .nav-bar {
+                display: flex;
+                flex-direction: row;
+                justify-content: flex-start;
+                z-index: 9999;
+            }
+
+            .app {
+                .workspace {
+                    width: 100%;
+                }
+
+                .left-menu {
+                    background-color: $tertiary-background-color;
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    height: 100%;
+                    z-index: 9997;
+                }
+            }
+        }
+    }
+}
+
+@media screen and (max-width: 1000px) {
+    html {
+        height: 100%;
+        width: 100%;
+        overflow-x: hidden;
+
+        body {
+            height: 100%;
+            min-height: 100%;
+            width: 100%;
+            overflow-x: hidden;
+
+            .app {
+                flex-direction: column;
+                justify-content: flex-start;
+                align-items: center;
+                height: auto; // Changed from fit-content
+                min-height: 100vh; // Added to ensure full height
+                width: 100%;
+                overflow-x: hidden;
+
+                .workspace {
+                    width: 100%;
+                    min-height: 80%;
+                }
+
+                .right-menu {
+                    width: 100%;
+                    min-width: 100%;
+                    height: 100%;
+                    min-height: 100%;
+                    align-self: stretch;
+                    
+                }
+            }
+        }
+    }
+}
+
+
+
+
+
+
