@@ -1,0 +1,666 @@
+
+from bokeh.models import Button, Select, Slider, RadioButtonGroup
+from bokeh.models import RangeSlider, Switch
+from bokeh.models import ColumnDataSource, HoverTool, Patches
+from bokeh.layouts import column, row
+from bokeh.models import Tabs, TabPanel
+from bokeh.events import ButtonClick
+from bokeh.models import MultiChoice
+from bokeh.models import TextInput, NumericInput
+
+
+from bokeh.models import CustomJS
+
+from bokeh.models import Div
+from bokeh_utils import AdjustableSpinner
+AVAILABLE_DOMAINS = [
+    'soma', 'perisomatic', 
+    'axon', 
+    'dend', 'basal', 
+    'apic', 'trunk', 'tuft', 'oblique', 
+    'custom_0', 'custom_1', 'custom_2', 'custom_3'
+]
+
+class RightMenuMixin():
+
+    def __init__(self):
+        super().__init__()
+
+    # =================================================================
+    # MORPHOLOGY 
+    # =================================================================
+
+    # -----------------------------------------------------------------
+    # Sections tab
+    # -----------------------------------------------------------------
+
+    def _create_nseg_slider(self):
+
+        self.widgets.sliders['n_seg'] = Slider(start=1, end=21, value=1, step=2, title='nseg')
+        self.widgets.sliders['n_seg'].on_change('value_throttled', self.p.nseg_callback)
+
+
+    def _create_sections_tab_panel(self):
+
+        self._create_nseg_slider()
+        
+        sections_layout = column(
+            [
+                self.widgets.sliders['n_seg']
+            ],
+            name='sections_layout',
+            sizing_mode='stretch_width',
+        )
+
+        self.widgets.tab_panels['sections'] = TabPanel(
+            title='Sections',
+            child=sections_layout,
+        )
+
+    # -----------------------------------------------------------------
+    # Domains tab
+    # -----------------------------------------------------------------
+
+    def _create_domain_selector(self):
+
+        self.widgets.selectors['domain'] = Select(options=[],
+                                            value=None,
+                                            title='Select domain',
+                                            width=100)
+        self.widgets.selectors['domain'].on_change('value', self.p.select_domain_segments_callback)
+
+
+    def _create_set_domain_selector(self):
+
+        self.widgets.selectors['set_domain'] = Select(title='Set domain',
+                                        options=AVAILABLE_DOMAINS,
+                                        value='soma',
+                                        width=150)
+        self.widgets.selectors['set_domain'].on_change('value', self.p.define_domain_callback)
+
+
+    def _create_domains_tab_panel(self):
+
+        self._create_domain_selector()
+        self._create_set_domain_selector()
+
+        domains_panel = column([
+            self.widgets.selectors['domain'],
+            self.widgets.selectors['set_domain'],
+        ])
+
+        self.widgets.tab_panels['domains'] = TabPanel(
+            title='Domains',
+            child=domains_panel,
+        )
+
+    # -----------------------------------------------------------------
+    # Morphology modification tab
+    # -----------------------------------------------------------------
+
+    def _create_reduce_subtree_button(self):
+        self.widgets.buttons['reduce_subtree'] = Button(label='Reduce subtree', button_type='warning')
+        self.add_message(self.widgets.buttons['reduce_subtree'], 'Reducing the subtree. Please wait...', callback_type='on_click')
+        self.widgets.buttons['reduce_subtree'].on_event(ButtonClick, self.p.reduce_subtree_callback)
+        self.widgets.buttons['reduce_subtree'].on_event(ButtonClick, self.p.voltage_callback_on_event)
+
+    def _create_delete_subtree_button(self):
+        self.widgets.buttons['delete_subtree'] = Button(label='Delete subtree', button_type='danger')
+        self.widgets.buttons['delete_subtree'].on_event(ButtonClick, self.p.delete_subtree_callback)
+
+
+    def _create_reduction_tab_panel(self):
+
+        self._create_reduce_subtree_button()
+        self._create_delete_subtree_button()
+
+        tree_modification_panel = column(
+            [
+                self.widgets.buttons['reduce_subtree'],
+                self.widgets.buttons['delete_subtree'],
+            ]
+        )
+
+        self.widgets.tab_panels['reduction'] = TabPanel(
+            title='Reduction',
+            child=tree_modification_panel,
+        )
+
+    # -----------------------------------------------------------------
+    # Morphometric analysis tab
+    # -----------------------------------------------------------------
+
+    def _create_morphometric_analysis_tab_panel(self):
+        
+        self.DOM_elements['stats'] = Div(text='Stats:')
+
+        self.widgets.buttons['stats'] = Button(label='Stats', button_type='default')
+        self.widgets.buttons['stats'].on_event(ButtonClick, self.p.stats_callback)
+
+        stats_panel = column(
+            [
+                self.widgets.buttons['stats'], 
+                self.DOM_elements['stats'],
+            ],
+            name='stats_panel'
+        )
+
+        self.widgets.tab_panels['morphometric_analysis'] = TabPanel(
+            title='Morphometric analysis',
+            child=stats_panel,
+        )
+        
+
+    def _create_morphology_tabs(self):
+
+        self._create_sections_tab_panel()
+        self._create_domains_tab_panel()
+        self._create_reduction_tab_panel()
+        self._create_morphometric_analysis_tab_panel()
+        
+        self.widgets.tabs['morphology'] = Tabs(
+            tabs = [
+                self.widgets.tab_panels['sections'],
+                self.widgets.tab_panels['domains'],
+                self.widgets.tab_panels['reduction'],
+                self.widgets.tab_panels['morphometric_analysis']
+            ],
+            active = 0,
+            sizing_mode='stretch_width',
+        )
+
+    # =================================================================
+    # MEMBRANE
+    # =================================================================
+
+    # -----------------------------------------------------------------
+    # Membrane mechanisms tab
+    # -----------------------------------------------------------------
+
+    def _create_mechanisms_multichoice(self):
+
+        self.widgets.multichoice['mechanisms'] = MultiChoice(title='Added mechanisms',
+                                                            options=[],
+                                                            value=[],
+                                                            visible=True,
+                                                            width=300)
+        self.widgets.multichoice['mechanisms'].on_change('value', self.p.add_mechanism_callback)
+
+
+    def _create_recompile_switch(self):
+
+        self.widgets.switches['recompile'] = Switch(active=self.p.config['data']['recompile_MOD_files'], 
+                                                    name='recompile')
+
+
+    def _create_add_default_mechanisms_button(self):
+        self.widgets.buttons['add_default_mechanisms'] = Button(label='Add default mechanisms', button_type='primary', width=100)
+        self.widgets.buttons['add_default_mechanisms'].on_event(ButtonClick, self.p.add_default_mechanisms_callback)
+
+
+    def _create_mechanisms_to_insert_selector(self):
+
+        self.widgets.selectors['mechanism_to_insert'] = Select(
+            title='Mechanism',
+            options=['Leak'],
+            value = 'Leak',
+        )
+        self.widgets.selectors['mechanism_to_insert'].on_change('value', self.p.select_mechanism_to_insert_callback)
+
+
+    def _create_domains_multichoice(self):
+
+        self.widgets.multichoice['domains'] = MultiChoice(title='Domains where to insert:',
+                                                                  options=[],
+                                                                  value=[],
+                                                                  visible=True,
+                                                                  width=300)
+        self.widgets.multichoice['domains'].on_change('value', self.p.insert_mechanism_callback)
+
+
+    def _create_membrane_mechanisms_tab_panel(self):
+        
+        self._create_mechanisms_multichoice()
+        self._create_recompile_switch()
+        self._create_add_default_mechanisms_button()
+        self._create_mechanisms_to_insert_selector()
+        self._create_domains_multichoice()
+
+        mechanisms_panel = column([
+            row(self.widgets.switches['recompile'], Div(text='Recompile mod files')),
+            self.widgets.multichoice['mechanisms'],
+            self.widgets.buttons['add_default_mechanisms'],
+            self.widgets.selectors['mechanism_to_insert'],
+            self.widgets.multichoice['domains'],
+        ])
+
+        self.widgets.tab_panels['membrane_mechanisms'] = TabPanel(
+            title='Membrane mechanisms',
+            child=mechanisms_panel,
+        )
+
+    # -----------------------------------------------------------------
+    # Segment groups tab
+    # -----------------------------------------------------------------
+
+    def _create_group_name_text_input(self):
+        self.widgets.text['group_name'] = TextInput(value='', 
+                                                    title='Group name', 
+                                                    placeholder='New group name',
+                                                    width=150)
+        def check_name_exists_callback(attr, old, new):
+            if new in self.widgets.selectors['group'].options:
+                self.widgets.buttons['add_group'].disabled = True
+            else:
+                self.widgets.buttons['add_group'].disabled = False
+        self.widgets.text['group_name'].on_change('value_input', check_name_exists_callback)
+
+
+    def _create_add_group_button(self):
+        self.widgets.buttons['add_group'] = Button(label='Add group', 
+                                                   button_type='primary', 
+                                                   disabled=False,
+                                                   width=100,
+                                                   styles={"padding-top":"20px"}
+                                                   )
+                                                
+        self.widgets.buttons['add_group'].on_event(ButtonClick, self.p.add_group_callback)
+
+
+    def _create_group_domains_multichoice(self):
+        self.widgets.multichoice['group_domains'] = MultiChoice(
+            title='Domain',
+            options=[],
+            width=300
+        )
+        self.widgets.multichoice['group_domains'].on_change('value', self.p.select_group_segments_callback)
+
+
+    def _create_select_by_selector(self):
+        self.widgets.selectors['select_by'] = Select(options=['distance', 'domain_distance', 'diam', 'section_diam'],
+                                                value='distance',
+                                                title='Select by',
+                                                width=100)
+
+        self.widgets.selectors['select_by'].on_change('value', self.p.select_group_segments_callback)                                            
+
+        self.widgets.spinners['condition_min'] = NumericInput(value=None, title='Min', width=75, mode='float')
+        self.widgets.spinners['condition_max'] = NumericInput(value=None, title='Max', width=75, mode='float')
+
+        self.widgets.spinners['condition_min'].on_change('value', self.p.select_group_segments_callback)
+        self.widgets.spinners['condition_max'].on_change('value', self.p.select_group_segments_callback)
+
+
+    def _create_group_selector(self):
+        self.widgets.selectors['group'] = Select(title='Groups',
+                                            options=[], 
+                                            value=None,
+                                            width=150,
+                                            )
+
+        self.widgets.selectors['group'].on_change('value', self.p.select_group_segs_callback)
+
+
+    def _create_remove_group_button(self):
+        self.widgets.buttons['remove_group'] = Button(label='Remove group',
+                                                        button_type='danger',
+                                                        disabled=False,
+                                                        width=100,
+                                                        styles={"padding-top":"20px"}
+                                                        )
+
+        self.widgets.buttons['remove_group'].on_event(ButtonClick, self.p.remove_group_callback)
+
+
+    def _create_segment_groups_tab_panel(self):
+
+        self._create_group_name_text_input()
+        self._create_add_group_button()
+        self._create_group_domains_multichoice()
+        self._create_select_by_selector()
+        self._create_group_selector()
+        self._create_remove_group_button()
+        
+        groups_panel = column(
+            [
+                row(
+                    [
+                        self.widgets.text['group_name'],
+                        self.widgets.buttons['add_group']
+                    ]
+                ),
+                self.widgets.multichoice['group_domains'],
+                row(
+                    [
+                        self.widgets.selectors['select_by'],
+                        self.widgets.spinners['condition_min'],
+                        self.widgets.spinners['condition_max'],
+                    ]
+                ),
+                row(
+                    [
+                        self.widgets.selectors['group'],
+                        self.widgets.buttons['remove_group'],
+                    ]
+                )
+            ], 
+        )
+
+        self.widgets.tab_panels['segment_groups'] = TabPanel(
+            title='Segment groups',
+            child=groups_panel,
+        )
+
+    # -----------------------------------------------------------------
+    # Parameters tab (Distribution and kinetics)
+    # -----------------------------------------------------------------
+
+    def _create_mechanism_selector(self):
+
+        self.widgets.selectors['mechanism'] = Select(title='Mechanism',
+                                                    options=['Independent'],
+                                                    value = 'Independent',
+                                                    )
+
+        self.widgets.selectors['mechanism'].on_change('value', self.p.select_mechanism_callback)
+
+
+    def _create_standardize_button(self):
+
+        self.widgets.buttons['standardize'] = Button(label='Standardize',
+                                                    button_type='warning',
+                                                    visible=False,
+                                                    width=100,
+                                                    styles={"padding-top":"20px"}
+                                                    )
+
+        self.add_message(self.widgets.buttons['standardize'], 'Standardizing. Please wait...', callback_type='on_click')
+        
+        self.widgets.buttons['standardize'].on_event(ButtonClick, self.p.standardize_callback)
+        self.widgets.buttons['standardize'].on_event(ButtonClick, self.p.voltage_callback_on_event)
+        
+    def _create_param_selector(self):
+        self.widgets.selectors['param'] = Select(title='Parameter',
+                                                options=[],
+                                                value=None,
+                                                width=150)
+
+        self.widgets.selectors['param'].description = 'Select a parameter defined as a RANGE variable in the MOD file.'
+
+        self.widgets.selectors['param'].on_change('value', self.p.select_param_callback)
+
+
+    def _create_assigned_group_selector(self):
+        self.widgets.selectors['assigned_group'] = Select(title='Groups',
+                                            options=[], 
+                                            value=None,
+                                            width=150,
+                                            )
+
+        self.widgets.selectors['assigned_group'].on_change('value', self.p.select_group_callback)
+
+
+    def _create_add_distribution_button(self):
+
+        self.widgets.buttons['add_distribution'] = Button(label='Add distribution',
+                                                        button_type='primary',
+                                                        disabled=False,
+                                                        visible=True,
+                                                        width=150,
+                                                        styles={"padding-top":"20px"}
+                                                        )
+
+        self.widgets.buttons['add_distribution'].on_event(ButtonClick, self.p.add_distribution_callback)
+
+
+    def _create_remove_distribution_button(self):
+
+        self.widgets.buttons['remove_distribution'] = Button(label='Remove distribution',
+                                                        button_type='danger',   
+                                                        disabled=False,
+                                                        visible=False,
+                                                        width=150,
+                                                        styles={"padding-top":"20px"}
+                                                        )
+
+        self.widgets.buttons['remove_distribution'].on_event(ButtonClick, self.p.remove_distribution_callback)
+
+
+    def _create_distribution_type_selector(self):
+
+        self.widgets.selectors['distribution_type'] = Select(
+            title='Distribution type',
+            value='constant',
+            options=['constant', 'linear', 'exponential', 'sigmoid', 'sinusoidal', 'gaussian', 'step', 'inherit'],
+            width=150,
+            visible=True
+        )
+        self.widgets.selectors['distribution_type'].on_change('value', self.p.update_distribution_type_callback)
+ 
+
+    def _create_parameters_tab_panel(self):
+        
+        self._create_mechanism_selector()
+        self._create_standardize_button()
+        self._create_param_selector()
+
+        self._create_assigned_group_selector()
+        self._create_add_distribution_button()
+        self._create_remove_distribution_button()
+
+        self._create_distribution_type_selector()
+
+        # Distr → Group → Param → Mech
+
+        distribution_panel = column(width=300)
+        
+        group_panel = column(
+            [
+                self.widgets.selectors['distribution_type'],
+                distribution_panel,
+                # self.figures['distribution'],
+            ], 
+            visible=False
+        )
+
+        param_panel = column(
+            [
+                row(
+                    [
+                        self.widgets.selectors['assigned_group'],
+                        self.widgets.buttons['add_distribution'],
+                        self.widgets.buttons['remove_distribution'],
+                    ]
+                ),
+                group_panel,
+            ], 
+            visible=False
+        )
+
+        mech_panel = column(
+            [
+                row(
+                    [
+                        self.widgets.selectors['mechanism'], 
+                        self.widgets.buttons['standardize']
+                    ]
+                ),
+                self.widgets.selectors['param'],
+            ]
+        )
+        
+        parameters_panel = column(
+            [
+                mech_panel,
+                param_panel,
+            ]
+        )
+
+        self.widgets.tab_panels['parameters'] = TabPanel(
+            title='Parameters', 
+            child=parameters_panel
+        )
+
+    def _create_membrane_tabs(self):
+
+        self._create_membrane_mechanisms_tab_panel()
+        self._create_segment_groups_tab_panel()
+        self._create_parameters_tab_panel()
+        
+        self.widgets.tabs['membrane'] = Tabs(
+            tabs = [
+                self.widgets.tab_panels['membrane_mechanisms'],
+                self.widgets.tab_panels['segment_groups'],
+                self.widgets.tab_panels['parameters']
+            ],
+            active = 0,
+            visible=False,
+            sizing_mode='stretch_width',
+        )
+
+    # =================================================================
+    # STIMULI
+    # =================================================================
+
+    # -----------------------------------------------------------------
+    # Recordings tab
+    # -----------------------------------------------------------------
+
+    def _create_remove_all_recordings_button(self):
+        self.widgets.buttons['remove_all'] = Button(label='Remove all', button_type='danger')
+        self.widgets.buttons['remove_all'].on_event(ButtonClick, self.p.remove_all_callback)
+        self.widgets.buttons['remove_all'].on_event(ButtonClick, self.p.voltage_callback_on_event)
+
+    def _create_record_from_all_swwitch(self):
+        self.widgets.switches['record_from_all'] = Switch(active=False, disabled=True)
+        self.widgets.switches['record_from_all'].on_change('active', self.p.record_from_all_callback)
+        self.widgets.switches['record_from_all'].on_change('active', self.p.voltage_callback_on_change)
+
+    def _create_recording_switch(self):
+        self.widgets.switches['record'] = Switch(active=False)
+        self.widgets.switches['record'].on_change('active', self.p.record_callback)
+        self.widgets.switches['record'].on_change('active', self.p.voltage_callback_on_change)
+
+
+    def _create_recordings_tab_panel(self):
+
+        self._create_record_from_all_swwitch()
+        self._create_recording_switch()
+        self._create_remove_all_recordings_button()
+
+        recordings_panel = column(
+            [
+                self.widgets.switches['record_from_all'],
+                self.widgets.switches['record'],
+                self.widgets.buttons['remove_all']
+            ],
+            name='recordings_panel'
+        )
+
+        self.widgets.tab_panels['recordings'] = TabPanel(
+            title='Recordings',
+            child=recordings_panel,
+        )
+
+    # -----------------------------------------------------------------
+    # Iclamps tab
+    # -----------------------------------------------------------------
+
+    def _create_iclamp_switch(self):
+        self.widgets.switches['iclamp'] = Switch(active=False)
+        self.widgets.switches['iclamp'].on_change('active', self.p.toggle_iclamp_callback)
+        self.widgets.switches['iclamp'].on_change('active', self.p.voltage_callback_on_change)
+
+    def _create_iclamp_duration_slider(self):
+        self.widgets.sliders['iclamp_duration'] = RangeSlider(start=0, end=300, 
+                                                value=(100,200), step=10, 
+                                                title="Duration, ms", 
+                                                visible=False)
+        self.widgets.sliders['iclamp_duration'].on_change('value_throttled', self.p.iclamp_duration_callback)
+        self.widgets.sliders['iclamp_duration'].on_change('value_throttled', self.p.voltage_callback_on_change)
+
+    def _create_iclamp_delay_slider(self):
+        self.widgets.sliders['iclamp_amp'] = AdjustableSpinner(title="Amp (pA)", value=0, step=1, visible=False)
+        self.widgets.sliders['iclamp_amp'].on_change('value_throttled', self.p.iclamp_amp_callback)
+        self.widgets.sliders['iclamp_amp'].on_change('value_throttled', self.p.voltage_callback_on_change)
+
+
+    def _create_iclamp_tab_panel(self):
+        
+        self._create_iclamp_switch()
+        self._create_iclamp_duration_slider()
+        self._create_iclamp_delay_slider()
+        
+        iclamp_panel = column(
+            [
+                self.widgets.switches['iclamp'],
+                self.widgets.sliders['iclamp_amp'].get_widget(),
+                self.widgets.sliders['iclamp_duration'],
+            ],
+            name='iclamp_panel'
+        )
+
+        self.widgets.tab_panels['iclamp'] = TabPanel(
+            title='Iclamp',
+            child=iclamp_panel,
+        )
+
+    # -----------------------------------------------------------------
+    # Synapses tab
+    # -----------------------------------------------------------------
+
+    def _create_synapses_tab_panel(self):
+        pass
+
+    # -----------------------------------------------------------------
+    # Validation and analysis tab?
+    # -----------------------------------------------------------------
+
+    def _create_stimuli_tabs(self):
+
+        self._create_recordings_tab_panel()
+        self._create_iclamp_tab_panel()
+        self._create_synapses_tab_panel()
+
+        self.widgets.tabs['stimuli'] = Tabs(
+            tabs = [
+                self.widgets.tab_panels['recordings'],
+                self.widgets.tab_panels['iclamp'],
+                # self.widgets.tab_panels['synapses']
+            ],
+            active = 0,
+            visible=False,
+        )
+
+    def _create_radio_buttons(self):
+
+        self.widgets.buttons['switch_right_menu'] = RadioButtonGroup(
+            labels=['Morphology', 'Membrane mechanisms', 'Recordings and Stimuli'], 
+            active=0, 
+            align='center', 
+            disabled=False,
+            sizing_mode='stretch_width',
+            styles={"padding": "10px 0 20px 0"}
+        )
+        self.widgets.buttons['switch_right_menu'].on_change('active', self.p.switch_right_menu_tab_callback)
+
+
+    def create_right_menu(self):
+
+        self._create_morphology_tabs()
+        self._create_membrane_tabs()
+        self._create_stimuli_tabs()
+
+        self._create_radio_buttons()
+
+        return column(
+            [
+                self.widgets.buttons['switch_right_menu'],
+                self.widgets.tabs['morphology'], 
+                self.widgets.tabs['membrane'], 
+                self.widgets.tabs['stimuli'],
+            ],
+            align='center',
+            name='right_menu_section',
+            sizing_mode='stretch_width',
+        )

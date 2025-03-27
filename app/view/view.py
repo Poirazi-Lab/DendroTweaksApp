@@ -20,6 +20,13 @@ import colorcet as cc
 
 from dendrotweaks.utils import get_domain_color
 
+from view.left_menu import LeftMenuMixin
+from view.right_menu import RightMenuMixin
+from view.workspace import WorkspaceMixin
+from view.settings import SettingsMixin
+from view.auxiliary import AuxiliaryMixin
+
+from bokeh.models import Div
 
 CANOPY_COLORS = {
     'negative':[
@@ -165,25 +172,60 @@ class WidgetManager():
     multichoice: defaultdict = field(default_factory=lambda: defaultdict(dict))
     color_pickers: dict = field(default_factory=dict)
     tabs: dict = field(default_factory=dict)
+    tab_panels: dict = field(default_factory=dict)
     numeric: dict = field(default_factory=dict)
     file_input: dict = field(default_factory=dict)
 
 
 
-class CellView():
+class CellView(LeftMenuMixin, WorkspaceMixin, RightMenuMixin, SettingsMixin, AuxiliaryMixin):
     
     def __init__(self, theme='dark_minimal'):
+        super().__init__()
+        self._presenter = None
         self.theme = THEMES[theme]
         self.figures = {}
         self.sources = {}
         self.renderers = {}
         self.widgets = WidgetManager()
         self.DOM_elements = {}
+        self.layout_elements = {}
         self.params = PARAMS
         self._add_theme_callbacks()
         self._file_content = None
         self._filename = None
         self.get_domain_color = get_domain_color
+
+    @property
+    def p(self):
+        return self._presenter
+
+    def add_message(self, widget, message, callback_type='on_change', status='info'):
+    
+        color = self.theme.status_colors[status]
+
+        callback = CustomJS(args=dict(status=self.DOM_elements['status']),
+                            code=f"status.text = '<span style=\"color:{color}\">{message}</span>'")
+        if callback_type == 'on_change':
+            widget.js_on_change('value', callback)
+        elif callback_type == 'on_click':
+            widget.js_on_click(callback)
+
+
+    def create_status_bar(self):
+
+        self.DOM_elements['status'] = Div(
+            text='Select a model to start', 
+            height=50,
+            width=300, align='center',
+            styles={
+                'color': self.theme.status_colors['info'],
+                'margin': '10px',
+                'background-color': 'rgba(255, 255, 255, 0.2)',
+                'padding': '10px',
+                'border-radius': '5px',
+            }
+        )
 
 
     def set_theme(self, theme_name):

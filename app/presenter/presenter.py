@@ -54,8 +54,10 @@ class Presenter(IOMixin, NavigationMixin,
         super().__init__()
         self.path_to_data = path_to_data
         self.view = view
+        self.view._presenter = self
         self.model = model
         self._simulator = simulator
+        self.config = None
 
     @property
     def selected_mech_name(self):
@@ -875,7 +877,7 @@ class Presenter(IOMixin, NavigationMixin,
                                    width=300)
 
         def range_slider_callback(attr, old, new):
-            population.update_input_params({'start': new[0], 'end': new[1]})
+            population.update_input_params(**{'start': new[0], 'end': new[1]})
 
         range_slider.on_change('value_throttled', range_slider_callback)
         range_slider.on_change('value_throttled', self.voltage_callback_on_change)
@@ -926,6 +928,10 @@ class Presenter(IOMixin, NavigationMixin,
 
     @log
     def reduce_subtree_callback(self, event):
+
+        if self.model.mechs_to_domains.get('Leak') is None:
+            self.update_status_message(message='Insert the Leak mechanism first.', status='error')
+            return
         
         sec = next(iter(self.selected_secs))
         self.model.reduce_subtree(sec)
@@ -1016,6 +1022,21 @@ class Presenter(IOMixin, NavigationMixin,
         self.view.DOM_elements['status_bar'].text = output
         with remove_callbacks(self.view.DOM_elements['console']):
             self.view.DOM_elements['console'].value = ''
+
+  
+    def switch_right_menu_tab_callback(self, attr, old, new):
+        if new == 0:
+            self.view.widgets.tabs['stimuli'].visible = False
+            self.view.widgets.tabs['membrane'].visible = False
+            self.view.widgets.tabs['morphology'].visible = True
+        elif new == 1:
+            self.view.widgets.tabs['morphology'].visible = False
+            self.view.widgets.tabs['stimuli'].visible = False
+            self.view.widgets.tabs['membrane'].visible = True
+        elif new == 2:
+            self.view.widgets.tabs['morphology'].visible = False
+            self.view.widgets.tabs['membrane'].visible = False
+            self.view.widgets.tabs['stimuli'].visible = True
 
 
     def save_preferences_callback(self, event):
