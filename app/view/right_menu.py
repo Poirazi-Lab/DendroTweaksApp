@@ -43,10 +43,12 @@ class RightMenuMixin():
     def _create_sections_tab_panel(self):
 
         self._create_nseg_slider()
+        section_figures = self.create_section_panel()
         
         sections_layout = column(
             [
-                self.widgets.sliders['n_seg']
+                self.widgets.sliders['n_seg'],
+                section_figures,
             ],
             name='sections_layout',
             sizing_mode='stretch_width',
@@ -527,19 +529,26 @@ class RightMenuMixin():
     # -----------------------------------------------------------------
 
     def _create_remove_all_recordings_button(self):
-        self.widgets.buttons['remove_all'] = Button(label='Remove all', button_type='danger')
-        self.widgets.buttons['remove_all'].on_event(ButtonClick, self.p.remove_all_callback)
+        self.widgets.buttons['remove_all'] = Button(label='Remove all recordings', button_type='danger')
+        self.widgets.buttons['remove_all'].on_event(ButtonClick, self.p.remove_all_recordings_callback)
         self.widgets.buttons['remove_all'].on_event(ButtonClick, self.p.voltage_callback_on_event)
 
     def _create_record_from_all_swwitch(self):
-        self.widgets.switches['record_from_all'] = Switch(active=False, disabled=True)
+        self.widgets.switches['record_from_all'] = Switch(
+            active=False, 
+            disabled=True
+        )
         self.widgets.switches['record_from_all'].on_change('active', self.p.record_from_all_callback)
         self.widgets.switches['record_from_all'].on_change('active', self.p.voltage_callback_on_change)
 
     def _create_recording_switch(self):
-        self.widgets.switches['record'] = Switch(active=False)
+        self.widgets.switches['record'] = Switch(
+            active=False,
+            disabled=True
+        )
         self.widgets.switches['record'].on_change('active', self.p.record_callback)
         self.widgets.switches['record'].on_change('active', self.p.voltage_callback_on_change)
+        
 
 
     def _create_recordings_tab_panel(self):
@@ -550,8 +559,8 @@ class RightMenuMixin():
 
         recordings_panel = column(
             [
-                self.widgets.switches['record_from_all'],
-                self.widgets.switches['record'],
+                row([self.widgets.switches['record_from_all'], Div(text='Record from all')]),
+                row([self.widgets.switches['record'], Div(text='Record from segment')]),
                 self.widgets.buttons['remove_all']
             ],
             name='recordings_panel'
@@ -572,36 +581,54 @@ class RightMenuMixin():
         self.widgets.switches['iclamp'].on_change('active', self.p.voltage_callback_on_change)
 
     def _create_iclamp_duration_slider(self):
-        self.widgets.sliders['iclamp_duration'] = RangeSlider(start=0, end=300, 
-                                                value=(100,200), step=10, 
-                                                title="Duration, ms", 
-                                                visible=False)
+        self.widgets.sliders['iclamp_duration'] = RangeSlider(
+            start=0,
+            end=300,
+            value=(100,200),
+            step=10,
+            title="Duration, ms",
+            visible=False
+        )
         self.widgets.sliders['iclamp_duration'].on_change('value_throttled', self.p.iclamp_duration_callback)
         self.widgets.sliders['iclamp_duration'].on_change('value_throttled', self.p.voltage_callback_on_change)
 
     def _create_iclamp_delay_slider(self):
-        self.widgets.sliders['iclamp_amp'] = AdjustableSpinner(title="Amp (pA)", value=0, step=1, visible=False)
+        self.widgets.sliders['iclamp_amp'] = AdjustableSpinner(
+            title="Amp (pA)", 
+            value=0, 
+            step=1, 
+            visible=False)
         self.widgets.sliders['iclamp_amp'].on_change('value_throttled', self.p.iclamp_amp_callback)
         self.widgets.sliders['iclamp_amp'].on_change('value_throttled', self.p.voltage_callback_on_change)
 
+    def _create_remove_all_iclamps_button(self):
+
+        self.widgets.buttons['remove_all_iclamps'] = Button(
+            label='Remove all IClamps', 
+            button_type='danger'
+        )
+        self.widgets.buttons['remove_all_iclamps'].on_event(ButtonClick, self.p.remove_all_iclamps_callback)
+        self.widgets.buttons['remove_all_iclamps'].on_event(ButtonClick, self.p.voltage_callback_on_event)
 
     def _create_iclamp_tab_panel(self):
         
         self._create_iclamp_switch()
         self._create_iclamp_duration_slider()
         self._create_iclamp_delay_slider()
+        self._create_remove_all_iclamps_button()
         
         iclamp_panel = column(
             [
-                self.widgets.switches['iclamp'],
+                row([self.widgets.switches['iclamp'], Div(text='Add IClamp to segment')]),
                 self.widgets.sliders['iclamp_amp'].get_widget(),
                 self.widgets.sliders['iclamp_duration'],
+                self.widgets.buttons['remove_all_iclamps'],
             ],
             name='iclamp_panel'
         )
 
         self.widgets.tab_panels['iclamp'] = TabPanel(
-            title='Iclamp',
+            title='IClamps',
             child=iclamp_panel,
         )
 
@@ -609,8 +636,67 @@ class RightMenuMixin():
     # Synapses tab
     # -----------------------------------------------------------------
 
+    def _create_syn_type_selector(self):
+        self.widgets.selectors['syn_type'] = Select(
+            title='Synaptic type', 
+            value='AMPA_NMDA', 
+            options=['AMPA', 'NMDA', 'AMPA_NMDA', 'GABAa'], 
+            width=150
+        )
+        self.widgets.selectors['syn_type'].on_change('value', self.p.select_synapse_type_callback)
+
+
+    def _create_n_syn_spinner(self):
+        self.widgets.spinners['N_syn'] = NumericInput(value=1, title='N syn', width=100)
+
+
+    def _create_add_population_button(self):
+        self.widgets.buttons['add_population'] = Button(label='Add population', 
+                                                        button_type='primary', 
+                                                        disabled=False)
+        self.add_message(self.widgets.buttons['add_population'], 'Adding population. Please wait...', callback_type='on_click')
+        self.widgets.buttons['add_population'].on_event(ButtonClick, 
+                                                        self.p.add_population_callback)
+        self.widgets.buttons['add_population'].on_event(ButtonClick, 
+                                                        self.p.voltage_callback_on_event)
+
+
+    def _create_population_selector(self):
+
+        self.widgets.selectors['population'] = Select(options=[], title='Population', width=150)
+        self.widgets.selectors['population'].on_change('value', self.p.select_population_callback)
+
+
+    def _create_remove_population_button(self):
+
+        self.widgets.buttons['remove_population'] = Button(label='Remove population', button_type='danger', disabled=False, styles={"padding-top":"20px"})
+        self.widgets.buttons['remove_population'].on_event(ButtonClick, self.p.remove_population_callback)
+        self.widgets.buttons['remove_population'].on_event(ButtonClick, self.p.voltage_callback_on_event)
+
+
     def _create_synapses_tab_panel(self):
-        pass
+        
+        self._create_syn_type_selector()
+        self._create_n_syn_spinner()
+        self._create_add_population_button()
+        self._create_population_selector()
+        self._create_remove_population_button()
+
+        self.DOM_elements['population_panel'] = column(width=300)
+
+        synapses_panel = column([
+            # self.widgets.buttons['remove_all_populations'],
+            row([self.widgets.selectors['syn_type'], self.widgets.spinners['N_syn']]),
+            self.widgets.buttons['add_population'],
+            Div(text='<hr style="width:30em">'),
+            row([self.widgets.selectors['population'], self.widgets.buttons['remove_population']]),
+            self.DOM_elements['population_panel'],
+        ])
+
+        self.widgets.tab_panels['synapses'] = TabPanel(
+            title='Synapses',
+            child=synapses_panel,
+        )
 
     # -----------------------------------------------------------------
     # Validation and analysis tab?
@@ -626,7 +712,7 @@ class RightMenuMixin():
             tabs = [
                 self.widgets.tab_panels['recordings'],
                 self.widgets.tab_panels['iclamp'],
-                # self.widgets.tab_panels['synapses']
+                self.widgets.tab_panels['synapses']
             ],
             active = 0,
             visible=False,

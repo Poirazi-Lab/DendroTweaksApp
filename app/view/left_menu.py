@@ -415,6 +415,22 @@ class LeftMenuMixin():
             sizing_mode='scale_both'
         )
 
+    
+    def _create_status_bar(self):
+
+        self.DOM_elements['status'] = Div(
+            text='Select a model to start', 
+            height=50,
+            width=300, align='center',
+            styles={
+                'color': self.theme.status_colors['info'],
+                'margin': '10px',
+                'background-color': 'rgba(255, 255, 255, 0.2)',
+                'padding': '10px',
+                'border-radius': '5px',
+            }
+        )
+
 
     def create_left_menu(self):
 

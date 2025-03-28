@@ -32,7 +32,6 @@ html body .nav-bar #collapse-button {
 }
 html body .app {
   flex-grow: 1;
-  background-color: #15191c;
   color: #ffffff;
   display: flex;
   flex-direction: row;
@@ -43,7 +42,6 @@ html body .app {
   overflow-x: hidden;
 }
 html body .app .left-menu {
-  background-color: #20252b;
   color: #5db4ff;
   width: 300px;
   height: 100%;
@@ -79,7 +77,6 @@ html body .app .left-menu #settings-button:active {
   background-color: #8b8b8b;
 }
 html body .app .workspace {
-  background-color: #15191c;
   width: calc(100vw - 300px - 500px);
   color: #ffffff;
   display: flex;
@@ -122,7 +119,6 @@ html body .app .workspace .row #section {
   height: 500px;
 }
 html body .app .right-menu {
-  background-color: #20252b;
   color: #57b1ff;
   width: 500px;
   height: 100%;
@@ -146,7 +142,6 @@ html body .settings .settings-content {
   left: 10vw;
   width: 80vw;
   height: 80vh;
-  background-color: rgb(32, 38, 43);
   color: #ffffff;
   display: flex;
   justify-content: center;

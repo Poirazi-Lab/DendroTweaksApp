@@ -77,15 +77,46 @@ class WorkspaceMixin():
         self.widgets.selectors['section'] = Select(
             options=[], 
             title='Section',
-            width=100
         ) 
         self.widgets.selectors['section'].on_change('value', self.p.select_section_callback)
 
     def _create_seg_x_selector(self):
         self.widgets.selectors['seg_x'] = Select(
             options=[], 
-            title='Segment'
+            title='Segment',
         )
+
+
+    def _create_navigation_panel(self):
+        
+        self.widgets.buttons['child'] = Button(label='Child')
+        self.widgets.buttons['child'].on_event(ButtonClick, self.p.button_child_callback)
+
+        self.widgets.buttons['parent'] = Button(label='Parent', disabled=True)
+        self.widgets.buttons['parent'].on_event(ButtonClick, self.p.button_parent_callback)
+
+        self.widgets.buttons['sibling'] = Button(label='Sibling', disabled=True)
+        self.widgets.buttons['sibling'].on_event(ButtonClick, self.p.button_sibling_callback)
+
+        return row(
+            [
+                self.widgets.selectors['section'],
+                self.widgets.selectors['seg_x'],
+                row(
+                    [
+                        self.widgets.buttons['parent'], 
+                        self.widgets.buttons['sibling'], 
+                        self.widgets.buttons['child']
+                    ],
+                    styles={'padding-top': '20px'},
+                    sizing_mode='scale_width'
+                )
+            ],
+            sizing_mode='scale_width',
+            max_width=300,
+            flow_mode='inline',
+        )
+
 
     def create_cell_panel(self):
 
@@ -93,14 +124,22 @@ class WorkspaceMixin():
         self._create_rotate_cell_slider()
         self._create_section_selector()
         self._create_seg_x_selector()
+        navigation = self._create_navigation_panel()
 
         panel_cell = column(
-            self.figures['cell'], 
-            row(self.widgets.sliders['rotate_cell'], self.widgets.selectors['section'], 
-            sizing_mode='stretch_width', styles={'margin-right': '25px'}),
+            [
+                self.figures['cell'], 
+                row(
+                    self.widgets.sliders['rotate_cell'],
+                    sizing_mode='stretch_width', 
+                    styles={'margin-right': '25px'}
+                ),
+                navigation
+            ],
             name='panel_cell',
             sizing_mode='stretch_both',
-            styles={'background-color': 'cyan'})
+            styles={'padding-bottom': '20px'}
+        )
 
         panel_cell.background = None
 

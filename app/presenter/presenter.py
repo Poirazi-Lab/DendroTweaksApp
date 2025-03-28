@@ -106,6 +106,10 @@ class Presenter(IOMixin, NavigationMixin,
                              for domain in self.model.domains.values()}
         self.view.widgets.selectors['section'].options = domains_to_sec_ids
 
+        # TODO: Need a warning here if some mechanisms are already inserted
+        # as they will be removed
+        self.update_status_message(f'Domain {domain_name} created.', status='success')
+
     def _update_multichoice_domain_widget(self):
         mech_name = self.view.widgets.selectors['mechanism_to_insert'].value
         available_domains = list(self.model.domains.keys()) if self.model.sec_tree else []
@@ -964,7 +968,7 @@ class Presenter(IOMixin, NavigationMixin,
             logger.debug('Switching to Morphology tab')
             self.view.widgets.selectors['graph_param'].options = {**self.view.params}
             self.view.widgets.selectors['graph_param'].value = 'domain'
-            self.view.widgets.selectors['section'].value = '0'
+            # self.view.widgets.selectors['section'].value = '0'
         elif new == 1:
             logger.debug(f'Switching to Mechanisms tab')
             self.view.widgets.selectors['graph_param'].options = {**self.view.params}
@@ -984,59 +988,50 @@ class Presenter(IOMixin, NavigationMixin,
                 self.view.widgets.selectors['mechanism'].options = list(self.model.mechs_to_params.keys())
                 self.view.widgets.selectors['mechanism'].value = 'Independent'
             self._select_mechanism('Independent')
-            if self.view.widgets.switches['show_kinetics'].active:
-                self._toggle_kinetic_plots('Independent')
+            # if self.view.widgets.switches['show_kinetics'].active:
+            #     self._toggle_kinetic_plots('Independent')
         elif new == 4:
             logger.debug('Switching to Recordings tab')
             self.view.widgets.selectors['graph_param'].options = {**self.view.params}
             self.view.widgets.selectors['graph_param'].value = 'recordings'
-            self.view.widgets.selectors['section'].value = '0'
+            # self.view.widgets.selectors['section'].value = '0'
         elif new == 5:
             logger.debug('Switching to Stimuli tab')
             self.view.widgets.selectors['graph_param'].options = {**self.view.params}
             self.view.widgets.selectors['graph_param'].value = 'iclamps'
-            self.view.widgets.selectors['section'].value = '0'
+            # self.view.widgets.selectors['section'].value = '0'
             
 
             
         self.view.DOM_elements['section_plots'].visible = True if new in [0] else False
 
-    def console_callback(self, attr, old, new):
-
-        import io
-        import sys
-
-        # Redirect stdout to a string stream
-        new = f"print({new})"
-        logger.debug(f'Executing: {new}')
-        sys.stdout = io.StringIO()
-        try:
-            exec(new)
-        except Exception as e:
-            print(str(e))
-        # Get the output and reset stdout
-        output = sys.stdout.getvalue()
-        logger.debug(f'Output: {output}')
-        sys.stdout = sys.__stdout__
-        # Update the status bar with the output
-        self.view.DOM_elements['status_bar'].text = output
-        with remove_callbacks(self.view.DOM_elements['console']):
-            self.view.DOM_elements['console'].value = ''
 
   
     def switch_right_menu_tab_callback(self, attr, old, new):
+        if self.model is None: return
+        if self.model.sec_tree is None: return
         if new == 0:
+            logger.debug('Switching to Morphology Tabs')
             self.view.widgets.tabs['stimuli'].visible = False
             self.view.widgets.tabs['membrane'].visible = False
             self.view.widgets.tabs['morphology'].visible = True
+            self.view.widgets.selectors['graph_param'].options = {**self.view.params}
+            self.view.widgets.selectors['graph_param'].value = 'domain'
         elif new == 1:
+            logger.debug('Switching to Membrane Tabs')
             self.view.widgets.tabs['morphology'].visible = False
             self.view.widgets.tabs['stimuli'].visible = False
             self.view.widgets.tabs['membrane'].visible = True
+            self.view.widgets.selectors['graph_param'].options = {**self.view.params, **self.model.mechs_to_params}
+
         elif new == 2:
+            logger.debug('Switching to Stimuli Tabs')
             self.view.widgets.tabs['morphology'].visible = False
             self.view.widgets.tabs['membrane'].visible = False
             self.view.widgets.tabs['stimuli'].visible = True
+            self.view.widgets.selectors['section'].value = '0'
+            self.view.widgets.selectors['graph_param'].options = {**self.view.params}
+            self.view.widgets.selectors['graph_param'].value = 'recordings'
 
 
     def save_preferences_callback(self, event):
@@ -1071,3 +1066,25 @@ class Presenter(IOMixin, NavigationMixin,
 
         self.update_status_message('Preferences saved.', status='success')
         
+
+    def console_callback(self, attr, old, new):
+
+        import io
+        import sys
+
+        # Redirect stdout to a string stream
+        new = f"print({new})"
+        logger.debug(f'Executing: {new}')
+        sys.stdout = io.StringIO()
+        try:
+            exec(new)
+        except Exception as e:
+            print(str(e))
+        # Get the output and reset stdout
+        output = sys.stdout.getvalue()
+        logger.debug(f'Output: {output}')
+        sys.stdout = sys.__stdout__
+        # Update the status bar with the output
+        self.view.DOM_elements['status_bar'].text = output
+        with remove_callbacks(self.view.DOM_elements['console']):
+            self.view.DOM_elements['console'].value = ''

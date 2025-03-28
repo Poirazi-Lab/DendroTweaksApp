@@ -1,72 +1,74 @@
 {% extends base %}
 
-    
+
 {% block preamble %}
-    <link rel="stylesheet" href="app/static/css/main.css"> 
-    <link rel="shortcut icon" type="image/x-icon" href="/app/static/images/favicon.png">
-    <script src="app/static/main.js"></script>
- 
+<link rel="stylesheet" href="app/static/css/main.css">
+<link rel="shortcut icon" type="image/x-icon" href="/app/static/images/favicon.png">
+<script src="app/static/main.js"></script>
+
 
 {% endblock %}
 
 {% block contents %}
 
-    <div class="nav-bar">
-        <button id="collapse-button" onclick="toggleMenu()">☰</button>
+<div class="nav-bar">
+    <button id="collapse-button" onclick="toggleMenu()">☰</button>
+</div>
+
+<div class="app">
+
+    <div class="left-menu">
+        <img id="logo" src="app/static/images/logo.png" alt="logo">
+        {{ embed(roots.left_menu) }}
+        <button id="settings-button">Settings</button>
     </div>
-    <div class="app">
 
+    <div class="workspace">
 
-
-        <div class="left-menu">
-            <img id="logo" src="app/static/images/logo.png" alt="logo">
-            {{ embed(roots.left_menu) }}
-            <button id="settings-button">Settings</button>
-        </div>
-
-        <div class="workspace">
-
-            <div class="row" id="top-row">
-                <div id="cell">
-                    {{ embed(roots.panel_cell) }}
-                </div>
-                
-                <div id="graph">
-                    {{ embed(roots.panel_graph) }}
-                </div>
+        <div class="row" id="top-row">
+            <div id="cell">
+                {{ embed(roots.panel_cell) }}
             </div>
 
-            <div class="row" id="bottom-row">
-                <div id="simulation">
-                    {{ embed(roots.panel_simulation) }}
-                    
-                </div>
-               
+            <div id="graph">
+                {{ embed(roots.panel_graph) }}
             </div>
         </div>
-        <div class="right-menu">
-            {{ embed(roots.right_menu_section) }}
+
+        <div class="row" id="bottom-row">
+            <div id="simulation">
+                {{ embed(roots.panel_simulation) }}
+
+            </div>
+
         </div>
     </div>
 
-    <div class="settings hidden">
-        <div class="settings-content">
-            <div class="settings-header">
-                <!-- <button id="settings-close-button">Close</button> -->
-            </div>
-            <div class="settings-body">
-                <div id="settings">
-                    <h1>Settings</h1>
-                    <a href="https://dendrotweaks.dendrites.gr" target="_blank" style="font-size: 25px; color: dodgerblue">Dendro Tweaks Web</a>
-                    {{ embed(roots.settings_panel) }}
-                </div>
-            </div>
-        </div>
+    <div class="right-menu">
+        {{ embed(roots.right_menu_section) }}
     </div>
-
     
+</div>
 
-  {{ super() }}
+<div class="settings hidden">
+    <div class="settings-content">
+        <div class="settings-header">
+            <!-- <button id="settings-close-button">Close</button> -->
+        </div>
+        <div class="settings-body">
+            <div id="settings">
+                <h1>Settings</h1>
+                <a href="https://dendrotweaks.dendrites.gr" target="_blank"
+                    style="font-size: 25px; color: dodgerblue">Dendro Tweaks Web</a>
+                {{ embed(roots.settings_panel) }}
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+{{ super() }}
 
 
 {% endblock %}

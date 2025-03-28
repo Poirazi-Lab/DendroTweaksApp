@@ -212,22 +212,6 @@ class CellView(LeftMenuMixin, WorkspaceMixin, RightMenuMixin, SettingsMixin, Aux
             widget.js_on_click(callback)
 
 
-    def create_status_bar(self):
-
-        self.DOM_elements['status'] = Div(
-            text='Select a model to start', 
-            height=50,
-            width=300, align='center',
-            styles={
-                'color': self.theme.status_colors['info'],
-                'margin': '10px',
-                'background-color': 'rgba(255, 255, 255, 0.2)',
-                'padding': '10px',
-                'border-radius': '5px',
-            }
-        )
-
-
     def set_theme(self, theme_name):
         self.theme = THEMES[theme_name]
         
@@ -244,13 +228,13 @@ class CellView(LeftMenuMixin, WorkspaceMixin, RightMenuMixin, SettingsMixin, Aux
             renderer.node_renderer.nonselection_glyph.line_color = self.theme.graph_colors['edge']
             renderer.edge_renderer.glyph.line_color = self.theme.graph_colors['edge']
 
-        self.DOM_elements['status'].styles = {'color': self.theme.status_colors['info']}
+        self.DOM_elements['status'].styles.update({'color': self.theme.status_colors['info']})
         self.DOM_elements['status'].text = f'<span style="color: {self.theme.status_colors["success"]}">Theme changed to: {theme_name}</span>'
 
     def _add_theme_callbacks(self):
 
         self.widgets.selectors['theme'] = Select(title="Theme:", 
-                                                value="dark_minimal", 
+                                                value=None, 
                                                 options=list(THEMES.keys()),
                                                 name='theme_select')
         
@@ -263,13 +247,13 @@ class CellView(LeftMenuMixin, WorkspaceMixin, RightMenuMixin, SettingsMixin, Aux
             var theme = cb_obj.value;
             var appElement = document.querySelector('.app');
             var leftMenuElement = document.querySelector('.left-menu');
-            var mainElement = document.querySelector('.main');
+            var mainElement = document.querySelector('.workspace');
             var rightMenuElement = document.querySelector('.right-menu');
             var settingsPanelElement = document.querySelector('.settings-content');
 
             appElement.className = 'app ' + theme;
             leftMenuElement.className = 'left-menu ' + theme;
-            mainElement.className = 'main ' + theme;
+            mainElement.className = 'workspace ' + theme;
             rightMenuElement.className = 'right-menu ' + theme;
             settingsPanelElement.className = 'settings-content ' + theme;
 

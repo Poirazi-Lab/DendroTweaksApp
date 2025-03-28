@@ -10,71 +10,6 @@ class AuxiliaryMixin():
         super().__init__()
 
     # ==================================================================
-    # Kinetics panel
-    # ==================================================================
-    
-    def create_kinetics_panel(self):
-
-        self.figures['inf'] = figure(width=300, height=300, title='Steady state',
-                                x_axis_label='Voltage (mV)', y_axis_label='Inf, (1)',
-                                visible=False)
-
-        self.sources['inf_orig'] = ColumnDataSource(data={'xs': [], 'ys': [], })
-        self.figures['inf'].multi_line(xs='xs',
-                                    ys='ys',
-                                    source=self.sources['inf_orig'],
-                                    line_width=2,
-                                    color='color')
-
-        self.sources['inf_fit'] = ColumnDataSource(data={'xs': [], 'ys': [], })
-        self.figures['inf'].multi_line(xs='xs',
-                                    ys='ys',
-                                    source=self.sources['inf_fit'],
-                                    line_width=2,
-                                    line_dash='dashed',
-                                    color='color')
-
-        from bokeh.models import LogScale
-        self.figures['inf_log'] = figure(width=300, height=300, title='Steady state',
-                                x_axis_label='Voltage (mV)', y_axis_label='Inf, (1)',
-                                visible=False, x_axis_type='log')
-
-        self.figures['inf_log'].multi_line(xs='xs',
-                                        ys='ys',
-                                        source=self.sources['inf_orig'],
-                                        line_width=2,
-                                        color='color')
-
-        self.figures['tau'] = figure(width=300, height=300, title='Time constant',
-                                x_axis_label='Voltage (mV)', y_axis_label='Tau, ms',
-                                visible=False)
-
-        self.sources['tau_orig'] = ColumnDataSource(data={'xs': [], 'ys': []})
-        self.figures['tau'].multi_line(xs='xs',
-                                    ys='ys',
-                                    source=self.sources['tau_orig'],
-                                    line_width=2,
-                                    color='color')
-
-        self.figures['tau_log'] = figure(width=300, height=300, title='Time constant',
-                                x_axis_label='Voltage (mV)', y_axis_label='Tau, ms',
-                                visible=False, x_axis_type='log')
-
-        self.figures['tau_log'].multi_line(xs='xs',
-                                        ys='ys',
-                                        source=self.sources['tau_orig'],
-                                        line_width=2,
-                                        color='color')                        
-
-        self.sources['tau_fit'] = ColumnDataSource(data={'xs': [], 'ys': []})
-        self.figures['tau'].multi_line(xs='xs',
-                                    ys='ys',
-                                    source=self.sources['tau_fit'],
-                                    line_width=2,
-                                    line_dash='dashed',
-                                    color='color')
-
-    # ==================================================================
     # Section panel
     # ==================================================================
 
@@ -147,51 +82,112 @@ class AuxiliaryMixin():
         self.figures['cell'].add_tools(cell_hover_tool)
 
 
-    def _create_navigation_panel(self):
-        
-        self.widgets.buttons['child'] = Button(label='Child')
-        self.widgets.buttons['child'].on_event(ButtonClick, self.p.button_child_callback)
-
-        self.widgets.buttons['parent'] = Button(label='Parent', disabled=True)
-        self.widgets.buttons['parent'].on_event(ButtonClick, self.p.button_parent_callback)
-
-        self.widgets.buttons['sibling'] = Button(label='Sibling', disabled=True)
-        self.widgets.buttons['sibling'].on_event(ButtonClick, self.p.button_sibling_callback)
-
-        return column(
-            [
-                row(
-                    [
-                        self.widgets.selectors['section'],
-                        self.widgets.selectors['seg_x']
-                    ]
-                ),
-                row(
-                    [
-                        self.widgets.buttons['parent'], 
-                        self.widgets.buttons['sibling'], 
-                        self.widgets.buttons['child']
-                    ]
-                )
-            ]
-        )
-
     def create_section_panel(self):
 
         self._create_section_diam_figure()
         self._create_section_param_figure()
         self._create_section_param_hist_figure()
-        navigation = self._create_navigation_panel()
 
         return column(
             [
                 self.figures['section_diam'], 
                 self.figures['section_param'], 
-                navigation
             ], 
             name='panel_section',
             width=270, 
             height=350,
             sizing_mode='fixed'
         )
+
+    # ===================================================================
+    # Distribution plots
+    # ===================================================================
+
+    def _create_distribution_figure():
+
+        self.figures['distribution'] = figure(
+            width=400,
+            height=150,
+            match_aspect=False,
+            tools='pan, box_zoom, hover, reset, save'
+        )
+        self.figures['distribution'].toolbar.autohide = True
+        self.figures['distribution'].background_fill_color = None
+        self.figures['distribution'].border_fill_color = None
+
+        self.sources['distribution'] = ColumnDataSource(data={'x': [], 'y': []})
+        self.figures['distribution'].circle(x='x', y='y', source=self.sources['diam_distribution'], line_width=2, color='color')
+        hspan = Span(location=0, dimension='width', line_color='white', line_width=1)
+        self.figures['distribution'].add_layout(hspan)
+        vspan = Span(location=0, dimension='height', line_color='white', line_width=1)
+        self.figures['distribution'].add_layout(vspan)
+        # self.figures['distribution'].y_range.start = 0
+
+
+    # ==================================================================
+    # Kinetics plots
+    # ==================================================================
+    
+    def create_kinetics_panel(self):
+
+        self.figures['inf'] = figure(width=300, height=300, title='Steady state',
+                                x_axis_label='Voltage (mV)', y_axis_label='Inf, (1)',
+                                visible=False)
+
+        self.sources['inf_orig'] = ColumnDataSource(data={'xs': [], 'ys': [], })
+        self.figures['inf'].multi_line(xs='xs',
+                                    ys='ys',
+                                    source=self.sources['inf_orig'],
+                                    line_width=2,
+                                    color='color')
+
+        self.sources['inf_fit'] = ColumnDataSource(data={'xs': [], 'ys': [], })
+        self.figures['inf'].multi_line(xs='xs',
+                                    ys='ys',
+                                    source=self.sources['inf_fit'],
+                                    line_width=2,
+                                    line_dash='dashed',
+                                    color='color')
+
+        from bokeh.models import LogScale
+        self.figures['inf_log'] = figure(width=300, height=300, title='Steady state',
+                                x_axis_label='Voltage (mV)', y_axis_label='Inf, (1)',
+                                visible=False, x_axis_type='log')
+
+        self.figures['inf_log'].multi_line(xs='xs',
+                                        ys='ys',
+                                        source=self.sources['inf_orig'],
+                                        line_width=2,
+                                        color='color')
+
+        self.figures['tau'] = figure(width=300, height=300, title='Time constant',
+                                x_axis_label='Voltage (mV)', y_axis_label='Tau, ms',
+                                visible=False)
+
+        self.sources['tau_orig'] = ColumnDataSource(data={'xs': [], 'ys': []})
+        self.figures['tau'].multi_line(xs='xs',
+                                    ys='ys',
+                                    source=self.sources['tau_orig'],
+                                    line_width=2,
+                                    color='color')
+
+        self.figures['tau_log'] = figure(width=300, height=300, title='Time constant',
+                                x_axis_label='Voltage (mV)', y_axis_label='Tau, ms',
+                                visible=False, x_axis_type='log')
+
+        self.figures['tau_log'].multi_line(xs='xs',
+                                        ys='ys',
+                                        source=self.sources['tau_orig'],
+                                        line_width=2,
+                                        color='color')                        
+
+        self.sources['tau_fit'] = ColumnDataSource(data={'xs': [], 'ys': []})
+        self.figures['tau'].multi_line(xs='xs',
+                                    ys='ys',
+                                    source=self.sources['tau_fit'],
+                                    line_width=2,
+                                    line_dash='dashed',
+                                    color='color')
+
+    
                                     

@@ -198,17 +198,26 @@ class NavigationMixin():
                 self.view.widgets.switches['iclamp'].active = False
                 self.view.widgets.switches['iclamp'].disabled = True
 
-    def remove_all_callback(self, event):
-        self.view.widgets.switches['record'].active = False
-        self.view.widgets.switches['iclamp'].active = False
-        self.recorded_segments = []
-        self.model.simulator.remove_all_recordings()
+    # def remove_all_callback(self, event):
+    #     self.view.widgets.switches['record'].active = False
+    #     self.view.widgets.switches['iclamp'].active = False
+    #     self.recorded_segments = []
+    #     self.model.simulator.remove_all_recordings()
+    #     self.model.remove_all_iclamps()
+    #     self.model.remove_all_synapses()
+    #     self.view.DOM_elements['population_panel'].children = []
+    #     self.view.widgets.selectors['population'].options = []
+    #     self._update_graph_param('iclamps')
+    #     self._update_graph_param('recordings')
+    #     for name in self.model.synapses:
+    #         self._update_graph_param(name)
+    #     self.view.sources['sim'].data = {'xs': [], 'ys': [], 'label': []}
+
+    def remove_all_iclamps_callback(self, event):
         self.model.remove_all_iclamps()
-        self.model.remove_all_synapses()
-        self.view.DOM_elements['population_panel'].children = []
-        self.view.widgets.selectors['population'].options = []
-        self._update_graph_param('iclamps')
-        self._update_graph_param('recordings')
-        for name in self.model.synapses:
-            self._update_graph_param(name)
-        self.view.sources['sim'].data = {'xs': [], 'ys': [], 'label': []}
+
+    def remove_all_recordings_callback(self, event):
+        self.model.remove_all_recordings()
+
+    def remove_all_populations_callback(self, event):
+        self.model.remove_all_populations()

@@ -57,7 +57,6 @@ html {
 
         .app {
             flex-grow: 1;
-            background-color: $primary-background-color;
             color: #ffffff;
             display: flex;
             flex-direction: row;
@@ -68,7 +67,7 @@ html {
             overflow-x: hidden;
 
             .left-menu {
-                background-color: $secondary-background-color;
+                
                 color: #5db4ff;
                 width: $left-menu-width;
                 height: 100%;
@@ -110,7 +109,6 @@ html {
             }
 
             .workspace {
-                background-color: $primary-background-color;
                 width: $workspace-width;
                 color: #ffffff;
                 display: flex;
@@ -162,7 +160,6 @@ html {
             }
 
             .right-menu {
-                background-color: $secondary-background-color;
                 color: #57b1ff;
                 width: $right-menu-width;
                 height: 100%;
@@ -188,7 +185,7 @@ html {
                 left: 10vw;
                 width: 80vw;
                 height: 80vh;
-                background-color: rgba(32, 38, 43, 1);
+                // background-color: rgba(32, 38, 43, 1);
                 color: #ffffff;
                 display: flex;
                 justify-content: center;
