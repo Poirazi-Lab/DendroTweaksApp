@@ -13,7 +13,7 @@
     },
     "data": {
         "path_to_data": "app/static/data",
-        "recompile_MOD_files": true
+        "recompile_MOD_files": false
     },
     "simulation": {
         "simulator": "NEURON",

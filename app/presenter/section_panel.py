@@ -81,7 +81,7 @@ class SectionMixin():
         # if param_name.startswith('gbar_') or param_name in ['cm', 'g_pas']:
         if len(self.selected_secs) == 1:
             selected_sec = self.selected_sec
-            if param_name == 'dist':
+            if param_name == 'distance':
                 yp = [seg.distance_to_root for seg in selected_sec]
             elif param_name == 'area':
                 raise NotImplementedError
@@ -92,7 +92,7 @@ class SectionMixin():
                 yp = [0 for seg in selected_sec]
             else:
                 if hasattr(selected_sec, param_name):
-                    yp = [getattr(seg, param_name) for seg in selected_sec]
+                    yp = [seg.get_param_value(param_name) for seg in selected_sec]
                 else:
                     yp = [0 for seg in selected_sec]
             

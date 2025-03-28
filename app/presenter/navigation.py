@@ -40,10 +40,10 @@ class NavigationMixin():
         self.update_iclamp_switch()
         self.update_record_switch()
 
-        if self.view.widgets.tabs['right_menu'].active == 3:
-            self._update_distribution_plot()
-        elif self.view.widgets.tabs['right_menu'].active == 0:
-            self._update_diam_distribution_plot()
+        # if self.view.widgets.tabs['right_menu'].active == 3:
+        #     self._update_distribution_plot()
+        # elif self.view.widgets.tabs['right_menu'].active == 0:
+        #     self._update_diam_distribution_plot()
 
     @log
     def update_selected_segments(self, old, new):
