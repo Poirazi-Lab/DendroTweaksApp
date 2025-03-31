@@ -960,79 +960,64 @@ class Presenter(IOMixin, NavigationMixin,
     # MISC
     # =================================================================
 
+    # self.view.widgets.multichoice['group_domains'].options = list(self.model.domains.keys())
+    # self.view.widgets.selectors['mechanism'].options = list(self.model.mechs_to_params.keys())
+    def select_graph_param_based_on_tab(self):
+
+        TABS_TO_PARAMS = {
+            0: ('morphology', ['domain']*4),
+            1: ('membrane', ['domain', 'domain', 'cm']),
+            2: ('stimuli', ['recordings', 'iclamps', 'AMPA_NMDA']),
+        }
+
+        active_tab_id = self.view.widgets.buttons['switch_right_menu'].active
+        tab_name, params = TABS_TO_PARAMS[active_tab_id]
+        tab_idx = self.view.widgets.tabs[tab_name].active
+
+        logger.debug(f'Switching to "{tab_name}" tab with index {tab_idx}')
+
+        param_name = params[tab_idx]
+        options = {**self.view.params, **self.model.mechs_to_params} if tab_name == 'membrane' else {**self.view.params}
+
+        self.view.widgets.selectors['graph_param'].options = options
+        self.view.widgets.selectors['graph_param'].value = param_name
+
     def switch_tab_callback(self, attr, old, new):
-    
-        if self.model is None: return
-        if self.model.sec_tree is None: return
-        if new == 0:
-            logger.debug('Switching to Morphology tab')
-            self.view.widgets.selectors['graph_param'].options = {**self.view.params}
-            self.view.widgets.selectors['graph_param'].value = 'domain'
-            # self.view.widgets.selectors['section'].value = '0'
-        elif new == 1:
-            logger.debug(f'Switching to Mechanisms tab')
-            self.view.widgets.selectors['graph_param'].options = {**self.view.params}
-            self.view.widgets.selectors['graph_param'].value = 'domain'
-        elif new == 2:
-            logger.debug(f'Switching to Groups tab')
-            self.view.widgets.selectors['graph_param'].options = {**self.view.params}
-            self.view.widgets.selectors['graph_param'].value = 'domain'
-            self.view.widgets.multichoice['group_domains'].options = list(self.model.domains.keys())
-            self.view.widgets.multichoice['group_domains'].value = []
-        elif new == 3:
-            logger.debug('Switching to Parameters tab')
 
-            self.view.widgets.selectors['graph_param'].options = {**self.view.params, **self.model.mechs_to_params}
-
-            with remove_callbacks(self.view.widgets.selectors['mechanism']):
-                self.view.widgets.selectors['mechanism'].options = list(self.model.mechs_to_params.keys())
-                self.view.widgets.selectors['mechanism'].value = 'Independent'
-            self._select_mechanism('Independent')
-            # if self.view.widgets.switches['show_kinetics'].active:
-            #     self._toggle_kinetic_plots('Independent')
-        elif new == 4:
-            logger.debug('Switching to Recordings tab')
-            self.view.widgets.selectors['graph_param'].options = {**self.view.params}
-            self.view.widgets.selectors['graph_param'].value = 'recordings'
-            # self.view.widgets.selectors['section'].value = '0'
-        elif new == 5:
-            logger.debug('Switching to Stimuli tab')
-            self.view.widgets.selectors['graph_param'].options = {**self.view.params}
-            self.view.widgets.selectors['graph_param'].value = 'iclamps'
-            # self.view.widgets.selectors['section'].value = '0'
-            
-
-            
-        self.view.DOM_elements['section_plots'].visible = True if new in [0] else False
-
+        self.select_graph_param_based_on_tab()
+        if self.view.widgets.tabs['morphology'].visible:
+            if self.view.widgets.tabs['morphology'].active == 0:
+                self.view.widgets.selectors['section'].value = '0'
+            elif self.view.widgets.tabs['morphology'].active == 1:
+                self.view.widgets.selectors['section'].value = '0'
+                self.view.widgets.selectors['domain'].value = 'soma'
+            else:
+                self.view.widgets.selectors['section'].value = None
 
   
     def switch_right_menu_tab_callback(self, attr, old, new):
-        if self.model is None: return
-        if self.model.sec_tree is None: return
         if new == 0:
             logger.debug('Switching to Morphology Tabs')
             self.view.widgets.tabs['stimuli'].visible = False
             self.view.widgets.tabs['membrane'].visible = False
             self.view.widgets.tabs['morphology'].visible = True
-            self.view.widgets.selectors['graph_param'].options = {**self.view.params}
-            self.view.widgets.selectors['graph_param'].value = 'domain'
+            if self.view.widgets.tabs['morphology'].active == 0:
+                self.view.widgets.selectors['section'].value = '0'
+            else:
+                self.view.widgets.selectors['section'].value = None
         elif new == 1:
             logger.debug('Switching to Membrane Tabs')
             self.view.widgets.tabs['morphology'].visible = False
             self.view.widgets.tabs['stimuli'].visible = False
             self.view.widgets.tabs['membrane'].visible = True
-            self.view.widgets.selectors['graph_param'].options = {**self.view.params, **self.model.mechs_to_params}
-
+            self.view.widgets.selectors['section'].value = None
         elif new == 2:
             logger.debug('Switching to Stimuli Tabs')
             self.view.widgets.tabs['morphology'].visible = False
             self.view.widgets.tabs['membrane'].visible = False
             self.view.widgets.tabs['stimuli'].visible = True
             self.view.widgets.selectors['section'].value = '0'
-            self.view.widgets.selectors['graph_param'].options = {**self.view.params}
-            self.view.widgets.selectors['graph_param'].value = 'recordings'
-
+        self.select_graph_param_based_on_tab()
 
     def save_preferences_callback(self, event):
 

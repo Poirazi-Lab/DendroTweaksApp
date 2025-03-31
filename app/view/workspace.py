@@ -85,6 +85,7 @@ class WorkspaceMixin():
             options=[], 
             title='Segment',
         )
+        self.widgets.selectors['seg_x'].on_change('value', self.p.select_seg_x_callback)
 
 
     def _create_navigation_panel(self):

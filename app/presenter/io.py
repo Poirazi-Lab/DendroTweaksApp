@@ -79,6 +79,7 @@ class IOMixin():
         self._update_multichoice_mechanisms_widget()
 
         self.view.widgets.buttons['add_default_mechanisms'].disabled = True
+        self.view.widgets.selectors['membrane'].options = self.model.list_membrane_configs()
 
         self.update_status_message('Membrane loaded.', status='success')
         
@@ -106,6 +107,7 @@ class IOMixin():
         for param_name in ['AMPA', 'NMDA', 'GABAa', 'AMPA_NMDA', 'recordings', 'iclamps']:
             self._update_graph_param(param_name, update_colors=False)
 
+        self.view.widgets.selectors['stimuli'].options = self.model.list_stimuli_configs()
         self.update_status_message('Stimuli loaded.', status='success')
         
 
@@ -135,7 +137,7 @@ class IOMixin():
         """     
         self.load_morphology(new)
 
-        
+        self.view.menus['right_menu'].visible = True
         self.update_status_message('Morphology loaded.', status='success')
         
 
@@ -168,6 +170,7 @@ class IOMixin():
         # self._attach_download_js()
 
         self.view.widgets.multichoice['domains'].options = list(self.model.domains.keys())
+        self.view.widgets.selectors['morphology'].options = self.model.list_morphologies()
         
 
 

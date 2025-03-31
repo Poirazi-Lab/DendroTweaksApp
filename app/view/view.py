@@ -187,6 +187,7 @@ class CellView(LeftMenuMixin, WorkspaceMixin, RightMenuMixin, SettingsMixin, Aux
         self.figures = {}
         self.sources = {}
         self.renderers = {}
+        self.menus = {}
         self.widgets = WidgetManager()
         self.DOM_elements = {}
         self.layout_elements = {}
@@ -229,7 +230,7 @@ class CellView(LeftMenuMixin, WorkspaceMixin, RightMenuMixin, SettingsMixin, Aux
             renderer.edge_renderer.glyph.line_color = self.theme.graph_colors['edge']
 
         self.DOM_elements['status'].styles.update({'color': self.theme.status_colors['info']})
-        self.DOM_elements['status'].text = f'<span style="color: {self.theme.status_colors["success"]}">Theme changed to: {theme_name}</span>'
+        
 
     def _add_theme_callbacks(self):
 

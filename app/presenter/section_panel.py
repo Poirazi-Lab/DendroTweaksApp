@@ -70,7 +70,7 @@ class SectionMixin():
 
     def update_section_param_data(self, param_name: str = None) -> None:
         param_name = param_name or self.view.widgets.selectors['graph_param'].value
-        if param_name in ['', 'domain', 'Ra', 'recordings', 'AMPA', 'NMDA', 'GABAa', 'AMPA_NMDA', 'weights', 'iclamps']:
+        if param_name in ['', 'domain', 'recordings', 'AMPA', 'NMDA', 'GABAa', 'AMPA_NMDA', 'weights', 'iclamps']:
             param_name = 'diam'
         sec_name = self.view.widgets.selectors['section'].value
         self.view.sources['section_param'].data = self.get_param_data(param_name)
@@ -82,17 +82,22 @@ class SectionMixin():
         if len(self.selected_secs) == 1:
             selected_sec = self.selected_sec
             if param_name == 'distance':
-                yp = [seg.distance_to_root for seg in selected_sec]
+                yp = [seg.path_distance() for seg in selected_sec.segments]
+            elif param_name == 'domain_distance':
+                yp = [seg.path_distance(within_domain=True) for seg in selected_sec.segments]
+            elif param_name == 'subtree_size':
+                yp = [seg.subtree_size for seg in selected_sec.segments]
+            elif param_name == 'section_diam':
+                yp = [seg._section.diam for seg in selected_sec.segments]
+            elif param_name == 'Ra':
+                yp = [seg.Ra for seg in selected_sec.segments]
             elif param_name == 'area':
-                raise NotImplementedError
-                # yp = [seg.area() for seg in selected_sec]
-            elif param_name == '(unset)':
-                yp = [0 for seg in selected_sec]
+                yp = [seg._ref.area() for seg in selected_sec.segments]
             elif param_name == 'voltage':
                 yp = [0 for seg in selected_sec]
             else:
-                if hasattr(selected_sec, param_name):
-                    yp = [seg.get_param_value(param_name) for seg in selected_sec]
+                if hasattr(selected_sec._ref, param_name):
+                    yp = [seg.get_param_value(param_name) for seg in selected_sec.segments]
                 else:
                     yp = [0 for seg in selected_sec]
             
@@ -105,10 +110,10 @@ class SectionMixin():
     def update_section_widgets(self):
 
         self.update_sec_selector()
-        # self.update_seg_x_selector()
+        self.update_seg_x_selector()
 
         if len(self.selected_secs) == 1:
-            self.view.widgets.sliders['n_seg'].value = self.selected_sec.nseg   
+            self.view.widgets.spinners['n_seg'].value = self.selected_sec.nseg   
 
         self.update_navigation_buttons_on_reaching_terminal_branch()
 
@@ -159,11 +164,11 @@ class SectionMixin():
                                                     indent=4,
                                                     sort_dicts=False)
             spoiler = f'<details><summary>Toggle psection</summary><pre style="font-size:x-small">{preformatted_string}</pre></details>'
-            self.view.DOM_elements['status_bar'].text = spoiler
+            self.view.DOM_elements['psection'].text = spoiler
         elif len(self.selected_secs) > 1:
-            self.view.DOM_elements['status_bar'].text = 'More than one section selected'
+            self.view.DOM_elements['psection'].text = 'More than one section selected'
         else:
-            self.view.DOM_elements['status_bar'].text = 'No section selected'
+            self.view.DOM_elements['psection'].text = 'No section selected'
         
 
     # def get_seg_dist(self, sec, x=0.5):

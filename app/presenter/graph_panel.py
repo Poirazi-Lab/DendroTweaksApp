@@ -91,35 +91,6 @@ class GraphMixin():
         
         return pos
 
-    # def _create_sec_graph_nx(self):
-
-    #     # self.G = neuron_to_seg_graph(self.model.cell)
-    #     self.G = nx.Graph()
-    #     total_nsec = len(self.model.sec_tree)
-    #     color_map = {'soma': '#E69F00', 'axon': '#F0E442', 'dend': '#019E73', 'apic': '#0072B2'}
-    #     for sec in self.model.sec_tree:
-    #         radius = int(200 / np.sqrt(total_nsec)) if sec.domain == 'soma' else int(150 / np.sqrt(total_nsec))
-    #         self.G.add_node(sec.idx, 
-    #                         domain=sec.domain,
-    #                         cm = sec._ref.cm,
-    #                         Ra = sec._ref.Ra,
-    #                         diam = sec._ref.diam,
-    #                         # area = sec.area,
-    #                         subtree_size = sec.subtree_size,
-    
-    #                         recordings='None',
-    #                         iclamps=0,
-    #                         radius=radius*0.002,
-    #                         color=color_map[sec.domain],
-    #                         )
-    #         if sec.parent is not None:
-    #             self.G.add_edge(sec.parent.idx, sec.idx)
-
-    #     # pos = nx.kamada_kawai_layout(self.G, scale=1, center=(0, 0), dim=2)
-    #     pos = self._calculate_positions()
-    #     nx.set_node_attributes(self.G, pos, 'pos')
-    #     # self._rotate_graph()
-
     # CREATE GRAPH RENDERER
 
 
@@ -132,7 +103,6 @@ class GraphMixin():
         self.view.figures['graph'].renderers = []
         
         # CREATE NEW GRAPH RENDERER
-        # self._create_sec_graph_nx()
         self._create_seg_graph_nx()
 
         graph_renderer = from_networkx(
@@ -158,6 +128,7 @@ class GraphMixin():
         self.view.widgets.selectors['graph_param'].options = {**self.view.params, **self.model.mechs_to_params}
 
         self.add_lasso_callback()
+
 
     def _update_glyph(self, graph_renderer):
 
@@ -230,10 +201,12 @@ class GraphMixin():
         param_name = new
         self._update_graph_param(param_name, update_colors=True)
 
+
     def update_graph_callback(self, event):
         param_name = self.view.widgets.selectors['graph_param'].value
         self._update_graph_param(param_name, update_colors=True)
     
+
     @log
     def _update_graph_param(self, param_name, update_colors=True):
         """
@@ -251,6 +224,8 @@ class GraphMixin():
             # self.view.figures['graph'].renderers[0].node_renderer.data_source.data[param_name] = [self.G.nodes[n][param_name][0] for n in self.G.nodes]
 
         if update_colors: self._update_graph_colors(param_name)
+        
+        self.update_section_param_data(param_name)
 
 
     def _get_param_value(self, seg, param_name):

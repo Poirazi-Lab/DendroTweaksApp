@@ -110,8 +110,8 @@ class NavigationMixin():
 
     def select_seg_x_callback(self, attr, old, new):
 
-        seg_names = [self.view.widgets.selectors['section'].value + '(' + self.view.widgets.selectors['seg_x'].value + ')']
-        self.select_seg_x(seg_names)
+        seg_ids = [sec(float(new)).idx for sec in self.selected_secs]
+        self.select_seg_x(seg_ids)
 
     @log
     def select_section_callback(self, attr, old, new):
@@ -128,6 +128,7 @@ class NavigationMixin():
         indices = [i for i, lbl in enumerate(self.labels) if get_sec_type(self.model.cell.sections[lbl]) in new]
         logger.debug(f'Indices: {indices}')
         self.view.figures['cell'].renderers[0].data_source.selected.indices = indices
+
 
     def button_child_callback(self, event):
         """

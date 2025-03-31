@@ -80,16 +80,16 @@ curdoc().add_root(panel_simulation)
 # RIGHT MENU
 # =================================================================
 
-right_menu = view.create_right_menu()
-curdoc().add_root(right_menu)
+view.menus['right_menu'] = view.create_right_menu()
+curdoc().add_root(view.menus['right_menu'])
 
 
 # ====================================================================================
 # LEFT MENU
 # ====================================================================================
 
-left_menu = view.create_left_menu()
-curdoc().add_root(left_menu)
+view.menus['left_menu'] = view.create_left_menu()
+curdoc().add_root(view.menus['left_menu'])
 
 
 # ====================================================================================
@@ -132,7 +132,7 @@ for name, fig in view.figures.items():
 
 curdoc().theme = theme_name
 curdoc().on_event('document_ready', lambda event: setattr(view.widgets.selectors['theme'], 'value', theme_name))
-# curdoc().on_event('document_ready', lambda event: setattr(view.widgets.tabs['right_menu'], 'disabled', True))
+# curdoc().on_event('document_ready', lambda event: setattr(view.menus['right_menu'], 'visible', False))
 
 curdoc().js_on_event('document_ready', CustomJS(code="""
     console.log('Document ready');

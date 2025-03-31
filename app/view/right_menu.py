@@ -1,6 +1,6 @@
 
 from bokeh.models import Button, Select, Slider, RadioButtonGroup
-from bokeh.models import RangeSlider, Switch
+from bokeh.models import RangeSlider, Switch, Spinner
 from bokeh.models import ColumnDataSource, HoverTool, Patches
 from bokeh.layouts import column, row
 from bokeh.models import Tabs, TabPanel
@@ -34,21 +34,33 @@ class RightMenuMixin():
     # Sections tab
     # -----------------------------------------------------------------
 
-    def _create_nseg_slider(self):
+    def _create_nseg_spinner(self):
 
-        self.widgets.sliders['n_seg'] = Slider(start=1, end=21, value=1, step=2, title='nseg')
-        self.widgets.sliders['n_seg'].on_change('value_throttled', self.p.nseg_callback)
+        self.widgets.spinners['n_seg'] = Spinner(
+            title='N seg', 
+            value=1, 
+            step=1, 
+            width=100,
+            name='n_seg'
+        )
+        self.widgets.spinners['n_seg'].on_change('value_throttled', self.p.nseg_callback)
 
 
     def _create_sections_tab_panel(self):
 
-        self._create_nseg_slider()
+        self._create_nseg_spinner()
         section_figures = self.create_section_panel()
+        self.DOM_elements['psection'] = Div(
+            text="""Select a section to show.""",
+            styles={'width': '500px', 'height':'200px', 
+                    'margin-top': '60px',
+                    'overflow': 'auto', 'font-size': '12px'})
         
         sections_layout = column(
             [
-                self.widgets.sliders['n_seg'],
+                self.widgets.spinners['n_seg'],
                 section_figures,
+                self.DOM_elements['psection']
             ],
             name='sections_layout',
             sizing_mode='stretch_width',
@@ -170,6 +182,7 @@ class RightMenuMixin():
             active = 0,
             sizing_mode='stretch_width',
         )
+        self.widgets.tabs['morphology'].on_change('active', self.p.switch_tab_callback)
 
     # =================================================================
     # MEMBRANE
@@ -519,6 +532,7 @@ class RightMenuMixin():
             visible=False,
             sizing_mode='stretch_width',
         )
+        self.widgets.tabs['membrane'].on_change('active', self.p.switch_tab_callback)
 
     # =================================================================
     # STIMULI
@@ -717,6 +731,7 @@ class RightMenuMixin():
             active = 0,
             visible=False,
         )
+        self.widgets.tabs['stimuli'].on_change('active', self.p.switch_tab_callback)
 
     def _create_radio_buttons(self):
 
@@ -749,4 +764,5 @@ class RightMenuMixin():
             align='center',
             name='right_menu_section',
             sizing_mode='stretch_width',
+            visible=False,
         )
