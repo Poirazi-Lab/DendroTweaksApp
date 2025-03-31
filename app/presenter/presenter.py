@@ -334,7 +334,7 @@ class Presenter(IOMixin, NavigationMixin,
         with remove_callbacks(self.view.widgets.selectors['mechanism']):
             self.view.widgets.selectors['mechanism'].options = available_mechs
             self.view.widgets.selectors['mechanism'].value = available_mechs[-1] if available_mechs else None
-
+        
 
     # =================================================================
     # PARAMETERS TAB
@@ -375,6 +375,22 @@ class Presenter(IOMixin, NavigationMixin,
             self.view.widgets.selectors['param'].options = available_params
             self.view.widgets.selectors['param'].value = param_name
         self._select_param(param_name)
+
+    def toggle_kinetic_plots_callback(self, attr, old, new):
+        """
+        Callback for the switches['show_kinetics'] widget.
+        """
+        if not new:
+            self.view.figures['inf'].visible = False
+            self.view.figures['tau'].visible = False
+            self.view.figures['inf_log'].visible = False
+            self.view.figures['tau_log'].visible = False
+            self.view.figures['distribution'].visible = True
+            return
+
+        self.view.figures['distribution'].visible = False
+        mech_name = self.selected_mech_name
+        self._toggle_kinetic_plots(mech_name)
     
     @log
     def _toggle_kinetic_plots(self, mech_name):
@@ -961,12 +977,12 @@ class Presenter(IOMixin, NavigationMixin,
     # =================================================================
 
     # self.view.widgets.multichoice['group_domains'].options = list(self.model.domains.keys())
-    # self.view.widgets.selectors['mechanism'].options = list(self.model.mechs_to_params.keys())
+    
     def select_graph_param_based_on_tab(self):
 
         TABS_TO_PARAMS = {
             0: ('morphology', ['domain']*4),
-            1: ('membrane', ['domain', 'domain', 'cm']),
+            1: ('membrane', ['domain', 'domain', self.view.widgets.selectors['param'].value]),
             2: ('stimuli', ['recordings', 'iclamps', 'AMPA_NMDA']),
         }
 

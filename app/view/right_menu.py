@@ -394,6 +394,14 @@ class RightMenuMixin():
         self.widgets.buttons['standardize'].on_event(ButtonClick, self.p.standardize_callback)
         self.widgets.buttons['standardize'].on_event(ButtonClick, self.p.voltage_callback_on_event)
         
+    def _create_show_kinetics_switch(self):
+
+        self.widgets.switches['show_kinetics'] = Switch(
+            active=False, )
+        self.widgets.switches['show_kinetics'].on_change('active', self.p.toggle_kinetic_plots_callback)
+
+
+
     def _create_param_selector(self):
         self.widgets.selectors['param'] = Select(title='Parameter',
                                                 options=[],
@@ -457,6 +465,7 @@ class RightMenuMixin():
         
         self._create_mechanism_selector()
         self._create_standardize_button()
+        self._create_show_kinetics_switch()
         self._create_param_selector()
 
         self._create_assigned_group_selector()
@@ -465,20 +474,23 @@ class RightMenuMixin():
 
         self._create_distribution_type_selector()
 
+        kinetics_panel = self._create_kinetics_panel()
+        self._create_distribution_figure()
+
         # Distr → Group → Param → Mech
 
-        distribution_panel = column(width=300)
+        self.DOM_elements['distribution_widgets_panel'] = column(width=300)
         
-        group_panel = column(
+        self.DOM_elements['group_panel'] = column(
             [
                 self.widgets.selectors['distribution_type'],
-                distribution_panel,
-                # self.figures['distribution'],
+                self.DOM_elements['distribution_widgets_panel'],
+                self.figures['distribution'],
             ], 
             visible=False
         )
 
-        param_panel = column(
+        self.DOM_elements['param_panel'] = column(
             [
                 row(
                     [
@@ -487,7 +499,7 @@ class RightMenuMixin():
                         self.widgets.buttons['remove_distribution'],
                     ]
                 ),
-                group_panel,
+                self.DOM_elements['group_panel'],
             ], 
             visible=False
         )
@@ -497,9 +509,13 @@ class RightMenuMixin():
                 row(
                     [
                         self.widgets.selectors['mechanism'], 
-                        self.widgets.buttons['standardize']
+                        self.widgets.buttons['standardize'],
                     ]
                 ),
+                row(Div(text='Show distribution'), self.widgets.switches['show_kinetics'], Div(text='Show kinetics'),
+                        # styles={"padding-top":"20px"},
+                        ),
+                kinetics_panel,
                 self.widgets.selectors['param'],
             ]
         )
@@ -507,7 +523,8 @@ class RightMenuMixin():
         parameters_panel = column(
             [
                 mech_panel,
-                param_panel,
+                self.DOM_elements['param_panel'],
+                
             ]
         )
 

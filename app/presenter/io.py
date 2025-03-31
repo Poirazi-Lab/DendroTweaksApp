@@ -77,6 +77,8 @@ class IOMixin():
         self._update_mechs_to_insert_widget()
         self._update_multichoice_domain_widget()
         self._update_multichoice_mechanisms_widget()
+        self._update_mechanism_selector_widget()
+        self.view.widgets.selectors['mechanism'].value = 'Independent'
 
         self.view.widgets.buttons['add_default_mechanisms'].disabled = True
         self.view.widgets.selectors['membrane'].options = self.model.list_membrane_configs()

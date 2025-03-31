@@ -3,6 +3,7 @@ from bokeh.models import ColumnDataSource, Button, CustomJS, HoverTool, Patches
 from bokeh.layouts import column, row
 from bokeh.events import ButtonClick
 from bokeh.plotting import figure
+from bokeh.models import Span
 
 class AuxiliaryMixin():
 
@@ -103,7 +104,7 @@ class AuxiliaryMixin():
     # Distribution plots
     # ===================================================================
 
-    def _create_distribution_figure():
+    def _create_distribution_figure(self):
 
         self.figures['distribution'] = figure(
             width=400,
@@ -116,7 +117,7 @@ class AuxiliaryMixin():
         self.figures['distribution'].border_fill_color = None
 
         self.sources['distribution'] = ColumnDataSource(data={'x': [], 'y': []})
-        self.figures['distribution'].circle(x='x', y='y', source=self.sources['diam_distribution'], line_width=2, color='color')
+        self.figures['distribution'].circle(x='x', y='y', source=self.sources['distribution'], line_width=2, color='color')
         hspan = Span(location=0, dimension='width', line_color='white', line_width=1)
         self.figures['distribution'].add_layout(hspan)
         vspan = Span(location=0, dimension='height', line_color='white', line_width=1)
@@ -128,11 +129,12 @@ class AuxiliaryMixin():
     # Kinetics plots
     # ==================================================================
     
-    def create_kinetics_panel(self):
+    def _create_inf_figure(self):
 
-        self.figures['inf'] = figure(width=300, height=300, title='Steady state',
+        self.figures['inf'] = figure(width=400, height=200, title='Steady state',
                                 x_axis_label='Voltage (mV)', y_axis_label='Inf, (1)',
-                                visible=False)
+                                visible=False,
+                                tools='pan, ywheel_zoom, reset, box_zoom, save')
 
         self.sources['inf_orig'] = ColumnDataSource(data={'xs': [], 'ys': [], })
         self.figures['inf'].multi_line(xs='xs',
@@ -150,8 +152,9 @@ class AuxiliaryMixin():
                                     color='color')
 
         from bokeh.models import LogScale
-        self.figures['inf_log'] = figure(width=300, height=300, title='Steady state',
-                                x_axis_label='Voltage (mV)', y_axis_label='Inf, (1)',
+        self.figures['inf_log'] = figure(width=400, height=200, title='Steady state',
+                                x_axis_label='[Ca]_i (mM)',
+                                y_axis_label='Inf, (1)',
                                 visible=False, x_axis_type='log')
 
         self.figures['inf_log'].multi_line(xs='xs',
@@ -160,9 +163,12 @@ class AuxiliaryMixin():
                                         line_width=2,
                                         color='color')
 
-        self.figures['tau'] = figure(width=300, height=300, title='Time constant',
+    def _create_tau_figure(self):
+
+        self.figures['tau'] = figure(width=400, height=200, title='Time constant',
                                 x_axis_label='Voltage (mV)', y_axis_label='Tau, ms',
-                                visible=False)
+                                visible=False,
+                                tools='pan, ywheel_zoom, reset, box_zoom, save')
 
         self.sources['tau_orig'] = ColumnDataSource(data={'xs': [], 'ys': []})
         self.figures['tau'].multi_line(xs='xs',
@@ -171,8 +177,8 @@ class AuxiliaryMixin():
                                     line_width=2,
                                     color='color')
 
-        self.figures['tau_log'] = figure(width=300, height=300, title='Time constant',
-                                x_axis_label='Voltage (mV)', y_axis_label='Tau, ms',
+        self.figures['tau_log'] = figure(width=400, height=200, title='Time constant',
+                                x_axis_label='[Ca]_i (mM)', y_axis_label='Tau, ms',
                                 visible=False, x_axis_type='log')
 
         self.figures['tau_log'].multi_line(xs='xs',
@@ -189,5 +195,18 @@ class AuxiliaryMixin():
                                     line_dash='dashed',
                                     color='color')
 
-    
+        
+
+    def _create_kinetics_panel(self):
+
+        self._create_inf_figure()
+        self._create_tau_figure()
+
+        return row(
+            [
+                column([self.figures['inf'], self.figures['tau']]),
+                column([self.figures['inf_log'], self.figures['tau_log']])
+            ], 
+            name='panel_kinetics',
+        )
                                     
