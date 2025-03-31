@@ -5,6 +5,46 @@ from bokeh.models import Range1d
 from bokeh_utils import log
 from logger import logger
 
+from dendrotweaks.analysis import detect_somatic_spikes
+from dendrotweaks.analysis import calculate_passive_properties
+from dendrotweaks.analysis import calculate_fI_curve
+from dendrotweaks.analysis import calculate_dendritic_nonlinearity
+
+PROTOCOL_DESCRIPTIONS = {
+    'Input resistance and time constant': """<ol>
+    <li>Place a recording at the soma.</li>
+    <li>Inject a hyperpolarizing current into the cell.</li>
+    <li>Click "Run protocol" button.</li>
+    </ol>""",
+    'Somatic spikes': """<ol>
+    <li>Place a recording at the soma.</li>
+    <li>Inject a depolarizing current into the cell.</li>
+    <li>Click "Run protocol" button.</li>
+    </ol>""",
+    'Attenuation': """<ol>
+    <li>Place several recordings at different locations in the cell.</li>
+    <li>Inject a hyperpolarizing current at one of the locations.</li>
+    <li>Click "Run protocol" button.</li>
+    </ol>""",
+    'f-I curve': """<ol>
+    <li>Place a recording at the soma.</li>
+    <li>Inject a depolarizing current at the soma.</li>
+    <li>Specify the range of injected current amplitudes to test.</li>
+    <li>Click "Run protocol" button.</li>
+    </ol>""",
+    'Dendritic nonlinearity': """<ol>
+    <li>Place a recording at a dendritic location.</li>
+    <li>Place a single synapse at the same location.</li>
+    <li>Specify the range of weights to test.</li>
+    <li>Click "Run protocol" button.</li>
+    </ol>""",
+    'Sag ratio': """<ol>
+    <li>Place a recording at the soma.</li>
+    <li>Inject a hyperpolarizing current into the cell.</li>
+    <li>Click "Run protocol" button.</li>
+    </ol>""",
+}
+
 class ValidationMixin(): 
 
     def __init__(self):
@@ -110,6 +150,87 @@ class ValidationMixin():
         self.view.sources['frozen_v'].data = data
         tau = popt[1]
         return tau 
+
+    def select_protocol_callback(self, attr, old, new):
+        
+        self.view.DOM_elements['stats_ephys'].text = PROTOCOL_DESCRIPTIONS[new]
+        self.view.DOM_elements['stats_ephys'].styles['color'] = self.view.theme.status_colors['info']
+
+
+    @log
+    def run_protocol_callback(self, event):
+
+        protocol = self.view.widgets.selectors['protocol'].value
+        self.view.figures['stats_ephys'].visible = False
+
+        if protocol == 'Input resistance and time constant':
+            passive_data = calculate_passive_properties(self.model)
+            self._plot_passive_properties(passive_data)
+
+            stats = f"Input resistance: {np.round(passive_data['input_resistance'], 2)} MOhm<br>"
+            stats += f"Time constant: {np.round(passive_data['time_constant'], 2)} ms<br>"
+            stats += f"Onset voltage: {np.round(passive_data['onset_voltage'], 2)} mV<br>"
+            stats += f"Offset voltage: {np.round(passive_data['offset_voltage'], 2)} mV<br>"
+
+
+        elif protocol == 'Somatic spikes':
+            spike_data = detect_somatic_spikes(self.model)
+            self._plot_somatic_spikes(spike_data)
+
+            stats = f"Number of spikes: {len(spike_data['spike_times'])}<br>"
+            if len(spike_data['spike_times']) > 1:
+                stats += f"ISI: {np.round(np.mean(np.diff(spike_data['spike_times'])), 2)} ms<br>"
+                stats += f"Average frequency: {np.round(len(spike_data['spike_times']) / self.view.widgets.sliders['duration'].value * 1000, 2)} Hz<br>"
+                stats += f"Average frequency (1/ISI): {np.round(1000 / np.mean(np.diff(spike_data['spike_times'])), 2)} Hz<br>"
+                stats += f"ISI-CV: {np.round(np.std(np.diff(spike_data['spike_times'])) / np.mean(np.diff(spike_data['spike_times'])), 2)}<br>"
+                stats += f"Adaptation index: {np.round(np.sum(np.diff(np.diff(spike_data['spike_times']))) / np.sum(np.diff(spike_data['spike_times'])), 2)}<br>"
+            stats += f"Average spike half-width: {np.round(np.mean(spike_data['half_widths']), 2)} ms<br>"
+            stats += f"Average spike amplitude: {np.round(np.mean(spike_data['amplitudes']), 2)} mV<br>"
+
+        
+
+        self.view.DOM_elements['stats_ephys'].text = stats
+        self.view.DOM_elements['stats_ephys'].styles['color'] = self.view.theme.status_colors['success']
+
+    def _plot_passive_properties(self, passive_data):
+
+        tau = passive_data['time_constant']
+        v_onset = passive_data['onset_voltage']
+        v_offset = passive_data['offset_voltage']
+        t_decay = passive_data['decay_time']
+        v_decay = passive_data['decay_voltage']
+        A = passive_data['A']
+        start_t = passive_data['start_time']
+
+        def _exp_decay(t, A, tau):
+            return A * np.exp(-t / tau)
+
+        shifted_exp_decay = _exp_decay(t_decay, A, tau) + v_offset
+        data = {'xs': [t_decay + start_t], 'ys': [shifted_exp_decay], 'color': ['red']}
+        self.view.sources['frozen_v'].data = data
+
+
+    def _plot_somatic_spikes(self, spike_data):
+
+        spike_times = spike_data['spike_times']
+        spike_values = spike_data['spike_values']
+        half_widths = spike_data['half_widths']
+        amplitudes = spike_data['amplitudes']
+        right_bases = spike_data['right_bases']
+        left_bases = spike_data['left_bases']
+        duration_ms = spike_data['stimulus_duration']
+
+        self.view.sources['detected_spikes'].data = {'x': spike_times, 'y': spike_values}
+        data = {'xs': [], 'ys': [], 'color': []}
+        for t, v, w, a, lb, rb in zip(spike_times, spike_values, half_widths, amplitudes, left_bases, right_bases):
+            data['xs'].append([t, t])
+            data['ys'].append([v, v - a])
+            data['color'].append('lawngreen')
+            data['xs'].append([lb, rb])
+            data['ys'].append([v - a/2, v - a/2])
+            data['color'].append('lawngreen')
+        self.view.sources['frozen_v'].data = data
+        
 
     @log
     def stats_ephys_callback(self, event):

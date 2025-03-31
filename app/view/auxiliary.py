@@ -209,4 +209,24 @@ class AuxiliaryMixin():
             ], 
             name='panel_kinetics',
         )
-                                    
+
+
+     
+    def _create_stats_ephys_figure(self):
+
+        self.figures['stats_ephys'] = figure(
+            width=300, 
+            height=200,
+            x_axis_label='Current (nA)',
+            y_axis_label='Frequency (Hz)',
+            tools='pan, box_zoom, reset, save',
+            visible=False
+        )
+        self.sources['stats_ephys'] = ColumnDataSource(data={'x': [], 'y': []})   
+        self.figures['stats_ephys'].circle(
+            x='x', 
+            y='y', 
+            source=self.sources['stats_ephys'], 
+            color='red', 
+            size=5
+        )                       

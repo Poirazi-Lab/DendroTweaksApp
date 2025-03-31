@@ -310,90 +310,6 @@ class LeftMenuMixin():
             child=simulation_layout,
         )
 
-    # ------------------------------------------------------------------------------------
-    # Validation tab panel
-    # ------------------------------------------------------------------------------------
-
-    # Stats ephys
-
-    def _create_stats_ephys_button(self):
-        
-        self.widgets.buttons['stats_ephys'] = Dropdown(
-            label='Validate', 
-            button_type='default', 
-            menu=[
-                ('Detect spikes', 'spikes'), 
-                ('Input resistance and time constant', 'R_in'), 
-                ('Atttenuation', 'attenuation'), 
-                ('Sag ratio', 'sag_ratio'), 
-                ('f-I curve', 'fI_curve'), 
-                ('I-V curve', 'iv_curve'),
-                ('Dendritic nonlinearity', 'nonlinearity'),
-            ]
-        )
-        self.widgets.buttons['stats_ephys'].on_event("menu_item_click", self.p.stats_ephys_callback)
-
-
-    def _create_stats_ephys_figure(self):
-
-        self.figures['stats_ephys'] = figure(
-            width=300, 
-            height=200,
-            x_axis_label='Current (nA)',
-            y_axis_label='Frequency (Hz)',
-            tools='pan, box_zoom, reset, save',
-            visible=False
-        )
-        self.sources['stats_ephys'] = ColumnDataSource(data={'x': [], 'y': []})   
-        self.figures['stats_ephys'].circle(
-            x='x', 
-            y='y', 
-            source=self.sources['stats_ephys'], 
-            color='red', 
-            size=5
-        )
-
-
-    # Clear validation
-    def _create_clear_validation_button(self):
-
-        self.widgets.buttons['clear_validation'] = Button(
-            label='Clear', 
-            button_type='danger'
-        )
-        def clear_validation_callback():
-            self.sources['stats_ephys'].data = {'x': [], 'y': []}
-            self.sources['detected_spikes'].data = {'x': [], 'y': []}
-            self.sources['frozen_v'].data = {'xs': [], 'ys': []}
-            self.widgets.switches['frozen_v'].active = False
-            self.figures['stats_ephys'].visible = False
-        self.widgets.buttons['clear_validation'].on_event(ButtonClick, clear_validation_callback)
-
-
-    # Tab panel
-
-    def _create_validation_tab_panel(self):
-
-        self.DOM_elements['stats_ephys'] = Div(text='Validation results:')
-
-        self._create_stats_ephys_button()
-        self._create_stats_ephys_figure()
-        self._create_clear_validation_button()
-
-        validation_layout = column(
-            [
-                self.DOM_elements['stats_ephys'],
-                self.widgets.buttons['stats_ephys'],
-                self.figures['stats_ephys'],
-                self.widgets.buttons['clear_validation'],
-            ],
-            sizing_mode='scale_both',
-        )
-        
-        self.widgets.tab_panels['validation'] = TabPanel(
-            title='Validation',
-            child=validation_layout,
-        )
 
     # ------------------------------------------------------------------------------------
     # Assembling the left menu
@@ -403,13 +319,11 @@ class LeftMenuMixin():
 
         self._create_io_tab_panel()
         self._create_simulation_tab_panel()
-        self._create_validation_tab_panel()
 
         self.widgets.tabs['left_menu'] = Tabs(
             tabs=[
                 self.widgets.tab_panels['io'],
                 self.widgets.tab_panels['simulation'],
-                self.widgets.tab_panels['validation'],
             ],
             visible=True,
             sizing_mode='scale_both'

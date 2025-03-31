@@ -7,7 +7,7 @@ from bokeh.models import Tabs, TabPanel
 from bokeh.events import ButtonClick
 from bokeh.models import MultiChoice
 from bokeh.models import TextInput, NumericInput
-
+from bokeh.models import Dropdown
 
 from bokeh.models import CustomJS
 
@@ -729,21 +729,118 @@ class RightMenuMixin():
             child=synapses_panel,
         )
 
-    # -----------------------------------------------------------------
-    # Validation and analysis tab?
-    # -----------------------------------------------------------------
+    # ------------------------------------------------------------------------------------
+    # Validation tab panel
+    # ------------------------------------------------------------------------------------
+
+    def _create_protocol_selector(self):
+
+        self.widgets.selectors['protocol'] = Select(
+            title='Validation protocol',
+            value='Select validation protocol',
+            options=[
+                    'Somatic spikes',
+                    'Input resistance and time constant',
+                    'Attenuation',
+                    'Sag ratio',
+                    'f-I curve',
+                    'Dendritic nonlinearity',
+                ]
+            )
+        self.widgets.selectors['protocol'].on_change('value', self.p.select_protocol_callback)
+    
+    def _create_stats_ephys_button(self):
+        
+        self.widgets.buttons['stats_ephys'] = Dropdown(
+            label='Validate', 
+            button_type='default', 
+            menu=[
+                ('Detect spikes', 'spikes'), 
+                ('Input resistance and time constant', 'R_in'), 
+                ('Atttenuation', 'attenuation'), 
+                ('Sag ratio', 'sag_ratio'), 
+                ('f-I curve', 'fI_curve'), 
+                ('I-V curve', 'iv_curve'),
+                ('Dendritic nonlinearity', 'nonlinearity'),
+            ]
+        )
+        self.widgets.buttons['stats_ephys'].on_event("menu_item_click", self.p.stats_ephys_callback)
+
+    def _create_run_protocol_button(self):
+        self.widgets.buttons['run_protocol'] = Button(
+            label='Run protocol', 
+            button_type='primary'
+        )
+        self.widgets.buttons['run_protocol'].on_event(ButtonClick, self.p.run_protocol_callback)
+
+    # Clear validation
+    def _create_clear_validation_button(self):
+
+        self.widgets.buttons['clear_validation'] = Button(
+            label='Clear', 
+            button_type='danger'
+        )
+        def clear_validation_callback():
+            self.sources['stats_ephys'].data = {'x': [], 'y': []}
+            self.sources['detected_spikes'].data = {'x': [], 'y': []}
+            self.sources['frozen_v'].data = {'xs': [], 'ys': []}
+            self.widgets.switches['frozen_v'].active = False
+            self.figures['stats_ephys'].visible = False
+            self.DOM_elements['stats_ephys'].text = "Data cleared. Select a protocol to validate."
+        self.widgets.buttons['clear_validation'].on_event(ButtonClick, clear_validation_callback)
+
+
+    # Tab panel
+
+    def _create_validation_tab_panel(self):
+
+        self.DOM_elements['stats_ephys'] = Div(
+            text="",
+            width=400,
+            styles={
+                'color': self.theme.status_colors['info'],
+                'margin': '10px',
+                'background-color': 'rgba(255, 255, 255, 0.2)',
+                'padding': '10px',
+                'border-radius': '5px',
+            }
+        )
+
+        self._create_protocol_selector()
+        self._create_stats_ephys_figure()
+        self._create_run_protocol_button()
+        self._create_clear_validation_button()
+
+        validation_layout = column(
+            [
+                self.widgets.selectors['protocol'],
+                self.DOM_elements['stats_ephys'],
+                self.figures['stats_ephys'],
+                self.widgets.buttons['run_protocol'], 
+                self.widgets.buttons['clear_validation'],
+            ],
+            sizing_mode='scale_both',
+        )
+        
+        self.widgets.tab_panels['validation'] = TabPanel(
+            title='Ephys analysis',
+            child=validation_layout,
+        )
+
 
     def _create_stimuli_tabs(self):
 
         self._create_recordings_tab_panel()
         self._create_iclamp_tab_panel()
         self._create_synapses_tab_panel()
+        self._create_validation_tab_panel()
 
         self.widgets.tabs['stimuli'] = Tabs(
             tabs = [
                 self.widgets.tab_panels['recordings'],
                 self.widgets.tab_panels['iclamp'],
-                self.widgets.tab_panels['synapses']
+                self.widgets.tab_panels['synapses'],
+                self.widgets.tab_panels['validation'],
             ],
             active = 0,
             visible=False,

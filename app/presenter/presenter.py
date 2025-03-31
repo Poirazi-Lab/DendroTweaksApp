@@ -983,7 +983,7 @@ class Presenter(IOMixin, NavigationMixin,
         TABS_TO_PARAMS = {
             0: ('morphology', ['domain']*4),
             1: ('membrane', ['domain', 'domain', self.view.widgets.selectors['param'].value]),
-            2: ('stimuli', ['recordings', 'iclamps', 'AMPA_NMDA']),
+            2: ('stimuli', ['recordings', 'iclamps', 'AMPA_NMDA', 'recordings']),
         }
 
         active_tab_id = self.view.widgets.buttons['switch_right_menu'].active
