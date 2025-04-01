@@ -215,18 +215,35 @@ class AuxiliaryMixin():
     def _create_stats_ephys_figure(self):
 
         self.figures['stats_ephys'] = figure(
-            width=300, 
-            height=200,
+            width=400, 
+            height=300,
             x_axis_label='Current (nA)',
             y_axis_label='Frequency (Hz)',
+            y_range = (0, 1),
             tools='pan, box_zoom, reset, save',
             visible=False
         )
         self.sources['stats_ephys'] = ColumnDataSource(data={'x': [], 'y': []})   
+        self.sources['stats_ephys_extra'] = ColumnDataSource(data={'x': [], 'y': []})
+        self.figures['stats_ephys'].line(
+            x='x', 
+            y='y', 
+            source=self.sources['stats_ephys_extra'], 
+            color='gray', 
+            line_width=2,
+            line_dash='dashed'
+        )
+        self.figures['stats_ephys'].line(
+            x='x', 
+            y='y', 
+            source=self.sources['stats_ephys'], 
+            color='dodgerblue', 
+            line_width=2
+        )
         self.figures['stats_ephys'].circle(
             x='x', 
             y='y', 
             source=self.sources['stats_ephys'], 
             color='red', 
             size=5
-        )                       
+        )

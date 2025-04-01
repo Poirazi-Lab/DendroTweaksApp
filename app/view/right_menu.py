@@ -146,10 +146,10 @@ class RightMenuMixin():
 
     def _create_morphometric_analysis_tab_panel(self):
         
-        self.DOM_elements['stats'] = Div(text='Stats:')
+        self.DOM_elements['stats'] = Div(text='Morphometric statistics:')
 
-        self.widgets.buttons['stats'] = Button(label='Stats', button_type='default')
-        self.widgets.buttons['stats'].on_event(ButtonClick, self.p.stats_callback)
+        self.widgets.buttons['stats'] = Button(label='Show morphometric statistics', button_type='default')
+        self.widgets.buttons['stats'].on_event(ButtonClick, self.p.morphometric_stats_callback)
 
         stats_panel = column(
             [
@@ -737,34 +737,48 @@ class RightMenuMixin():
 
         self.widgets.selectors['protocol'] = Select(
             title='Validation protocol',
-            value='Select validation protocol',
+            value=None,
             options=[
                     'Somatic spikes',
                     'Input resistance and time constant',
-                    'Attenuation',
-                    'Sag ratio',
+                    'Voltage attenuation',
+                    # 'Sag ratio',
                     'f-I curve',
                     'Dendritic nonlinearity',
                 ]
             )
         self.widgets.selectors['protocol'].on_change('value', self.p.select_protocol_callback)
     
-    def _create_stats_ephys_button(self):
-        
-        self.widgets.buttons['stats_ephys'] = Dropdown(
-            label='Validate', 
-            button_type='default', 
-            menu=[
-                ('Detect spikes', 'spikes'), 
-                ('Input resistance and time constant', 'R_in'), 
-                ('Atttenuation', 'attenuation'), 
-                ('Sag ratio', 'sag_ratio'), 
-                ('f-I curve', 'fI_curve'), 
-                ('I-V curve', 'iv_curve'),
-                ('Dendritic nonlinearity', 'nonlinearity'),
-            ]
+    def _create_protocol_widgets(self):
+        self.widgets.numeric['protocol_min'] = NumericInput(
+            title='Min value',
+            value=0,
+            width=100,
+            mode='float'
         )
-        self.widgets.buttons['stats_ephys'].on_event("menu_item_click", self.p.stats_ephys_callback)
+        self.widgets.numeric['protocol_max'] = NumericInput(
+            title='Max value',
+            value=100,
+            width=100,
+            mode='float'
+        )
+        self.widgets.numeric['protocol_n'] = NumericInput(
+            title='N steps',
+            value=1,
+            width=100,
+            mode='float',
+            low=1,
+            high=10,
+        )
+        self.DOM_elements['protocol_widgets'] = row(
+            [
+                self.widgets.numeric['protocol_min'],
+                self.widgets.numeric['protocol_max'],
+                self.widgets.numeric['protocol_n'],
+            ],
+            name='protocol_widgets',
+            visible=False,
+        )
 
     def _create_run_protocol_button(self):
         self.widgets.buttons['run_protocol'] = Button(
@@ -772,22 +786,16 @@ class RightMenuMixin():
             button_type='primary'
         )
         self.widgets.buttons['run_protocol'].on_event(ButtonClick, self.p.run_protocol_callback)
+        self.add_message(self.widgets.buttons['run_protocol'], 'Running protocol. Please wait...', callback_type='on_click')
 
-    # Clear validation
     def _create_clear_validation_button(self):
 
         self.widgets.buttons['clear_validation'] = Button(
             label='Clear', 
             button_type='danger'
         )
-        def clear_validation_callback():
-            self.sources['stats_ephys'].data = {'x': [], 'y': []}
-            self.sources['detected_spikes'].data = {'x': [], 'y': []}
-            self.sources['frozen_v'].data = {'xs': [], 'ys': []}
-            self.widgets.switches['frozen_v'].active = False
-            self.figures['stats_ephys'].visible = False
-            self.DOM_elements['stats_ephys'].text = "Data cleared. Select a protocol to validate."
-        self.widgets.buttons['clear_validation'].on_event(ButtonClick, clear_validation_callback)
+
+        self.widgets.buttons['clear_validation'].on_event(ButtonClick, self.p.clear_validation_callback)
 
 
     # Tab panel
@@ -808,6 +816,7 @@ class RightMenuMixin():
 
         self._create_protocol_selector()
         self._create_stats_ephys_figure()
+        self._create_protocol_widgets()
         self._create_run_protocol_button()
         self._create_clear_validation_button()
 
@@ -816,6 +825,7 @@ class RightMenuMixin():
                 self.widgets.selectors['protocol'],
                 self.DOM_elements['stats_ephys'],
                 self.figures['stats_ephys'],
+                self.DOM_elements['protocol_widgets'],
                 self.widgets.buttons['run_protocol'], 
                 self.widgets.buttons['clear_validation'],
             ],

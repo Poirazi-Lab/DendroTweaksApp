@@ -132,6 +132,7 @@ for name, fig in view.figures.items():
 
 curdoc().theme = theme_name
 curdoc().on_event('document_ready', lambda event: setattr(view.widgets.selectors['theme'], 'value', theme_name))
+curdoc().on_event('document_ready', lambda event: setattr(view.widgets.selectors['protocol'], 'value', 'Somatic spikes'))
 # curdoc().on_event('document_ready', lambda event: setattr(view.menus['right_menu'], 'visible', False))
 
 curdoc().js_on_event('document_ready', CustomJS(code="""
