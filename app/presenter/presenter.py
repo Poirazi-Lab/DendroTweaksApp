@@ -326,14 +326,15 @@ class Presenter(IOMixin, NavigationMixin,
         self._update_mechanism_selector_widget()
 
 
-    def _update_mechanism_selector_widget(self):
+    def _update_mechanism_selector_widget(self, mech_name=None):
         """
         Updates the selectors['mechanism'] widget options when a mechanism is added or removed.
         """
         available_mechs = list(self.model.mechs_to_params.keys()) # both inserted and with range params
         with remove_callbacks(self.view.widgets.selectors['mechanism']):
             self.view.widgets.selectors['mechanism'].options = available_mechs
-            self.view.widgets.selectors['mechanism'].value = available_mechs[0] if available_mechs else None
+            mech_name = mech_name if mech_name else (available_mechs[-1] if available_mechs else None)
+            self.view.widgets.selectors['mechanism'].value = mech_name
         
 
     # =================================================================
@@ -590,6 +591,7 @@ class Presenter(IOMixin, NavigationMixin,
                 if mech_name not in ['Independent', 'Leak']:
                     mech = self.model.mechanisms[mech_name]
                     mech.params[param_name.replace(f'_{mech.name}', '')] = round(new, 10) # TODO: actually should take the seg value, but which seg
+                    logger.debug(f'Updating {mech_name} {param_name} to {new}')
                     self._toggle_kinetic_plots(mech.name)
                 self._update_graph_param(param_name)
                 self._update_distribution_plot()

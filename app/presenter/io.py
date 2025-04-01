@@ -77,7 +77,7 @@ class IOMixin():
         self._update_mechs_to_insert_widget()
         self._update_multichoice_domain_widget()
         self._update_multichoice_mechanisms_widget()
-        self._update_mechanism_selector_widget()
+        self._update_mechanism_selector_widget('Independent')
         self._update_param_selector_widget('Independent')
         
 
