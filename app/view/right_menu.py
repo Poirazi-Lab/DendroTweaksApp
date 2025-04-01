@@ -36,14 +36,16 @@ class RightMenuMixin():
 
     def _create_nseg_spinner(self):
 
-        self.widgets.spinners['n_seg'] = Spinner(
+        self.widgets.spinners['nseg'] = Spinner(
             title='N seg', 
-            value=1, 
-            step=1, 
+            value=None, 
+            step=2, 
+            low=1,
+            high=101,
             width=100,
-            name='n_seg'
+            name='nseg'
         )
-        self.widgets.spinners['n_seg'].on_change('value_throttled', self.p.nseg_callback)
+        self.widgets.spinners['nseg'].on_change('value_throttled', self.p.nseg_callback)
 
 
     def _create_sections_tab_panel(self):
@@ -58,7 +60,7 @@ class RightMenuMixin():
         
         sections_layout = column(
             [
-                self.widgets.spinners['n_seg'],
+                self.widgets.spinners['nseg'],
                 section_figures,
                 self.DOM_elements['psection']
             ],

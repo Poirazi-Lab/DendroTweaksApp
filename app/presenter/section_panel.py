@@ -113,7 +113,12 @@ class SectionMixin():
         self.update_seg_x_selector()
 
         if len(self.selected_secs) == 1:
-            self.view.widgets.spinners['n_seg'].value = self.selected_sec.nseg   
+            if list(self.selected_secs)[0].parent is None:
+                self.view.widgets.spinners['nseg'].visible = False
+            else:
+                self.view.widgets.spinners['nseg'].visible = True
+            with remove_callbacks(self.view.widgets.spinners['nseg']):
+                self.view.widgets.spinners['nseg'].value = self.selected_sec.nseg
 
         self.update_navigation_buttons_on_reaching_terminal_branch()
 
@@ -184,6 +189,7 @@ class SectionMixin():
     # VIEW TO MODEL
 
     def nseg_callback(self, attr, old, new):
+        if new is None: return
         if not self.selected_secs: 
             logger.debug('No section selected')
             return
