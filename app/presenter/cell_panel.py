@@ -55,7 +55,7 @@ class CellMixin():
     def get_cell_data(self):
         return {'xs': self.xs, 
                 'ys': self.ys, 
-                'color': self.colors, 
+                'line_color': self.colors, 
                 'line_width': self.line_widths, 
                 'label': self.labels}
 

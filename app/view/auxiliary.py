@@ -43,13 +43,15 @@ class AuxiliaryMixin():
                                             tools='pan, box_zoom, reset, wheel_zoom, save')
 
         self.sources['section_param'] = ColumnDataSource(data={'x': [], 'y': [], 'width': []})
-        self.figures['section_param'].vbar(x='x', 
-                                                                            top='y', 
-                                                                            width='width', 
-                                                                            source=self.sources['section_param'], 
-                                                                            color='#CC79A7', 
-                                                                            line_color='black', 
-                                                                            fill_alpha=0.5)
+        self.figures['section_param'].vbar(
+            x='x', 
+            top='y', 
+            width='width', 
+            source=self.sources['section_param'], 
+            color='#CC79A7', 
+            line_color='black', 
+            fill_alpha=0.5
+        )
 
         self.figures['section_param'].scatter(y='y', x='x', marker='marker', source=self.sources['section_nseg'], size=10, color='white')
 
@@ -116,7 +118,7 @@ class AuxiliaryMixin():
         self.figures['distribution'].background_fill_color = None
         self.figures['distribution'].border_fill_color = None
 
-        self.sources['distribution'] = ColumnDataSource(data={'x': [], 'y': []})
+        self.sources['distribution'] = ColumnDataSource(data={'x': [], 'y': [], 'color': []})
         self.figures['distribution'].circle(x='x', y='y', source=self.sources['distribution'], line_width=2, color='color')
         hspan = Span(location=0, dimension='width', line_color='white', line_width=1)
         self.figures['distribution'].add_layout(hspan)
@@ -136,20 +138,20 @@ class AuxiliaryMixin():
                                 visible=False,
                                 tools='pan, ywheel_zoom, reset, box_zoom, save')
 
-        self.sources['inf_orig'] = ColumnDataSource(data={'xs': [], 'ys': [], })
+        self.sources['inf_orig'] = ColumnDataSource(data={'xs': [], 'ys': [], 'line_color': []})
         self.figures['inf'].multi_line(xs='xs',
                                     ys='ys',
                                     source=self.sources['inf_orig'],
                                     line_width=2,
-                                    color='color')
+                                    line_color='line_color')
 
-        self.sources['inf_fit'] = ColumnDataSource(data={'xs': [], 'ys': [], })
+        self.sources['inf_fit'] = ColumnDataSource(data={'xs': [], 'ys': [], 'line_color': []})
         self.figures['inf'].multi_line(xs='xs',
                                     ys='ys',
                                     source=self.sources['inf_fit'],
                                     line_width=2,
                                     line_dash='dashed',
-                                    color='color')
+                                    line_color='line_color')
 
         from bokeh.models import LogScale
         self.figures['inf_log'] = figure(width=400, height=200, title='Steady state',
@@ -161,7 +163,7 @@ class AuxiliaryMixin():
                                         ys='ys',
                                         source=self.sources['inf_orig'],
                                         line_width=2,
-                                        color='color')
+                                        line_color='line_color')
 
     def _create_tau_figure(self):
 
@@ -170,12 +172,12 @@ class AuxiliaryMixin():
                                 visible=False,
                                 tools='pan, ywheel_zoom, reset, box_zoom, save')
 
-        self.sources['tau_orig'] = ColumnDataSource(data={'xs': [], 'ys': []})
+        self.sources['tau_orig'] = ColumnDataSource(data={'xs': [], 'ys': [], 'line_color': []})
         self.figures['tau'].multi_line(xs='xs',
                                     ys='ys',
                                     source=self.sources['tau_orig'],
                                     line_width=2,
-                                    color='color')
+                                    line_color='line_color')
 
         self.figures['tau_log'] = figure(width=400, height=200, title='Time constant',
                                 x_axis_label='[Ca]_i (mM)', y_axis_label='Tau, ms',
@@ -185,15 +187,15 @@ class AuxiliaryMixin():
                                         ys='ys',
                                         source=self.sources['tau_orig'],
                                         line_width=2,
-                                        color='color')                        
+                                        line_color='line_color')                        
 
-        self.sources['tau_fit'] = ColumnDataSource(data={'xs': [], 'ys': []})
+        self.sources['tau_fit'] = ColumnDataSource(data={'xs': [], 'ys': [], 'line_color': []})
         self.figures['tau'].multi_line(xs='xs',
                                     ys='ys',
                                     source=self.sources['tau_fit'],
                                     line_width=2,
                                     line_dash='dashed',
-                                    color='color')
+                                    line_color='line_color')
 
         
 

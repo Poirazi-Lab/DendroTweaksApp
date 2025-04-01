@@ -333,7 +333,7 @@ class Presenter(IOMixin, NavigationMixin,
         available_mechs = list(self.model.mechs_to_params.keys()) # both inserted and with range params
         with remove_callbacks(self.view.widgets.selectors['mechanism']):
             self.view.widgets.selectors['mechanism'].options = available_mechs
-            self.view.widgets.selectors['mechanism'].value = available_mechs[-1] if available_mechs else None
+            self.view.widgets.selectors['mechanism'].value = available_mechs[0] if available_mechs else None
         
 
     # =================================================================
@@ -356,7 +356,8 @@ class Presenter(IOMixin, NavigationMixin,
             self.view.sources['inf_fit'].data = {'xs': [], 'ys': [], 'label': [], 'color': []}
             self.view.sources['tau_fit'].data = {'xs': [], 'ys': [], 'label': [], 'color': []}
             self._toggle_kinetic_plots(mech_name)
-            
+        param_name = self.view.widgets.selectors['param'].value
+        self._update_graph_param(param_name)
 
 
     @log
@@ -438,12 +439,12 @@ class Presenter(IOMixin, NavigationMixin,
         inf_data = {'xs': [x for _ in range(len(data))],
                     'ys': [state['inf'] for state in data.values()],
                     'label': [state for state in data.keys()],
-                    'color': [Bokeh[8][2*i+factor] for i in range(len(data))]
+                    'line_color': [Bokeh[8][2*i+factor] for i in range(len(data))]
         }
         tau_data = {'xs': [x for _ in range(len(data))],
                     'ys': [state['tau'] for state in data.values()],
                     'label': [state for state in data.keys()],
-                    'color': [Bokeh[8][2*i+factor] for i in range(len(data))]
+                    'line_color': [Bokeh[8][2*i+factor] for i in range(len(data))]
         }
 
         # 6. Update the figures
@@ -465,6 +466,7 @@ class Presenter(IOMixin, NavigationMixin,
         """
         param_name = new
         self._select_param(param_name)
+        self._update_graph_param(param_name)
 
     @log
     def _select_param(self, param_name):
@@ -477,7 +479,7 @@ class Presenter(IOMixin, NavigationMixin,
 
         with remove_callbacks(self.view.widgets.selectors['graph_param']):
             self.view.widgets.selectors['graph_param'].value = param_name
-        self._update_graph_param(param_name)
+        
 
 
     @log

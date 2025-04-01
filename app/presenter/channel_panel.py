@@ -26,75 +26,7 @@ class ChannelMixin():
     def __init__(self):
         logger.debug('ChannelMixin init')
         super().__init__()
-
-
-    @log
-    def states_callback(self, attr, old, new):
-        import inspect
-
-        ch = self.selected_channel
-        if ch.name == 'Leak':
-            self.view.sources['inf_orig'].data = {'xs': [], 'ys': [], 'label': [], 'color': []}
-            self.view.sources['tau_orig'].data = {'xs': [], 'ys': [], 'label': [], 'color': []}
-            self.view.sources['inf_fit'].data = {'xs': [], 'ys': [], 'label': [], 'color': []}
-            self.view.sources['tau_fit'].data = {'xs': [], 'ys': [], 'label': [], 'color': []}
-            return
-
-        # sig = inspect.signature(ch.update)
-        # logger.debug(f'{ch.name} `update` signature: {sig}, parameters: {sig.parameters}')
-        
-        if hasattr(ch, 'cai'):
-            x_range = np.logspace(-5, 5, 1000)
-            self.view.figures['inf'].visible = False
-            self.view.figures['inf_log'].visible = True
-            self.view.figures['tau'].visible = False
-            self.view.figures['tau_log'].visible = True
-        else: 
-            logger.debug('Using linear scale for x-axis')
-            x_range = np.linspace(-100, 100, 1000)
-            self.view.figures['inf_log'].visible = False
-            self.view.figures['inf'].visible = True
-            self.view.figures['tau_log'].visible = False
-            self.view.figures['tau'].visible = True
-
-        ch.update(x_range)
-
-        inf_values = []
-        inf_labels = []
-        tau_values = []
-        tau_labels = []
-        v_ranges = []
-        for i, (state_var, state_params) in enumerate(ch.state_vars.items()):
-            inf = getattr(ch, state_params['inf']).tolist()
-            tau = getattr(ch, state_params['tau']).tolist()
-            inf_values.append(inf)
-            tau_values.append(tau)
-            inf_labels.append(state_var)
-            tau_labels.append(state_var)
-            v_ranges.append(x_range.tolist())
-
-        if isinstance(ch, StandardIonChannel):
-            ch_type = 'fit'
-        else:
-            ch_type = 'orig'
-
-        self.view.sources[f'inf_{ch_type}'].data = {'xs': v_ranges, 
-                                            'ys': inf_values, 
-                                            'label': inf_labels,
-                                            'color': [Bokeh[8][2*i+1] for i in range(len(inf_labels))]}
-        self.view.sources[f'tau_{ch_type}'].data = {'xs': v_ranges, 
-                                            'ys': tau_values, 
-                                            'label': tau_labels,
-                                            'color': [Bokeh[8][2*i+1] for i in range(len(tau_labels))]}
-
-        self.view.figures[f'inf'].title.text = f'Steady state, {ch.name}'
-        self.view.figures[f'tau'].title.text = f'Time constant, {ch.name}'
-
-        self.view.sources['inf_fit'].data = {'xs': [], 'ys': [], 'label': [], 'color': []}
-        self.view.sources['tau_fit'].data = {'xs': [], 'ys': [], 'label': [], 'color': []}
-
-    
-
+  
 
     @log
     def standardize_callback(self, event):
@@ -120,12 +52,12 @@ class ChannelMixin():
         inf_fit_data = {'xs': [x for _ in range(len(data))],
                         'ys': [state['inf'] for state in data.values()],
                         'label': [state for state in data.keys()],
-                        'color': [Bokeh[8][2*i+2] for i in range(len(data))]
+                        'line_color': [Bokeh[8][2*i+2] for i in range(len(data))]
                         }
         tau_fit_data = {'xs': [x for _ in range(len(data))],
                         'ys': [state['tau'] for state in data.values()],
                         'label': [state for state in data.keys()],
-                        'color': [Bokeh[8][2*i+2] for i in range(len(data))]
+                        'line_color': [Bokeh[8][2*i+2] for i in range(len(data))]
                         }
                         
 

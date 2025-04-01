@@ -40,21 +40,21 @@ class WorkspaceMixin():
             tools='pan, box_zoom,reset, tap, wheel_zoom, save'
         )
         self.figures['cell'].toolbar.active_scroll = self.figures['cell'].select_one(WheelZoomTool)
-        self.sources['cell'] = ColumnDataSource(data={'xs': [], 'ys': [], 'color': [], 'line_width': [], 'label': [], 'line_alpha': []})
-        self.sources['soma'] = ColumnDataSource(data={'x': [], 'y': [], 'rad': [], 'color': ['red']})
+        self.sources['cell'] = ColumnDataSource(data={'xs': [], 'ys': [], 'line_color': [], 'line_width': [], 'label': [], 'line_alpha': []})
+        self.sources['soma'] = ColumnDataSource(data={'x': [], 'y': [], 'rad': [], 'color': []})
         color_mapper = CategoricalColorMapper(palette=['#E69F00', '#F0E442', '#019E73', '#0072B2'], factors=['soma', 'axon', 'dend', 'apic'])
         glyph = MultiLine(
             xs='xs', 
             ys='ys', 
-            line_color='color', 
+            line_color='line_color', 
             line_width='line_width', 
             line_alpha=1
         )
         self.figures['cell'].add_glyph(self.sources['cell'], glyph)
 
         # change nonselection glyph alpha
-        self.figures['cell'].renderers[0].selection_glyph = MultiLine(line_alpha=0.8, line_width='line_width', line_color='color')
-        self.figures['cell'].renderers[0].nonselection_glyph = MultiLine(line_alpha=0.3, line_width='line_width', line_color='color')
+        self.figures['cell'].renderers[0].selection_glyph = MultiLine(line_alpha=0.8, line_width='line_width', line_color='line_color')
+        self.figures['cell'].renderers[0].nonselection_glyph = MultiLine(line_alpha=0.3, line_width='line_width', line_color='line_color')
 
         self.figures['cell'].circle(x='x', y='y', radius='rad', color='color', source=self.sources['soma'], alpha=0.9)
 
@@ -187,7 +187,6 @@ class WorkspaceMixin():
                                                                 ("AMPA", "@AMPA"), 
                                                                 ("Weights", "@weights"), 
                                                                 ("Iclamps", "@iclamps"), 
-                                                                #    ("line_color", "@line_color"), 
                                                                 ("voltage", "@voltage"), 
                                                                 ("cai", "@cai")])
         self.figures['graph'].add_tools(hover)
@@ -291,25 +290,25 @@ class WorkspaceMixin():
             ys='ys', 
             source=self.sources['sim'],
             line_width=2, 
-            color={'field': 'dist', 'transform': color_mapper}
+            line_color={'field': 'dist', 'transform': color_mapper}
         )
         self.figures['sim'].renderers[0].nonselection_glyph.line_alpha = 0.3
 
         from bokeh.models import Span
-        self.renderers['span_v'] = Span(location=100, dimension='height', line_color='red', line_width=1)
+        self.renderers['span_v'] = Span(location=100, dimension='height', line_color='red', line_width=1, name='v_span')
         self.figures['sim'].add_layout(self.renderers['span_v'])
         # self.sources['span_v'] = ColumnDataSource(data={'x': [100, 100], 'y': [-90, 90]})
         # self.figures['sim'].line(x='x', y='y', color='red', source=self.sources['span_v'])
 
 
-        self.sources['frozen_v'] = ColumnDataSource(data={'xs': [], 'ys': [], 'color': []})
+        self.sources['frozen_v'] = ColumnDataSource(data={'xs': [], 'ys': [], 'line_color': []})
 
         self.figures['sim'].multi_line(
             xs='xs', 
             ys='ys',
             source=self.sources['frozen_v'],
             line_width=1,
-            color='color',
+            line_color='line_color',
             line_alpha=0.5
         )
 
@@ -320,7 +319,7 @@ class WorkspaceMixin():
         def frozen_v_callback(attr, old, new):
             if new:
                 data = dict(self.sources['sim'].data)
-                data.update({'color': [self.theme.frozen]})
+                data.update({'line_color': [self.theme.frozen]})
                 self.sources['frozen_v'].data = data
                 
             else:
@@ -354,17 +353,21 @@ class WorkspaceMixin():
 
         self.figures['curr'].grid.grid_line_alpha = 0.1
 
-        self.sources['curr'] = ColumnDataSource(data={'xs': [], 'ys': [], 'color': []})
+        self.sources['curr'] = ColumnDataSource(data={'xs': [], 'ys': [], 'line_color': []})
 
-        self.figures['curr'].multi_line(xs='xs', ys='ys', source=self.sources['curr'], line_width=2, color='red')
+        self.figures['curr'].multi_line(xs='xs', ys='ys', 
+            source=self.sources['curr'], line_width=2, line_color='red',
+            name='multiline_curr',
+            )
 
-        self.sources['frozen_I'] = ColumnDataSource(data={'xs': [], 'ys': []})
+        self.sources['frozen_I'] = ColumnDataSource(data={'xs': [], 'ys': [], 'line_color': []})
 
         self.figures['curr'].multi_line(xs='xs', ys='ys',
                                         source=self.sources['frozen_I'],
                                         line_width=1,
-                                        color='color',
-                                        line_alpha=0.5)
+                                        line_color='line_color',
+                                        line_alpha=0.5,
+                                        name='multiline_curr_frozen')
 
     def _create_frozen_i_switch(self):
 
@@ -373,7 +376,7 @@ class WorkspaceMixin():
         def frozen_I_callback(attr, old, new):
             if new:
                 data = dict(self.sources['curr'].data)
-                data.update({'color': [self.theme.frozen]})
+                data.update({'line_color': [self.theme.frozen]})
                 self.sources['frozen_I'].data = data
             else:
                 self.sources['frozen_I'].data = {'xs': [], 'ys': []}

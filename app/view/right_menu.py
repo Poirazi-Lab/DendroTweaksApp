@@ -487,7 +487,7 @@ class RightMenuMixin():
                 self.DOM_elements['distribution_widgets_panel'],
                 self.figures['distribution'],
             ], 
-            visible=False
+            visible=True
         )
 
         self.DOM_elements['param_panel'] = column(
@@ -501,7 +501,7 @@ class RightMenuMixin():
                 ),
                 self.DOM_elements['group_panel'],
             ], 
-            visible=False
+            visible=True
         )
 
         mech_panel = column(

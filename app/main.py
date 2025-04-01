@@ -138,3 +138,26 @@ curdoc().on_event('document_ready', lambda event: setattr(view.widgets.selectors
 curdoc().js_on_event('document_ready', CustomJS(code="""
     console.log('Document ready');
 """))
+
+
+# print("========================================================")
+# doc = curdoc()
+
+# # Find the model by ID
+# problematic_glyph_ids = ['p1703', 'p1789', 'p1831', 'p1843']
+
+# problematic_glyphs = [doc.get_model_by_id(idx) for idx in problematic_glyph_ids]
+
+# # Find which figure contains this glyph
+# for idx, glyph in zip(problematic_glyph_ids, problematic_glyphs):
+#     print(f"Glyph ID: {idx}")
+#     print(f"Glyph type: {type(glyph)}")
+#     print(f"Glyph name: {glyph.properties_with_values()['name']}")
+#     for figure_name, figure in view.figures.items():
+#         for renderer in figure.renderers:
+#             if renderer.id == idx:
+#                 print(f"Found in figure: {figure_name}")
+#                 break
+#     print(f"------------------------------------------")
+
+# print("========================================================")

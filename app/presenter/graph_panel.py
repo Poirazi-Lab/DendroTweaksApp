@@ -64,7 +64,7 @@ class GraphMixin():
                             recordings='None',
                             iclamps=0,
                             radius=radius*0.0015,
-                            color=self.view.get_domain_color(seg._section.domain),
+                            fill_color=self.view.get_domain_color(seg._section.domain),
                             )
             if seg.parent is not None:
                 self.G.add_edge(seg.parent.idx, seg.idx)
@@ -134,7 +134,7 @@ class GraphMixin():
 
         graph_renderer.node_renderer.glyph = Circle(radius='radius',
                                                     radius_units='data',
-                                                    fill_color='color',
+                                                    fill_color='fill_color',
                                                     line_color='line_color',
                                                     line_alpha='line_alpha',
                                                     line_width='line_width')
@@ -154,7 +154,7 @@ class GraphMixin():
     def _update_selection_glyph(self, graph_renderer):
         graph_renderer.node_renderer.selection_glyph = Circle(radius='radius',
                                                               radius_units='data',
-                                                              fill_color='color',
+                                                              fill_color='fill_color',
                                                               line_color='line_color',
                                                               line_alpha='line_alpha',
                                                               line_width='line_width')
@@ -171,7 +171,7 @@ class GraphMixin():
     def _update_nonselection_glyph(self, graph_renderer):
         graph_renderer.node_renderer.nonselection_glyph = Circle(radius='radius', 
                                                             radius_units='data',
-                                                            fill_color='color', 
+                                                            fill_color='fill_color', 
                                                             line_color=self.view.theme.graph_colors['edge'], 
                                                             line_alpha='line_alpha', 
                                                             line_width='line_width')
