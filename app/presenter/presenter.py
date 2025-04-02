@@ -317,14 +317,16 @@ class Presenter(IOMixin, NavigationMixin,
             domain_name = domains_to_remove[0]
             self.model.uninsert_mechanism(mech_name, domain_name)
             # TODO: update the list of inserted mechanisms (Params tab)
+            self.update_status_message(f'Mechanism {mech_name} removed from {domain_name}.', status='success')
         if domains_to_add:
             logger.debug(f'Domains to which to add: {domains_to_add}')
             domain_name = domains_to_add[0]
             self.model.insert_mechanism(mech_name, domain_name)
+            self.update_status_message(f'Mechanism {mech_name} inserted into {domain_name}.', status='success')
 
         self._select_domain_segs_in_graph(domain_names=new)
         self._update_mechanism_selector_widget()
-
+        
 
     def _update_mechanism_selector_widget(self, mech_name=None):
         """
@@ -335,7 +337,7 @@ class Presenter(IOMixin, NavigationMixin,
             self.view.widgets.selectors['mechanism'].options = available_mechs
             mech_name = mech_name if mech_name else (available_mechs[-1] if available_mechs else None)
             self.view.widgets.selectors['mechanism'].value = mech_name
-        
+        self._update_param_selector_widget(mech_name)
 
     # =================================================================
     # PARAMETERS TAB
@@ -388,6 +390,7 @@ class Presenter(IOMixin, NavigationMixin,
             self.view.figures['inf_log'].visible = False
             self.view.figures['tau_log'].visible = False
             self.view.figures['distribution'].visible = True
+            self.view.widgets.buttons['standardize'].visible = False
             return
 
         self.view.figures['distribution'].visible = False
@@ -404,6 +407,8 @@ class Presenter(IOMixin, NavigationMixin,
             self.view.figures['tau_log'].visible = False
             self.view.figures['tau'].visible = False
             return
+        else: 
+            self.view.widgets.buttons['standardize'].visible = True
 
         # 2. Get the mechanism
         mech = self.model.mechanisms[mech_name]
@@ -948,7 +953,7 @@ class Presenter(IOMixin, NavigationMixin,
         self.view.widgets.selectors['section'].value = None
 
         self.update_voltage()
-        
+        self.update_status_message(message='Subtree deleted.', status='success')
 
     @log
     def reduce_subtree_callback(self, event):

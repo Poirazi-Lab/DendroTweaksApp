@@ -122,6 +122,7 @@ class RightMenuMixin():
 
     def _create_delete_subtree_button(self):
         self.widgets.buttons['delete_subtree'] = Button(label='Delete subtree', button_type='danger')
+        self.add_message(self.widgets.buttons['delete_subtree'], 'Deleting the subtree. Please wait...', callback_type='on_click')
         self.widgets.buttons['delete_subtree'].on_event(ButtonClick, self.p.delete_subtree_callback)
 
 

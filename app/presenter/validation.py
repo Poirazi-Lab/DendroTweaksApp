@@ -1,7 +1,7 @@
 import numpy as np
 from bokeh.models import Range1d
 
-# from bokeh_utils import remove_callbacks
+from bokeh_utils import remove_callbacks
 from bokeh_utils import log
 from logger import logger
 
@@ -124,6 +124,8 @@ class ValidationMixin():
                 duration = self.view.widgets.sliders['duration'].value
                 data = calculate_fI_curve(self.model, duration=duration, min_amp=min_amp, max_amp=max_amp, n=n)
                 self._plot_fI_curve(data)
+                with remove_callbacks(self.view.widgets.sliders['iclamp_amp']):
+                    self.view.widgets.sliders['iclamp_amp'].value = max_amp
                 self.update_voltage()
             
         
@@ -237,14 +239,14 @@ class ValidationMixin():
         duration_ms = spike_data['stimulus_duration']
 
         self.view.sources['detected_spikes'].data = {'x': spike_times, 'y': spike_values}
-        data = {'xs': [], 'ys': [], 'color': []}
+        data = {'xs': [], 'ys': [], 'line_color': []}
         for t, v, w, a, lb, rb in zip(spike_times, spike_values, half_widths, amplitudes, left_bases, right_bases):
             data['xs'].append([t, t])
             data['ys'].append([v, v - a])
-            data['color'].append('lawngreen')
+            data['line_color'].append('lawngreen')
             data['xs'].append([lb, rb])
             data['ys'].append([v - a/2, v - a/2])
-            data['color'].append('lawngreen')
+            data['line_color'].append('lawngreen')
         self.view.sources['frozen_v'].data = data
 
         stats = f"Number of spikes: {len(spike_times)}<br>"
@@ -378,10 +380,6 @@ class ValidationMixin():
         <b>Depth:</b><br>
         &nbsp;&nbsp;Min: {stats['depth']['min']}<br>
         &nbsp;&nbsp;Max: {stats['depth']['max']}<br>
-        &nbsp;&nbsp;Counts:<br>
-        <ul>
-        {''.join(f"<li>Depth {key}: {value} sections </li>" for key, value in stats['depth']['counts'].items())}
-        </ul>
         <b>Diameter:</b><br>
         &nbsp;&nbsp;Min: {stats['diam']['min']} µm<br>
         &nbsp;&nbsp;Max: {stats['diam']['max']} µm<br>
