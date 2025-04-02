@@ -80,22 +80,30 @@ class SettingsMixin():
                                                     value=self.p.config['simulation']['simulator'],
                                                     options=['NEURON', 'Jaxley'],
                                                     width=200)
-
+        if not self.p.config['dev_tools']['choose_simulator']:
+            self.widgets.selectors['simulator'].disabled = True
 
     def _create_save_preferences_button(self):
 
         self.widgets.buttons['save_preferences'] = Button(label='Save preferences', button_type='warning', width=200)
         self.widgets.buttons['save_preferences'].on_event(ButtonClick, self.p.save_preferences_callback)
 
+        if not self.p.config['dev_tools']['save_preferences']:
+            self.widgets.buttons['save_preferences'].disabled = True
+
 
     def create_settings_panel(self):
 
-        self._create_console()
+        if self.p.config['dev_tools']['console']:
+            self._create_console()
+        else:
+            self.DOM_elements['controller'] = Div(text='Console disabled', name='status_bar')
         # self._create_theme_selector()
         self._create_voltage_plot_settings()
         self._create_graph_layout_selector()
         self._create_simulator_selector()
         self._create_save_preferences_button()
+
 
         return column(
             [

@@ -33,8 +33,14 @@ with open('app/default_config.json', 'r') as f:
 with open('app/user_config.json', 'r') as f:
     user_config = json.load(f)
 
-default_config.update(**user_config)
+for key, value in user_config.items():
+    if isinstance(value, dict) and key in default_config:
+        default_config[key].update(value)
+    else:
+        default_config[key] = value
 config = default_config
+
+logger.debug(f'Config: {config}')
 
 theme_name = config['appearance']['theme']
 path_to_data = config['data']['path_to_data']

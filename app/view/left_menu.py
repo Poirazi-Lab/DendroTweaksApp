@@ -130,22 +130,49 @@ class LeftMenuMixin():
         self._create_morphology_selector()
         self._create_membrane_selector()
         self._create_stimuli_selector()
-        self._create_file_name_text_input()
-        self._create_export_model_button()
-        self._create_download_model_button()
 
-        io_layout = column(
+        import_layout = column(
             [
                 Div(text='File Import', align='center', styles={'padding-top': '20px'}),
                 self.widgets.selectors['model'],
                 self.widgets.selectors['morphology'],
                 self.widgets.selectors['membrane'],
                 self.widgets.selectors['stimuli'],
-                Div(text='File Export', align='center', styles={'padding-top': '20px'}), 
-                # self.widgets.file_input['all'],
-                self.widgets.text['file_name'],
-                self.widgets.buttons['export_model'],
-                self.widgets.buttons['download_model'],
+            ],
+            sizing_mode='scale_both',
+            align='center',
+        )
+
+        if self.p.config['dev_tools']['allow_file_io']:
+            self._create_file_name_text_input()
+            self._create_export_model_button()
+            self._create_download_model_button()
+
+            export_layout = column(
+                [
+                    Div(text='File Export', align='center', styles={'padding-top': '20px'}),
+                    # self.widgets.file_input['all'],
+                    self.widgets.text['file_name'],
+                    self.widgets.buttons['export_model'],
+                    self.widgets.buttons['download_model'],
+                ],
+                sizing_mode='scale_both',
+                align='center',
+            )
+        else:
+            export_layout = column(
+                [
+                    Div(text='File Export', align='center', styles={'padding-top': '20px'}),
+                    Div(text='File upload/download is disabled in this version.', align='center'),
+                ],
+                sizing_mode='scale_both',
+                align='center',
+            )
+
+        io_layout = column(
+            [
+                import_layout,
+                export_layout,
             ],
             sizing_mode='scale_both',
             align='center',
