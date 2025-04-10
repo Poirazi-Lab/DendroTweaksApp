@@ -41,7 +41,7 @@ class NavigationMixin():
         self.update_record_switch()
 
         if self.view.widgets.buttons['switch_right_menu'].active == 1:
-            if self.view.widgets.tabs['membrane'].active == 2:
+            if self.view.widgets.tabs['biophys'].active == 2:
                 logger.debug('Updating distribution plot')
                 self._update_distribution_plot()
         

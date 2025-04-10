@@ -35,8 +35,8 @@ class IOMixin():
         self.view.widgets.selectors['model'].options = self.list_models()
         morphologies = self.model.path_manager.list_morphologies()
         self.view.widgets.selectors['morphology'].options = ['Select a morphology'] + morphologies
-        membrane = self.model.path_manager.list_membrane()
-        self.view.widgets.selectors['membrane'].options = ['Select a membrane'] + membrane
+        biophys = self.model.path_manager.list_biophys()
+        self.view.widgets.selectors['biophys'].options = ['Select biophys'] + biophys
         stimuli = self.model.path_manager.list_stimuli()
         self.view.widgets.selectors['stimuli'].options = ['Select a stimuli'] + stimuli
 
@@ -51,17 +51,17 @@ class IOMixin():
         
 
         
-    def load_membrane_callback(self, attr, old, new):
+    def load_biophys_callback(self, attr, old, new):
         """
-        Callback for the selectors['membrane'] widget.
+        Callback for the selectors['biophys'] widget.
         """
         if self.model.sec_tree is None:
-            with remove_callbacks(self.view.widgets.selectors['membrane']):
-                self.view.widgets.selectors['membrane'].value = 'Select a membrane'
+            with remove_callbacks(self.view.widgets.selectors['biophys']):
+                self.view.widgets.selectors['biophys'].value = 'Select biophys'
             self.update_status_message('Please load a morphology first.', status='warning')
             return
 
-        self.model.load_membrane(new, recompile=self.view.widgets.switches['recompile'].active)
+        self.model.load_biophys(new, recompile=self.view.widgets.switches['recompile'].active)
 
         d_lambda = self.model.d_lambda
         with remove_callbacks(self.view.widgets.sliders['d_lambda']):
@@ -81,9 +81,9 @@ class IOMixin():
         
 
         self.view.widgets.buttons['add_default_mechanisms'].disabled = True
-        self.view.widgets.selectors['membrane'].options = self.model.list_membrane_configs()
+        self.view.widgets.selectors['biophys'].options = self.model.list_biophys()
 
-        self.update_status_message('Membrane loaded.', status='success')
+        self.update_status_message('Biophysical configuration loaded.', status='success')
         
         
 
@@ -109,7 +109,7 @@ class IOMixin():
         for param_name in ['AMPA', 'NMDA', 'GABAa', 'AMPA_NMDA', 'recordings', 'iclamps']:
             self._update_graph_param(param_name, update_colors=False)
 
-        self.view.widgets.selectors['stimuli'].options = self.model.list_stimuli_configs()
+        self.view.widgets.selectors['stimuli'].options = self.model.list_stimuli()
         self.update_status_message('Stimuli loaded.', status='success')
         
 
@@ -332,9 +332,9 @@ class IOMixin():
         if event.item == 'morphology':
             self.model.export_morphology(file_name)
             self.update_status_message('Morphology exported.', status='success')
-        elif event.item == 'membrane':
-            self.model.export_membrane(file_name)
-            self.update_status_message('Membrane exported.', status='success')
+        elif event.item == 'biophys':
+            self.model.export_biophys(file_name)
+            self.update_status_message('Biophys exported.', status='success')
         elif event.item == 'stimuli':
             self.model.export_stimuli(file_name)
             self.update_status_message('Stimuli exported.', status='success')

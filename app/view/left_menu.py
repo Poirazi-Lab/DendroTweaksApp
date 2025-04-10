@@ -56,17 +56,17 @@ class LeftMenuMixin():
         self.widgets.selectors['morphology'].on_change('value', self.p.load_morphology_callback)
 
 
-    def _create_membrane_selector(self):
+    def _create_biophys_selector(self):
 
-        self.widgets.selectors['membrane'] = Select(
-            value='Select membrane config.',
-            options=['Select membrane config.'],
-            title='Membrane config.',
+        self.widgets.selectors['biophys'] = Select(
+            value='Select biophys config.',
+            options=['Select biophys config.'],
+            title='Biophys config.',
             width=242, 
             align='center',
         )
-        self.add_message(self.widgets.selectors['membrane'], 'Loading membrane config. Please wait...', callback_type='on_change')
-        self.widgets.selectors['membrane'].on_change('value', self.p.load_membrane_callback)
+        self.add_message(self.widgets.selectors['biophys'], 'Loading biophys config. Please wait...', callback_type='on_change')
+        self.widgets.selectors['biophys'].on_change('value', self.p.load_biophys_callback)
 
 
     def _create_stimuli_selector(self):
@@ -102,7 +102,7 @@ class LeftMenuMixin():
             button_type='default',
             menu=[
                 ('Export morphology', 'morphology'), 
-                ('Export membrane config', 'membrane'),
+                ('Export biophys config', 'biophys'),
                 ('Export stimuli', 'stimuli')
             ]
         )
@@ -128,7 +128,7 @@ class LeftMenuMixin():
 
         self._create_model_selector()
         self._create_morphology_selector()
-        self._create_membrane_selector()
+        self._create_biophys_selector()
         self._create_stimuli_selector()
 
         import_layout = column(
@@ -136,7 +136,7 @@ class LeftMenuMixin():
                 Div(text='File Import', align='center', styles={'padding-top': '20px'}),
                 self.widgets.selectors['model'],
                 self.widgets.selectors['morphology'],
-                self.widgets.selectors['membrane'],
+                self.widgets.selectors['biophys'],
                 self.widgets.selectors['stimuli'],
             ],
             sizing_mode='scale_both',

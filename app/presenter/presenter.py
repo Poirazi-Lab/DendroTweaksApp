@@ -40,10 +40,7 @@ from presenter.graph_panel import GraphMixin
 from presenter.simulation_panel import SimulationMixin
 from presenter.channel_panel import ChannelMixin
 
-# TODO: Remove this when dd installed through pip
-import sys
-sys.path.append('app/src')
-from dendrotweaks.membrane import StandardIonChannel
+from dendrotweaks.biophys import StandardIonChannel
 
 class Presenter(IOMixin, NavigationMixin, 
                 CellMixin, SectionMixin, GraphMixin, SimulationMixin, ChannelMixin, 
@@ -991,7 +988,7 @@ class Presenter(IOMixin, NavigationMixin,
 
         TABS_TO_PARAMS = {
             0: ('morphology', ['domain']*4),
-            1: ('membrane', ['domain', 'domain', self.view.widgets.selectors['param'].value]),
+            1: ('biophys', ['domain', 'domain', self.view.widgets.selectors['param'].value]),
             2: ('stimuli', ['recordings', 'iclamps', 'AMPA_NMDA', 'recordings']),
         }
 
@@ -1002,7 +999,7 @@ class Presenter(IOMixin, NavigationMixin,
         logger.debug(f'Switching to "{tab_name}" tab with index {tab_idx}')
 
         param_name = params[tab_idx]
-        options = {**self.view.params, **self.model.mechs_to_params} if tab_name == 'membrane' else {**self.view.params}
+        options = {**self.view.params, **self.model.mechs_to_params} if tab_name == 'biophys' else {**self.view.params}
 
         self.view.widgets.selectors['graph_param'].options = options
         self.view.widgets.selectors['graph_param'].value = param_name
@@ -1024,22 +1021,22 @@ class Presenter(IOMixin, NavigationMixin,
         if new == 0:
             logger.debug('Switching to Morphology Tabs')
             self.view.widgets.tabs['stimuli'].visible = False
-            self.view.widgets.tabs['membrane'].visible = False
+            self.view.widgets.tabs['biophys'].visible = False
             self.view.widgets.tabs['morphology'].visible = True
             if self.view.widgets.tabs['morphology'].active == 0:
                 self.view.widgets.selectors['section'].value = '0'
             else:
                 self.view.widgets.selectors['section'].value = None
         elif new == 1:
-            logger.debug('Switching to Membrane Tabs')
+            logger.debug('Switching to Biophys Tabs')
             self.view.widgets.tabs['morphology'].visible = False
             self.view.widgets.tabs['stimuli'].visible = False
-            self.view.widgets.tabs['membrane'].visible = True
+            self.view.widgets.tabs['biophys'].visible = True
             self.view.widgets.selectors['section'].value = None
         elif new == 2:
             logger.debug('Switching to Stimuli Tabs')
             self.view.widgets.tabs['morphology'].visible = False
-            self.view.widgets.tabs['membrane'].visible = False
+            self.view.widgets.tabs['biophys'].visible = False
             self.view.widgets.tabs['stimuli'].visible = True
             self.view.widgets.selectors['section'].value = '0'
         self.select_graph_param_based_on_tab()

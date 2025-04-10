@@ -188,7 +188,7 @@ class RightMenuMixin():
         self.widgets.tabs['morphology'].on_change('active', self.p.switch_tab_callback)
 
     # =================================================================
-    # MEMBRANE
+    # BIOPHYSICS
     # =================================================================
 
     # -----------------------------------------------------------------
@@ -536,13 +536,13 @@ class RightMenuMixin():
             child=parameters_panel
         )
 
-    def _create_membrane_tabs(self):
+    def _create_biophys_tabs(self):
 
         self._create_membrane_mechanisms_tab_panel()
         self._create_segment_groups_tab_panel()
         self._create_parameters_tab_panel()
         
-        self.widgets.tabs['membrane'] = Tabs(
+        self.widgets.tabs['biophys'] = Tabs(
             tabs = [
                 self.widgets.tab_panels['membrane_mechanisms'],
                 self.widgets.tab_panels['segment_groups'],
@@ -552,7 +552,7 @@ class RightMenuMixin():
             visible=False,
             sizing_mode='stretch_width',
         )
-        self.widgets.tabs['membrane'].on_change('active', self.p.switch_tab_callback)
+        self.widgets.tabs['biophys'].on_change('active', self.p.switch_tab_callback)
 
     # =================================================================
     # STIMULI
@@ -863,7 +863,7 @@ class RightMenuMixin():
     def _create_radio_buttons(self):
 
         self.widgets.buttons['switch_right_menu'] = RadioButtonGroup(
-            labels=['Morphology', 'Membrane mechanisms', 'Recordings and Stimuli'], 
+            labels=['Morphology', 'Biophysics', 'Recordings and Stimuli'], 
             active=0, 
             align='center', 
             disabled=False,
@@ -876,7 +876,7 @@ class RightMenuMixin():
     def create_right_menu(self):
 
         self._create_morphology_tabs()
-        self._create_membrane_tabs()
+        self._create_biophys_tabs()
         self._create_stimuli_tabs()
 
         self._create_radio_buttons()
@@ -885,7 +885,7 @@ class RightMenuMixin():
             [
                 self.widgets.buttons['switch_right_menu'],
                 self.widgets.tabs['morphology'], 
-                self.widgets.tabs['membrane'], 
+                self.widgets.tabs['biophys'], 
                 self.widgets.tabs['stimuli'],
             ],
             align='center',
