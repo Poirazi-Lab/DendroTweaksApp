@@ -25,12 +25,12 @@ class SimulationMixin():
     @log
     @timeit
     def update_voltage(self):
-        if not self.model.simulator.recordings:
-            logger.warning('No recordings selected, interrupting simulation')
-            return
+        # if not self.model.simulator.recordings['v']:
+        #     logger.warning('No recordings selected, interrupting simulation')
+        #     return
 
         ### Get labels for recorded segments ###
-        labels = [seg.idx for seg in self.model.simulator.recordings.keys()]
+        labels = [seg.idx for seg in self.model.simulator.recordings['v'].keys()]
         logger.info(f'Recording voltage from {labels}')
 
         duration = self.view.widgets.sliders['duration'].value
@@ -40,7 +40,7 @@ class SimulationMixin():
         self.view.DOM_elements['runtime'].text = f'✅ Runtime: {runtime:.2f} s'
     
         ### Update color of voltage and current traces ###
-        if self.model.simulator.recordings.keys():
+        if self.model.simulator.recordings['v'].keys():
             # color_mapper = CategoricalColorMapper(palette=self.view.theme.palettes['trace'], factors=labels)
             factors = [str(seg.idx) for seg in self.recorded_segments]
             color_mapper = CategoricalColorMapper(palette=cc.glasbey_cool, factors=factors)
@@ -50,21 +50,24 @@ class SimulationMixin():
         else:
             factors = []
 
-        # ts = [t[::25] for t in ts]
-        # vs = [v[::25] for v in vs]
-        # Is = [I[::25] for I in Is]
-        vs = self.model.simulator.vs
-        t = self.model.simulator.t
-        ts = [t for _ in range(len(vs))]
         logger.debug(f'Show traces from segments: {self.recorded_segments}')
-        vs = [self.model.simulator.recordings[seg].to_python() for seg in self.recorded_segments]
-        self.view.sources['sim'].data = {'xs': ts[:len(vs)], 'ys': vs, 'label': factors}
-        # self.view.sources['curr'].data = {'xs': ts[:len(Is)], 'ys': Is, 'label': factors}
-    
+        
+
+        voltages = [self.model.simulator.recordings['v'][seg] for seg in self.recorded_segments]
+        t = self.model.simulator.t.to_python()
+        ts = [t for _ in range(len(voltages))]
+        logger.debug(f'Voltages: {type(voltages[0])}')
+
+        self.view.sources['sim'].data = {'xs': ts, 'ys': voltages, 'label': factors}
+        
+        # if self.model.simulator.record_current_from:
+        #     currents = [self.model.simulator.recordings[self.model.simulator.record_current_from][seg] for seg in self.recorded_segments]
+        #     self.view.sources['curr'].data = {'xs': ts[:len(currents)], 'ys': currents, 'label': factors}
         
         self.update_spike_times_data()
 
-        # self.view.DOM_elements['status'].text = f'✅ Simulation finished in {runtime:.2f} s'
+        
+
     
     @log
     @timeit
@@ -108,11 +111,17 @@ class SimulationMixin():
     def voltage_callback_on_click(self, event):
         self.update_voltage()
 
-    def record_current_callback(self, event):
+    def record_current_callback(self, attr, old, new):
+        """ Callback for the record current switch. """
         
-        ch = self.model.channels[self.view.widgets.selectors['channel'].value]
-        self.model.simulator.ch = ch
-        self.update_voltage()
+        if self.view.widgets.switches['record_current'].active:
+            mech = self.model.mechanisms[self.view.widgets.selectors['mechanism'].value]
+            self.model.simulator.record_current_from = mech.name
+            self.update_voltage()
+        else:
+            self.model.simulator.record_current_from = None
+            self.view.sources['curr'].data = {'xs': [], 'ys': [], 'label': []}
+            
 
     @log
     def toggle_iclamp_callback(self, attr, old, new):

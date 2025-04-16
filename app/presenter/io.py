@@ -98,12 +98,13 @@ class IOMixin():
             return
 
         self.model.load_stimuli(new)
+        logger.debug(f'Recordings loaded: {self.model.recordings}')
         self.update_simulation_widgets()
 
         # MISC --------------------------------------------------------
         # self._attach_download_js() # needed to update the names of the files to download
 
-        self.recorded_segments = [seg for seg in self.model.recordings]
+        self.recorded_segments = [seg for seg in self.model.recordings['v']]
         self.update_voltage()
 
         for param_name in ['AMPA', 'NMDA', 'GABAa', 'AMPA_NMDA', 'recordings', 'iclamps']:

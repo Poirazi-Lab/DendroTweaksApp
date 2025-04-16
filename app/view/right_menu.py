@@ -382,6 +382,14 @@ class RightMenuMixin():
 
         self.widgets.selectors['mechanism'].on_change('value', self.p.select_mechanism_callback)
 
+    def _create_record_current_button(self):
+
+        self.widgets.switches['record_current'] = Switch(
+            active=False, 
+            # visible=False,
+        )
+        self.widgets.switches['record_current'].on_change('active', self.p.record_current_callback)
+        
 
     def _create_standardize_button(self):
 
@@ -467,6 +475,7 @@ class RightMenuMixin():
     def _create_parameters_tab_panel(self):
         
         self._create_mechanism_selector()
+        self._create_record_current_button()
         self._create_standardize_button()
         self._create_show_kinetics_switch()
         self._create_param_selector()
@@ -512,6 +521,7 @@ class RightMenuMixin():
                 row(
                     [
                         self.widgets.selectors['mechanism'], 
+                        row(self.widgets.switches['record_current'], Div(text='Record current')),
                         self.widgets.buttons['standardize'],
                     ]
                 ),

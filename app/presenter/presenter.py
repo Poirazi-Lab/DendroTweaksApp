@@ -410,6 +410,7 @@ class Presenter(IOMixin, NavigationMixin,
         # 2. Get the mechanism
         mech = self.model.mechanisms[mech_name]
         logger.debug(f'Toggling kinetic plots for {mech.name}')
+        self.view.widgets.switches['record_current'].visible = mech.current_available
 
         # 3. Enable/ disable the standardize button
         if isinstance(mech, StandardIonChannel):

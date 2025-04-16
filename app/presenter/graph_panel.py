@@ -238,7 +238,7 @@ class GraphMixin():
             return str(seg.idx) if self.model.recordings.get(seg) is not None else np.nan
 
         elif param_name == 'voltage':
-            self.model.simulator.recordings[seg].to_python() if param_name == 'voltage' else 0,
+            self.model.simulator.recordings['v'][seg].to_python() if param_name == 'voltage' else 0,
 
         # STIMULI
         elif param_name == 'iclamps':
@@ -309,7 +309,7 @@ class GraphMixin():
             self.view.widgets.sliders['graph_param_high'].visible = False
         elif param == 'recordings':
             recorded_seg_ids = [str(seg.idx) for seg in self.recorded_segments]
-            not_recorded_seg_ids = [str(seg.idx) for seg in self.model.simulator.recordings.keys() if seg not in self.recorded_segments]
+            not_recorded_seg_ids = [str(seg.idx) for seg in self.model.simulator.recordings['v'].keys() if seg not in self.recorded_segments]
             factors = recorded_seg_ids + not_recorded_seg_ids
             color_mapper = CategoricalColorMapper(
                 palette=cc.glasbey_cool[:len(recorded_seg_ids)], 
