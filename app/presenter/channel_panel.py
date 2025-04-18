@@ -40,6 +40,7 @@ class ChannelMixin():
         self._update_multichoice_mechanisms_widget()
         
         self._update_mechanism_selector_widget()
+        self._update_recording_variable_selector_widget()
         self._select_mechanism(f'std{ch_name}')
         self.view.widgets.buttons['standardize'].visible = False
         

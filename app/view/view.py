@@ -148,15 +148,15 @@ PARAMS_TO_UNITS = {
             'NMDA': 'Number of synapses',
             'AMPA_NMDA': 'Number of synapses',
             'GABAa': 'Number of synapses',
-            'recordings': 'Recordings',
-            'voltage': 'Voltage',}
+            'rec_v': 'Voltage (mV)'
+            }
 }
 
 PARAMS = {
     'Topology': ['domain', 'subtree_size'],
     'Geometry': ['diam', 'section_diam', 'area', 'distance', 'domain_distance'],
     'Stimuli': ['iclamps'],
-    'Recordings': ['recordings'],
+    'Recordings': ['rec_v'],
     'Synapses': ['AMPA', 'NMDA', 'AMPA_NMDA', 'GABAa']
 }
 
@@ -196,6 +196,7 @@ class CellView(LeftMenuMixin, WorkspaceMixin, RightMenuMixin, SettingsMixin, Aux
         self._file_content = None
         self._filename = None
         self.get_domain_color = get_domain_color
+        self.recordings_color_mapper = None
 
     @property
     def p(self):

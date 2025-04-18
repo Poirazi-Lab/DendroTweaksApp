@@ -23,8 +23,9 @@ from typing import List, Dict, Tuple
 from bokeh.events import ButtonClick
 
 from bokeh.palettes import Bokeh
+import colorcet as cc
 
-
+from bokeh.models import CategoricalColorMapper
 
 from bokeh_utils import log
 
@@ -71,6 +72,22 @@ class Presenter(IOMixin, NavigationMixin,
     def update_model_version_callback(self, attr, old, new):
         self.model.version = new
 
+    @property
+    def available_domains(self):
+        return list(self.model.domains.keys()) if self.model.sec_tree else []
+
+    @property
+    def available_mechs(self):
+        return list(self.model.mechs_to_params.keys())
+
+    @property
+    def mechs_with_current(self):
+        return [mech.name for mech in self.model.mechanisms.values() if mech.current_available]
+
+    @property
+    def avaliable_vars_to_record(self):
+        return ['v'] + [f'i_{mech_name}' for mech_name in self.available_mechs if mech_name in self.mechs_with_current]
+
     # =================================================================
     # MORPHOLOGY TAB
     # =================================================================
@@ -99,6 +116,7 @@ class Presenter(IOMixin, NavigationMixin,
             self.view.widgets.selectors['group'].options = list(self.model.groups.keys())
             self.view.widgets.selectors['group'].value = domain_name
 
+        # TODO: make this a property of the model
         domains_to_sec_ids = {domain.name: sorted([str(sec.idx) for sec in domain.sections], key=lambda x: int(x)) 
                              for domain in self.model.domains.values()}
         self.view.widgets.selectors['section'].options = domains_to_sec_ids
@@ -109,11 +127,10 @@ class Presenter(IOMixin, NavigationMixin,
 
     def _update_multichoice_domain_widget(self):
         mech_name = self.view.widgets.selectors['mechanism_to_insert'].value
-        available_domains = list(self.model.domains.keys()) if self.model.sec_tree else []
         mech_domains = list(self.model.mechs_to_domains.get(mech_name, []))
-        logger.debug(f'Available domains: {available_domains}, mech domains: {mech_domains}')
+        logger.debug(f'Available domains: {self.available_domains}, mech domains: {mech_domains}')
         with remove_callbacks(self.view.widgets.multichoice['domains']):
-            self.view.widgets.multichoice['domains'].options = list(self.model.domains.keys())
+            self.view.widgets.multichoice['domains'].options = self.available_domains
             self.view.widgets.multichoice['domains'].value = mech_domains
 
     def _update_multichoice_mechanisms_widget(self):
@@ -323,18 +340,24 @@ class Presenter(IOMixin, NavigationMixin,
 
         self._select_domain_segs_in_graph(domain_names=new)
         self._update_mechanism_selector_widget()
+        self._update_recording_variable_selector_widget()
         
 
     def _update_mechanism_selector_widget(self, mech_name=None):
         """
         Updates the selectors['mechanism'] widget options when a mechanism is added or removed.
         """
-        available_mechs = list(self.model.mechs_to_params.keys()) # both inserted and with range params
         with remove_callbacks(self.view.widgets.selectors['mechanism']):
-            self.view.widgets.selectors['mechanism'].options = available_mechs
-            mech_name = mech_name if mech_name else (available_mechs[-1] if available_mechs else None)
+            self.view.widgets.selectors['mechanism'].options = self.available_mechs
+            mech_name = mech_name if mech_name else (self.available_mechs[-1] if self.available_mechs else None)
             self.view.widgets.selectors['mechanism'].value = mech_name
         self._update_param_selector_widget(mech_name)
+
+    def _update_recording_variable_selector_widget(self):
+        """
+        Updates the selectors['recording_var'] widget options when a mechanism is added or removed.
+        """
+        self.view.widgets.selectors['recording_variable'].options = self.avaliable_vars_to_record
 
     # =================================================================
     # PARAMETERS TAB
@@ -363,7 +386,6 @@ class Presenter(IOMixin, NavigationMixin,
     @log
     def _select_mechanism(self, mech_name):
         logger.debug(f'Selected mechanism: {mech_name}')
-
         self._update_param_selector_widget(mech_name)
 
 
@@ -410,7 +432,6 @@ class Presenter(IOMixin, NavigationMixin,
         # 2. Get the mechanism
         mech = self.model.mechanisms[mech_name]
         logger.debug(f'Toggling kinetic plots for {mech.name}')
-        self.view.widgets.switches['record_current'].visible = mech.current_available
 
         # 3. Enable/ disable the standardize button
         if isinstance(mech, StandardIonChannel):
@@ -686,18 +707,43 @@ class Presenter(IOMixin, NavigationMixin,
     # RECORDINGS
     # -----------------------------------------------------------------
 
-
+    @log
     def record_callback(self, attr, old, new):
         seg = self.selected_segs[0]
         sec, loc = seg._section, seg.x
+        var = self.view.widgets.selectors['recording_variable'].value
+        logger.debug(f'Selected variable: {var}')
         if new:
-            self.model.add_recording(sec, loc)
-            self.recorded_segments.append(seg)
-            self._update_graph_param('recordings')
+            logger.debug(f'Recording {var} in {seg}')
+            self.model.add_recording(sec, loc, var)
+            if seg not in self._recorded_segments:
+                self._recorded_segments.append(seg)
+            self._update_graph_param(f'rec_{var}')
         else:
-            self.model.remove_recording(sec, loc)
-            self.recorded_segments.remove(seg)
-            self._update_graph_param('recordings')
+            logger.debug(f'Stop recording {var} in {seg}')
+            self.model.remove_recording(sec, loc, var)
+            if seg not in self.get_recorded_segments():
+                self._recorded_segments.remove(seg)
+            self._update_graph_param(f'rec_{var}')
+        self._update_traces_renderers()
+    
+    def _update_traces_renderers(self):
+        """
+        Updates the traces renderers
+        """
+        labels = [str(seg.idx) for seg in self._recorded_segments]
+        color_mapper = CategoricalColorMapper(
+            palette=cc.glasbey_light, 
+            factors=labels, 
+            nan_color=self.view.theme.graph_colors['node_fill']
+        )
+        self.view.figures['sim'].renderers[0].glyph.line_color = {'field': 'labels', 'transform': color_mapper}
+        self.view.figures['sim'].renderers[0].selection_glyph.line_color = {'field': 'labels', 'transform': color_mapper}
+        self.view.figures['sim'].renderers[0].nonselection_glyph.line_color = {'field': 'labels', 'transform': color_mapper}
+        self.view.figures['curr'].renderers[0].glyph.line_color = {'field': 'labels', 'transform': color_mapper}
+        self.view.figures['curr'].renderers[0].selection_glyph.line_color = {'field': 'labels', 'transform': color_mapper}
+        self.view.figures['curr'].renderers[0].nonselection_glyph.line_color = {'field': 'labels', 'transform': color_mapper}
+
 
 
     @log
@@ -705,12 +751,12 @@ class Presenter(IOMixin, NavigationMixin,
         if new:
             for seg in self.model.cell.segments.values():
                 self.model.simulator.add_recording(seg=seg)
-            self._update_graph_param('recordings')
+            self._update_graph_param('v')
         else:
             for seg in self.model.cell.segments.values():
-                if seg not in self.recorded_segments:
+                if seg not in self.get_recorded_segments('v'):
                     self.model.simulator.remove_recording(seg=seg)
-            self._update_graph_param('recordings')
+            self._update_graph_param('v')
 
 
     # -----------------------------------------------------------------
@@ -990,7 +1036,7 @@ class Presenter(IOMixin, NavigationMixin,
         TABS_TO_PARAMS = {
             0: ('morphology', ['domain']*4),
             1: ('biophys', ['domain', 'domain', self.view.widgets.selectors['param'].value]),
-            2: ('stimuli', ['recordings', 'iclamps', 'AMPA_NMDA', 'recordings']),
+            2: ('stimuli', ['rec_v', 'iclamps', 'AMPA_NMDA', 'rec_v']),
         }
 
         active_tab_id = self.view.widgets.buttons['switch_right_menu'].active

@@ -164,13 +164,19 @@ class NavigationMixin():
 
         self.view.widgets.selectors['section'].value = str(sigbling.idx)
 
+    def recording_variable_callback(self, attr, old, new):
+        """ Callback for the recording variable selector. """
+        self.update_record_switch()
+        self.view.widgets.selectors['graph_param'].value = f'rec_{new}'
+
     @log
     def update_record_switch(self):
         if len(self.selected_segs) == 1:
             with remove_callbacks(self.view.widgets.switches['record']):
+                var = self.view.widgets.selectors['recording_variable'].value
                 self.view.widgets.switches['record'].disabled = False
                 seg = self.selected_segs[0]
-                self.view.widgets.switches['record'].active = seg in self.recorded_segments
+                self.view.widgets.switches['record'].active = seg in self.model.recordings.get(var, [])
         else:
             with remove_callbacks(self.view.widgets.switches['record']):
                 self.view.widgets.switches['record'].active = False
@@ -200,26 +206,17 @@ class NavigationMixin():
                 self.view.widgets.switches['iclamp'].active = False
                 self.view.widgets.switches['iclamp'].disabled = True
 
-    # def remove_all_callback(self, event):
-    #     self.view.widgets.switches['record'].active = False
-    #     self.view.widgets.switches['iclamp'].active = False
-    #     self.recorded_segments = []
-    #     self.model.simulator.remove_all_recordings()
-    #     self.model.remove_all_iclamps()
-    #     self.model.remove_all_synapses()
-    #     self.view.DOM_elements['population_panel'].children = []
-    #     self.view.widgets.selectors['population'].options = []
-    #     self._update_graph_param('iclamps')
-    #     self._update_graph_param('recordings')
-    #     for name in self.model.synapses:
-    #         self._update_graph_param(name)
-    #     self.view.sources['sim'].data = {'xs': [], 'ys': [], 'label': []}
 
     def remove_all_iclamps_callback(self, event):
         self.model.remove_all_iclamps()
+        self.update_iclamp_switch()
+        self._update_graph_param('iclamps')
 
     def remove_all_recordings_callback(self, event):
-        self.model.remove_all_recordings()
+        var = self.view.widgets.selectors['recording_variable'].value
+        self.model.simulator.remove_all_recordings(var=var)
+        self.update_record_switch()
+        self._update_graph_param('v')
 
     def remove_all_populations_callback(self, event):
         self.model.remove_all_populations()

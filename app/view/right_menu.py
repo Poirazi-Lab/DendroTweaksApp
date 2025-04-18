@@ -382,14 +382,6 @@ class RightMenuMixin():
 
         self.widgets.selectors['mechanism'].on_change('value', self.p.select_mechanism_callback)
 
-    def _create_record_current_button(self):
-
-        self.widgets.switches['record_current'] = Switch(
-            active=False, 
-            # visible=False,
-        )
-        self.widgets.switches['record_current'].on_change('active', self.p.record_current_callback)
-        
 
     def _create_standardize_button(self):
 
@@ -475,7 +467,6 @@ class RightMenuMixin():
     def _create_parameters_tab_panel(self):
         
         self._create_mechanism_selector()
-        self._create_record_current_button()
         self._create_standardize_button()
         self._create_show_kinetics_switch()
         self._create_param_selector()
@@ -521,7 +512,6 @@ class RightMenuMixin():
                 row(
                     [
                         self.widgets.selectors['mechanism'], 
-                        row(self.widgets.switches['record_current'], Div(text='Record current')),
                         self.widgets.buttons['standardize'],
                     ]
                 ),
@@ -577,13 +567,23 @@ class RightMenuMixin():
         self.widgets.buttons['remove_all'].on_event(ButtonClick, self.p.remove_all_recordings_callback)
         self.widgets.buttons['remove_all'].on_event(ButtonClick, self.p.voltage_callback_on_event)
 
-    def _create_record_from_all_swwitch(self):
+    def _create_record_from_all_switch(self):
         self.widgets.switches['record_from_all'] = Switch(
             active=False, 
             disabled=True
         )
         self.widgets.switches['record_from_all'].on_change('active', self.p.record_from_all_callback)
         self.widgets.switches['record_from_all'].on_change('active', self.p.voltage_callback_on_change)
+
+    def _create_recording_variable_selector(self):
+        self.widgets.selectors['recording_variable'] = Select(
+            title='Recording variable',
+            value='v',
+            options=['v'],
+            width=100,
+        )
+        self.widgets.selectors['recording_variable'].on_change('value', self.p.recording_variable_callback)
+        self.widgets.selectors['recording_variable'].description = 'To record a current through a specific channel, ensure "i" is included as a RANGE variable in the channel\'s MOD file.'
 
     def _create_recording_switch(self):
         self.widgets.switches['record'] = Switch(
@@ -597,14 +597,16 @@ class RightMenuMixin():
 
     def _create_recordings_tab_panel(self):
 
-        self._create_record_from_all_swwitch()
+        self._create_recording_variable_selector()
         self._create_recording_switch()
+        self._create_record_from_all_switch()
         self._create_remove_all_recordings_button()
 
         recordings_panel = column(
             [
-                row([self.widgets.switches['record_from_all'], Div(text='Record from all')]),
+                self.widgets.selectors['recording_variable'],
                 row([self.widgets.switches['record'], Div(text='Record from segment')]),
+                # row([self.widgets.switches['record_from_all'], Div(text='Record from all')]),
                 self.widgets.buttons['remove_all']
             ],
             name='recordings_panel'

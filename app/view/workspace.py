@@ -183,7 +183,7 @@ class WorkspaceMixin():
                                                                 ("Ra", "@Ra"), 
                                                                 #    ('g na', '@gbar_na{0.000000}'), 
                                                                 #    ('g kv', '@gbar_kv{0.000000}'), 
-                                                                ("Recordings", "@recordings"), 
+                                                                ("Recordings", "@rec_v"), 
                                                                 ("AMPA", "@AMPA"), 
                                                                 ("Weights", "@weights"), 
                                                                 ("Iclamps", "@iclamps"), 
@@ -281,7 +281,7 @@ class WorkspaceMixin():
 
         self.figures['sim'].grid.grid_line_alpha = 0.1
 
-        self.sources['sim'] = ColumnDataSource(data={'xs': [], 'ys': [], 'dist': []})
+        self.sources['sim'] = ColumnDataSource(data={'xs': [], 'ys': []})
 
         color_mapper = LinearColorMapper(palette=cc.rainbow4, low=0)  #rainbow4
 
@@ -290,9 +290,10 @@ class WorkspaceMixin():
             ys='ys', 
             source=self.sources['sim'],
             line_width=2, 
-            line_color={'field': 'dist', 'transform': color_mapper}
+            line_alpha=0.9,
         )
-        self.figures['sim'].renderers[0].nonselection_glyph.line_alpha = 0.3
+        self.figures['sim'].renderers[0].selection_glyph = MultiLine(line_width=2, line_alpha=1)
+        self.figures['sim'].renderers[0].nonselection_glyph = MultiLine(line_width=2, line_alpha=0.3)
 
         from bokeh.models import Span
         self.renderers['span_v'] = Span(location=100, dimension='height', line_color='red', line_width=1, name='v_span')
@@ -312,6 +313,17 @@ class WorkspaceMixin():
             line_alpha=0.5
         )
 
+        hover_callback = CustomJS(args=dict(plot=self.figures['cell']), 
+            code="""
+                    // get the canvas element
+                    var canvas = plot.canvas_self.el;
+                    // change the cursor
+                    canvas.style.cursor = 'pointer';
+                """)
+
+        sim_hover_tool = HoverTool(callback=hover_callback, renderers=[self.figures['sim'].renderers[0]], tooltips=[('Seg', '@labels')])
+        self.figures['sim'].add_tools(sim_hover_tool)
+
     def _create_frozen_v_switch(self):
         
         self.widgets.switches['frozen_v'] = Switch(active=False)
@@ -326,17 +338,6 @@ class WorkspaceMixin():
                 self.sources['frozen_v'].data = {'xs': [], 'ys': []}
 
         self.widgets.switches['frozen_v'].on_change('active', frozen_v_callback)
-
-        hover_callback = CustomJS(args=dict(plot=self.figures['cell']), 
-                                code="""
-                                        // get the canvas element
-                                        var canvas = plot.canvas_self.el;
-                                        // change the cursor
-                                        canvas.style.cursor = 'pointer';
-                                    """)
-
-        sim_hover_tool = HoverTool(callback=hover_callback, renderers=[self.figures['sim'].renderers[0]], tooltips=[('Seg', '@label')])
-        self.figures['sim'].add_tools(sim_hover_tool)
 
         self.sources['detected_spikes'] = ColumnDataSource(data={'x': [], 'y': []})
         self.figures['sim'].circle(x='x', y='y', color='red', source=self.sources['detected_spikes'])
@@ -353,21 +354,26 @@ class WorkspaceMixin():
 
         self.figures['curr'].grid.grid_line_alpha = 0.1
 
-        self.sources['curr'] = ColumnDataSource(data={'xs': [], 'ys': [], 'line_color': []})
+        self.sources['curr'] = ColumnDataSource(data={'xs': [], 'ys': []})
 
         self.figures['curr'].multi_line(xs='xs', ys='ys', 
-            source=self.sources['curr'], line_width=2, line_color='red',
+            source=self.sources['curr'], line_width=2,
             name='multiline_curr',
+            line_alpha=0.9
             )
+        self.figures['curr'].renderers[0].selection_glyph = MultiLine(line_width=2, line_alpha=1)
+        self.figures['curr'].renderers[0].nonselection_glyph = MultiLine(line_width=2, line_alpha=0.3)
 
         self.sources['frozen_I'] = ColumnDataSource(data={'xs': [], 'ys': [], 'line_color': []})
 
         self.figures['curr'].multi_line(xs='xs', ys='ys',
                                         source=self.sources['frozen_I'],
                                         line_width=1,
-                                        line_color='line_color',
                                         line_alpha=0.5,
                                         name='multiline_curr_frozen')
+
+        curr_hover_tool = HoverTool(renderers=[self.figures['curr'].renderers[0]], tooltips=[('Seg', '@labels'), ('Current', '@names')])
+        self.figures['curr'].add_tools(curr_hover_tool)
 
     def _create_frozen_i_switch(self):
 

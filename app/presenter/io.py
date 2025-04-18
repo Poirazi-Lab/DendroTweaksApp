@@ -78,6 +78,7 @@ class IOMixin():
         self._update_multichoice_domain_widget()
         self._update_multichoice_mechanisms_widget()
         self._update_mechanism_selector_widget('Independent')
+        self._update_recording_variable_selector_widget()
         
 
         self.view.widgets.buttons['add_default_mechanisms'].disabled = True
@@ -104,10 +105,11 @@ class IOMixin():
         # MISC --------------------------------------------------------
         # self._attach_download_js() # needed to update the names of the files to download
 
-        self.recorded_segments = [seg for seg in self.model.recordings['v']]
+        self._recorded_segments = self.get_recorded_segments()
+        self._update_traces_renderers()        
         self.update_voltage()
 
-        for param_name in ['AMPA', 'NMDA', 'GABAa', 'AMPA_NMDA', 'recordings', 'iclamps']:
+        for param_name in ['AMPA', 'NMDA', 'GABAa', 'AMPA_NMDA', 'iclamps']:
             self._update_graph_param(param_name, update_colors=False)
 
         self.view.widgets.selectors['stimuli'].options = self.model.list_stimuli()

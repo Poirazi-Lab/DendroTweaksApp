@@ -9,6 +9,9 @@ from utils import get_seg_name, get_sec_type, get_sec_name, get_sec_id
 
 from bokeh.models import CategoricalColorMapper
 import colorcet as cc
+from matplotlib import cm
+import numpy as np
+from bokeh.palettes import Blues6, Oranges6, Greens6, Reds6, Purples6
 
 class SimulationMixin():
     """ This class is a mixin for the Presenter class.
@@ -18,57 +21,88 @@ class SimulationMixin():
     def __init__(self):
         logger.debug('BiophysMixin init')
         super().__init__()
-        self.recorded_segments = []
+        self._recorded_segments = []
+        
+    def get_recorded_segments(self, var=None):
+        """ Returns the segments in which the variable is recorded. """
+        var_names = [var] if var else self.model.simulator.recordings.keys()
+        segments = [seg for var in var_names 
+            for seg in self.model.recordings.get(var, [])]
+        return segments
 
     # MODEL TO VIEW
 
     @log
     @timeit
     def update_voltage(self):
-        # if not self.model.simulator.recordings['v']:
-        #     logger.warning('No recordings selected, interrupting simulation')
-        #     return
-
-        ### Get labels for recorded segments ###
-        labels = [seg.idx for seg in self.model.simulator.recordings['v'].keys()]
-        logger.info(f'Recording voltage from {labels}')
+        if not self.model.simulator.recordings:
+            logger.warning('No recordings selected, interrupting simulation')
+            return
 
         duration = self.view.widgets.sliders['duration'].value
         start = time.time()
         self.model.simulator.run(duration)
         runtime = time.time() - start
         self.view.DOM_elements['runtime'].text = f'✅ Runtime: {runtime:.2f} s'
-    
-        ### Update color of voltage and current traces ###
-        if self.model.simulator.recordings['v'].keys():
-            # color_mapper = CategoricalColorMapper(palette=self.view.theme.palettes['trace'], factors=labels)
-            factors = [str(seg.idx) for seg in self.recorded_segments]
-            color_mapper = CategoricalColorMapper(palette=cc.glasbey_cool, factors=factors)
-            self.view.figures['sim'].renderers[0].glyph.line_color = {'field': 'label', 'transform': color_mapper}
-            # if Is:
-            #     self.view.figures['curr'].renderers[0].glyph.line_color = {'field': 'label', 'transform': color_mapper}
+
+        if self.model.simulator.recordings.get('v'):
+            self._update_voltage_data()
         else:
-            factors = []
-
-        logger.debug(f'Show traces from segments: {self.recorded_segments}')
+            self.view.sources['sim'].data = {'xs': [], 'ys': [], 'labels': []}
         
-
-        voltages = [self.model.simulator.recordings['v'][seg] for seg in self.recorded_segments]
-        t = self.model.simulator.t.to_python()
-        ts = [t for _ in range(len(voltages))]
-        logger.debug(f'Voltages: {type(voltages[0])}')
-
-        self.view.sources['sim'].data = {'xs': ts, 'ys': voltages, 'label': factors}
+        current_names = [k for k in self.model.simulator.recordings.keys() if k not in ['v']]
+        if current_names:
+            self._update_current_data(current_names)
+        else:
+            self.view.sources['curr'].data = {'xs': [], 'ys': [], 'labels': [], 'names': []}
         
-        # if self.model.simulator.record_current_from:
-        #     currents = [self.model.simulator.recordings[self.model.simulator.record_current_from][seg] for seg in self.recorded_segments]
-        #     self.view.sources['curr'].data = {'xs': ts[:len(currents)], 'ys': currents, 'label': factors}
-        
-        self.update_spike_times_data()
+        if any(self.model.populations.values()):
+            self.update_spike_times_data()
 
         
+    def _update_voltage_data(self):
 
-    
+        segments = self.get_recorded_segments('v')
+        labels = [str(seg.idx) for seg in segments]
+        voltages = list(self.model.simulator.recordings['v'].values())
+
+        ts = [self.model.simulator.t for _ in range(len(voltages))]
+
+        self.view.sources['sim'].data = {
+            'xs': ts, 
+            'ys': voltages, 
+            'labels': labels
+        }
+
+
+    def _update_current_data(self, current_names):
+
+        currents = []
+        labels = []
+        names = []
+        
+        for current_name in current_names:
+            
+            _segments = self.get_recorded_segments(current_name)
+            _labels = [str(seg.idx) for seg in _segments]
+            _currents = list(self.model.simulator.recordings[current_name].values())
+
+            currents.extend(_currents)
+            labels.extend(_labels)
+            names.extend([current_name] * len(_currents))
+
+        # Time series: same time vector for each trace
+        ts = [self.model.simulator.t for _ in range(len(currents))]
+
+        # Push to the Bokeh data source
+        self.view.sources['curr'].data = {
+            'xs': ts,
+            'ys': currents,
+            'labels': labels,
+            'names': names
+        }
+
+
     @log
     @timeit
     def update_spike_times_data(self):
@@ -114,12 +148,11 @@ class SimulationMixin():
     def record_current_callback(self, attr, old, new):
         """ Callback for the record current switch. """
         
-        if self.view.widgets.switches['record_current'].active:
-            mech = self.model.mechanisms[self.view.widgets.selectors['mechanism'].value]
-            self.model.simulator.record_current_from = mech.name
+        mech_name = self.view.widgets.selectors['mechanism'].value
+        if self.view.widgets.switches['record_current'].active and mech_name != 'Independent':
+            mech = self.model.mechanisms[mech_name]
             self.update_voltage()
         else:
-            self.model.simulator.record_current_from = None
             self.view.sources['curr'].data = {'xs': [], 'ys': [], 'label': []}
             
 

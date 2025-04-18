@@ -61,7 +61,7 @@ class GraphMixin():
                             distance = seg.path_distance(),
                             domain_distance = seg.path_distance(within_domain=True),
                             length=seg._section.length,
-                            recordings='None',
+                            rec_v='None',
                             iclamps=0,
                             radius=radius*0.0015,
                             fill_color=self.view.get_domain_color(seg._section.domain),
@@ -125,6 +125,7 @@ class GraphMixin():
         self.view.figures['graph'].renderers.append(graph_renderer)
 
         # UPDATE PARAM OPTIONS
+        self.view.params.update({'Recordings': [f'rec_{var}' for var in self.avaliable_vars_to_record]})
         self.view.widgets.selectors['graph_param'].options = {**self.view.params, **self.model.mechs_to_params}
 
         self.add_lasso_callback()
@@ -214,14 +215,11 @@ class GraphMixin():
         from the model.
         Also updates the colors of the graph based on the parameter values.
         """
-        logger.info(f'Updating graph parameter {param_name}!')
+        logger.info(f'Updating graph parameter {param_name}')
 
-        if not param_name == 'voltage':
-            self.view.figures['graph'].renderers[0].node_renderer.data_source.data[param_name] = \
-                [self._get_param_value(seg, param_name) for seg in self.model.seg_tree]
-        else:
-            raise NotImplementedError
-            # self.view.figures['graph'].renderers[0].node_renderer.data_source.data[param_name] = [self.G.nodes[n][param_name][0] for n in self.G.nodes]
+        self.view.figures['graph'].renderers[0].node_renderer.data_source.data[param_name] = \
+            [self._get_param_value(seg, param_name) for seg in self.model.seg_tree]
+        # self.view.figures['graph'].renderers[0].node_renderer.data_source.data[param_name] = [self.G.nodes[n][param_name][0] for n in self.G.nodes]
 
         if update_colors: self._update_graph_colors(param_name)
         
@@ -234,11 +232,12 @@ class GraphMixin():
         """
 
         # RECORDINGS
-        if param_name == 'recordings':
-            return str(seg.idx) if self.model.recordings.get(seg) is not None else np.nan
+        if param_name.startswith('rec_'):
+            param_name = param_name.replace('rec_', '')
+            return str(seg.idx) if self.model.recordings.get(param_name, {}).get(seg) is not None else np.nan
 
-        elif param_name == 'voltage':
-            self.model.simulator.recordings['v'][seg].to_python() if param_name == 'voltage' else 0,
+        # elif param_name == 'voltage':
+        #     self.model.simulator.recordings['v'][seg].to_python() if param_name == 'voltage' else 0,
 
         # STIMULI
         elif param_name == 'iclamps':
@@ -307,19 +306,17 @@ class GraphMixin():
                 factors=[domain for domain in self.model.domains]
             )
             self.view.widgets.sliders['graph_param_high'].visible = False
-        elif param == 'recordings':
-            recorded_seg_ids = [str(seg.idx) for seg in self.recorded_segments]
-            not_recorded_seg_ids = [str(seg.idx) for seg in self.model.simulator.recordings['v'].keys() if seg not in self.recorded_segments]
-            factors = recorded_seg_ids + not_recorded_seg_ids
+        elif param.startswith('rec_'):
+            labels = [str(seg.idx) for seg in self._recorded_segments]
             color_mapper = CategoricalColorMapper(
-                palette=cc.glasbey_cool[:len(recorded_seg_ids)], 
-                factors=factors,
+                palette=cc.glasbey_light, 
+                factors=labels, 
                 nan_color=self.view.theme.graph_colors['node_fill']
             )
             self.view.widgets.sliders['graph_param_high'].visible = False
-        elif param == 'voltage':
-            color_mapper = LinearColorMapper(palette=cc.bmy, low=-70, high=40)
-            self.view.widgets.sliders['time_slice'].visible = True
+        # elif param == 'voltage':
+        #     color_mapper = LinearColorMapper(palette=cc.bmy, low=-70, high=40)
+        #     self.view.widgets.sliders['time_slice'].visible = True
         else:
             if param == 'iclamps':
                 color_mapper = LinearColorMapper(palette=['red'], high=1, nan_color=self.view.theme.graph_colors['node_fill'])
@@ -401,7 +398,7 @@ class GraphMixin():
         dt = self.model.simulator.dt
         time_stemp = int(t / dt)
             
-        self.view.figures['graph'].renderers[0].node_renderer.data_source.data['voltage'] = [self.G.nodes[n]['voltage'][time_stemp] for n in self.G.nodes]
+        # self.view.figures['graph'].renderers[0].node_renderer.data_source.data['voltage'] = [self.G.nodes[n]['voltage'][time_stemp] for n in self.G.nodes]
 
 
     # ========================================================================================================
