@@ -210,6 +210,9 @@ class SimulationMixin():
     def update_e_leak_callback(self, attr, old, new):
         self.model.update_e('_leak', new)
 
+    def update_cvode_callback(self, attr, old, new):
+        self.model.simulator._cvode = new
+
     @log
     def update_Ra_callback(self, attr, old, new):
         for sec in self.selected_secs:

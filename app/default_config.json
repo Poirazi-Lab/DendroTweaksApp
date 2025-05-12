@@ -22,7 +22,8 @@
     },
     "simulation": {
         "simulator": "NEURON",
-        "run_on_interaction": true
+        "run_on_interaction": true,
+        "cvode": false
     },
     "dev_tools": {
         "console": true,

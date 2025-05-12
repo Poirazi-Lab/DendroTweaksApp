@@ -1,5 +1,5 @@
-from bokeh.models import Select, Button, RangeSlider, TextInput, Div
-from bokeh.layouts import column
+from bokeh.models import Select, Button, RangeSlider, TextInput, Div, Switch
+from bokeh.layouts import column, row
 from bokeh.events import ButtonClick
 from bokeh.models import CustomJS
 from bokeh.models import ColumnDataSource
@@ -83,6 +83,10 @@ class SettingsMixin():
         if not self.p.config['dev_tools']['choose_simulator']:
             self.widgets.selectors['simulator'].disabled = True
 
+    def _create_cvode_switch(self):
+        self.widgets.switches['cvode'] = Switch(active=self.p.config['simulation']['cvode'], name='cvode')
+        self.widgets.switches['cvode'].on_change('active', self.p.update_cvode_callback)
+
     def _create_save_preferences_button(self):
 
         self.widgets.buttons['save_preferences'] = Button(label='Save preferences', button_type='warning', width=200)
@@ -102,6 +106,7 @@ class SettingsMixin():
         self._create_voltage_plot_settings()
         self._create_graph_layout_selector()
         self._create_simulator_selector()
+        self._create_cvode_switch()
         self._create_save_preferences_button()
 
 
@@ -114,6 +119,7 @@ class SettingsMixin():
                 # row(self.widgets.switches['enable_record_from_all'], Div(text='Enable record from all')),
                 self.widgets.selectors['graph_layout'],
                 self.widgets.selectors['simulator'],
+                row(self.widgets.switches['cvode'], Div(text='Use adaptive time step (CVode)')),
                 self.widgets.buttons['save_preferences'],
                 self.DOM_elements['controller'],
             ],
