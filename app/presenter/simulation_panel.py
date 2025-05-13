@@ -212,6 +212,10 @@ class SimulationMixin():
 
     def update_cvode_callback(self, attr, old, new):
         self.model.simulator._cvode = new
+        if new:
+            self.view.widgets.sliders['dt'].disabled = True
+        else:
+            self.view.widgets.sliders['dt'].disabled = False
 
     @log
     def update_Ra_callback(self, attr, old, new):

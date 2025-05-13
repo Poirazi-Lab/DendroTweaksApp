@@ -97,6 +97,7 @@ class GraphMixin():
     def _create_graph_renderer(self):
 
         self.selected_secs = set()
+        self.view.figures['cell'].renderers[0].data_source.selected.indices = []
         self.selected_segs = []
         
         # REMOVE OLD GRAPH RENDERER

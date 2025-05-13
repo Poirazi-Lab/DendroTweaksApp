@@ -129,16 +129,15 @@ class SectionMixin():
             else:
                 self.view.widgets.selectors['section'].value = ''
 
+    @log
     def update_seg_x_selector(self):
         with remove_callbacks(self.view.widgets.selectors['seg_x']):
             if len(self.selected_secs) == 1:
                 self.view.widgets.selectors['seg_x'].options = [str(round(seg.x, 5)) for seg in self.selected_segs[0]._section]
-                self.view.widgets.selectors['seg_x'].value = str(round(self.selected_segs[0].x, 5))
+                self.view.widgets.selectors['seg_x'].value = '0.5' # str(round(self.selected_segs[0].x, 5))
             else:
                 self.view.widgets.selectors['seg_x'].options = ['']
                 self.view.widgets.selectors['seg_x'].value = ''
-            
-        logger.debug('END\n')
 
     def update_navigation_buttons_on_reaching_terminal_branch(self):
         """
@@ -187,15 +186,19 @@ class SectionMixin():
 
     
     # VIEW TO MODEL
-
+    @log
     def nseg_callback(self, attr, old, new):
         if new is None: return
         if not self.selected_secs: 
             logger.debug('No section selected')
             return
         selected_secs = self.selected_secs
+        if all([sec.nseg == new for sec in selected_secs]):
+            logger.debug('No change in nseg')
+            return
+
         for sec in selected_secs:
-            sec.nseg = new
+            sec.nseg = int(new)
             
         self._create_graph_renderer()
         self.update_section_panel()
