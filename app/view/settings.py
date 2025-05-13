@@ -84,7 +84,11 @@ class SettingsMixin():
             self.widgets.selectors['simulator'].disabled = True
 
     def _create_cvode_switch(self):
-        self.widgets.switches['cvode'] = Switch(active=self.p.config['simulation']['cvode'], name='cvode')
+        self.widgets.switches['cvode'] = Switch(
+            active=self.p.config['simulation']['cvode'], 
+            disabled=True,
+            name='cvode'
+            )
         self.widgets.switches['cvode'].on_change('active', self.p.update_cvode_callback)
 
     def _create_save_preferences_button(self):

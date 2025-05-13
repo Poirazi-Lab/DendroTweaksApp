@@ -44,6 +44,7 @@ class IOMixin():
         
         self.view.widgets.text['file_name'].value = self.model.name + '_modified'
         self.view.widgets.selectors['model'].disabled = True
+        self.view.widgets.switches['cvode'].disabled = False
 
         self._attach_download_js()
 
@@ -61,7 +62,14 @@ class IOMixin():
             self.update_status_message('Please load a morphology first.', status='warning')
             return
 
-        self.model.load_biophys(new, recompile=self.view.widgets.switches['recompile'].active)
+        try:
+            self.model.load_biophys(new, recompile=self.view.widgets.switches['recompile'].active)
+        except Exception as e:
+            logger.error(f'Error loading biophys: {e}')
+            with remove_callbacks(self.view.widgets.selectors['biophys']):
+                self.view.widgets.selectors['biophys'].value = 'Select biophys'
+            self.update_status_message('Error loading biophys.', status='error')
+            return
 
         d_lambda = self.model.d_lambda
         with remove_callbacks(self.view.widgets.sliders['d_lambda']):
@@ -98,8 +106,16 @@ class IOMixin():
             self.update_status_message('Please load a morphology first.', status='warning')
             return
 
-        self.model.load_stimuli(new)
-        logger.debug(f'Recordings loaded: {self.model.recordings}')
+        try:
+            self.model.load_stimuli(new)
+            logger.debug(f'Recordings loaded: {self.model.recordings}')
+        except Exception as e:
+            logger.error(f'Error loading stimuli: {e}')
+            with remove_callbacks(self.view.widgets.selectors['stimuli']):
+                self.view.widgets.selectors['stimuli'].value = 'Select stimuli'
+            self.update_status_message('Error loading stimuli.', status='error')
+            return
+
         self.update_simulation_widgets()
 
         # MISC --------------------------------------------------------
@@ -139,8 +155,15 @@ class IOMixin():
     def load_morphology_callback(self, attr, old, new):
         """
         Creates the cell and the renderers.
-        """     
-        self.load_morphology(new)
+        """
+        try:     
+            self.load_morphology(new)
+        except Exception as e:
+            logger.error(f'Error loading morphology: {e}')
+            with remove_callbacks(self.view.widgets.selectors['morphology']):
+                self.view.widgets.selectors['morphology'].value = 'Select a morphology'
+            self.update_status_message('Error loading morphology.', status='error')
+            return
 
         self.view.menus['right_menu'].visible = True
         self.update_status_message('Morphology loaded.', status='success')
