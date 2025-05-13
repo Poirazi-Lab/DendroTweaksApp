@@ -92,17 +92,22 @@ class RightMenuMixin():
                                         options=AVAILABLE_DOMAINS,
                                         value='soma',
                                         width=150)
-        self.widgets.selectors['set_domain'].on_change('value', self.p.define_domain_callback)
+        
 
+    def _create_set_domain_button(self):
+        self.widgets.buttons['set_domain'] = Button(label='Set domain', button_type='primary', styles={"padding-top":"20px"})
+        self.widgets.buttons['set_domain'].on_event(ButtonClick, self.p.define_domain_callback)
+        
 
     def _create_domains_tab_panel(self):
 
         self._create_domain_selector()
         self._create_set_domain_selector()
+        self._create_set_domain_button()
 
         domains_panel = column([
             self.widgets.selectors['domain'],
-            self.widgets.selectors['set_domain'],
+            row(self.widgets.selectors['set_domain'], self.widgets.buttons['set_domain']),
         ])
 
         self.widgets.tab_panels['domains'] = TabPanel(

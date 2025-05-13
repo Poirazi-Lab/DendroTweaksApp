@@ -96,12 +96,12 @@ class Presenter(IOMixin, NavigationMixin,
     # DOMAIN
     # -----------------------------------------------------------------
 
-    def define_domain_callback(self, attr, old, new):
+    def define_domain_callback(self, event):
         """
         Callback for the buttons['create_domain'] widget.
         """
         # GET VIEW
-        domain_name = new
+        domain_name = self.view.widgets.selectors['set_domain'].value
         # SET MODEL
         self.model.define_domain(domain_name, sections=self.selected_secs)
         # SET VIEW
