@@ -225,8 +225,9 @@ class WorkspaceMixin():
 
         self.widgets.buttons['update_graph'] = Button(
             label='Update', 
-            button_type='primary', 
-            width=100
+            button_type='default',
+            width=100,
+            styles={'padding-top': '20px', 'padding-left': '10px'}
         )
         self.widgets.buttons['update_graph'].on_event(ButtonClick, self.p.update_graph_callback)
 

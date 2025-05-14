@@ -38,7 +38,7 @@ class IOMixin():
         biophys = self.model.path_manager.list_biophys()
         self.view.widgets.selectors['biophys'].options = ['Select biophys'] + biophys
         stimuli = self.model.path_manager.list_stimuli()
-        self.view.widgets.selectors['stimuli'].options = ['Select a stimuli'] + stimuli
+        self.view.widgets.selectors['stimuli'].options = ['Select stimuli'] + stimuli
 
         self.view.widgets.multichoice['mechanisms'].options = self.model.list_mechanisms()
         
@@ -125,7 +125,7 @@ class IOMixin():
         self._update_traces_renderers()        
         self.update_voltage()
 
-        for param_name in ['AMPA', 'NMDA', 'GABAa', 'AMPA_NMDA', 'iclamps']:
+        for param_name in ['AMPA', 'NMDA', 'GABAa', 'AMPA_NMDA', 'iclamps', 'rec_v']:
             self._update_graph_param(param_name, update_colors=False)
 
         self.view.widgets.selectors['stimuli'].options = self.model.list_stimuli()
