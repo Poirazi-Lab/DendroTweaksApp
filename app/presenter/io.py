@@ -42,7 +42,8 @@ class IOMixin():
 
         self.view.widgets.multichoice['mechanisms'].options = self.model.list_mechanisms()
         
-        self.view.widgets.text['file_name'].value = self.model.name + '_modified'
+        if self.config['dev_tools']['allow_file_io']:
+            self.view.widgets.text['file_name'].value = self.model.name + '_modified'
         self.view.widgets.selectors['model'].disabled = True
         self.view.widgets.switches['cvode'].disabled = False
 
@@ -406,5 +407,6 @@ class IOMixin():
             
             button.js_on_event('button_click', CustomJS(code=js_code))
 
-        attach_download_js(self.view.widgets.buttons['download_model'], 
-                           f'app/static/data/{self.model.name}/{self.model.name}.zip')
+        if self.config['dev_tools']['allow_file_io']:
+            attach_download_js(self.view.widgets.buttons['download_model'], 
+                            f'app/static/data/{self.model.name}/{self.model.name}.zip')
