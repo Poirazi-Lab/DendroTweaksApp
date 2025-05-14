@@ -125,7 +125,7 @@ class ValidationMixin():
                 data = calculate_fI_curve(self.model, duration=duration, min_amp=min_amp, max_amp=max_amp, n=n)
                 self._plot_fI_curve(data)
                 with remove_callbacks(self.view.widgets.sliders['iclamp_amp']):
-                    self.view.widgets.sliders['iclamp_amp'].value = max_amp
+                    self.view.widgets.sliders['iclamp_amp'].value = max_amp* 1e3
                 self.update_voltage()
             
         
@@ -138,7 +138,7 @@ class ValidationMixin():
                 self.update_voltage()
 
     def _check_passive_protocol(self):
-        if len(self.model.recordings) != 1:
+        if len(self.model.recordings['v']) != 1:
             self.view.DOM_elements['stats_ephys'].text = "Please place a single recording at the soma."
             self.view.DOM_elements['stats_ephys'].styles['color'] = self.view.theme.status_colors['error']
             return False
@@ -153,7 +153,7 @@ class ValidationMixin():
         return True
 
     def _check_somatic_spikes_protocol(self):
-        if len(self.model.recordings) != 1:
+        if len(self.model.recordings['v']) != 1:
             self.view.DOM_elements['stats_ephys'].text = "Please place a single recording at the soma."
             self.view.DOM_elements['stats_ephys'].styles['color'] = self.view.theme.status_colors['error']
             return False
@@ -168,7 +168,7 @@ class ValidationMixin():
         return True
 
     def _check_voltage_attenuation_protocol(self):
-        if len(self.model.recordings) < 2:
+        if len(self.model.recordings['v']) < 2:
             self.view.DOM_elements['stats_ephys'].text = "Please place at least two recordings."
             self.view.DOM_elements['stats_ephys'].styles['color'] = self.view.theme.status_colors['error']
             return False
@@ -193,7 +193,7 @@ class ValidationMixin():
             self.view.DOM_elements['stats_ephys'].text = "Please add a valid synapse population with exactly one synapse."
             self.view.DOM_elements['stats_ephys'].styles['color'] = self.view.theme.status_colors['error']
             return False
-        if len(self.model.recordings) != 1:
+        if len(self.model.recordings['v']) != 1:
             self.view.DOM_elements['stats_ephys'].text = "Please place a single recording at the dendrite."
             self.view.DOM_elements['stats_ephys'].styles['color'] = self.view.theme.status_colors['error']
             return False
