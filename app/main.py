@@ -46,6 +46,9 @@ theme_name = config['appearance']['theme']
 path_to_data = config['data']['path_to_data']
 simulator = config['simulation']['simulator']
 
+if not os.path.exists(path_to_data) or not os.listdir(path_to_data):
+    os.makedirs(path_to_data, exist_ok=True)
+    dd.download_example_data(path_to_data)
 
 # =================================================================
 # INITIALIZATION
