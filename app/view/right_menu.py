@@ -65,7 +65,6 @@ class RightMenuMixin():
                 self.DOM_elements['psection']
             ],
             name='sections_layout',
-            sizing_mode='stretch_width',
         )
 
         self.widgets.tab_panels['sections'] = TabPanel(
@@ -188,7 +187,6 @@ class RightMenuMixin():
                 self.widgets.tab_panels['morphometric_analysis']
             ],
             active = 0,
-            sizing_mode='stretch_width',
         )
         self.widgets.tabs['morphology'].on_change('active', self.p.switch_tab_callback)
 
@@ -555,7 +553,6 @@ class RightMenuMixin():
             ],
             active = 0,
             visible=False,
-            sizing_mode='stretch_width',
         )
         self.widgets.tabs['biophys'].on_change('active', self.p.switch_tab_callback)
 
@@ -849,7 +846,6 @@ class RightMenuMixin():
                 self.widgets.buttons['run_protocol'], 
                 self.widgets.buttons['clear_validation'],
             ],
-            sizing_mode='scale_both',
         )
         
         self.widgets.tab_panels['validation'] = TabPanel(
@@ -884,7 +880,6 @@ class RightMenuMixin():
             active=0, 
             align='center', 
             disabled=False,
-            sizing_mode='stretch_width',
             styles={"padding": "10px 0 20px 0"}
         )
         self.widgets.buttons['switch_right_menu'].on_change('active', self.p.switch_right_menu_tab_callback)
@@ -905,8 +900,13 @@ class RightMenuMixin():
                 self.widgets.tabs['biophys'], 
                 self.widgets.tabs['stimuli'],
             ],
-            align='center',
             name='right_menu_section',
-            sizing_mode='stretch_width',
-            visible=False,
+            visible=True,
+            styles={
+                'padding': '10px',
+                'background_color': 'goldenrod',
+            },
+            height=960,
+            width=500,
+
         )

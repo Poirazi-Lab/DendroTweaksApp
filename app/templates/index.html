@@ -4,50 +4,22 @@
 {% block preamble %}
 <link rel="stylesheet" href="app/static/css/main.css">
 <link rel="shortcut icon" type="image/x-icon" href="/app/static/images/favicon.png">
-<script src="app/static/main.js"></script>
+
 
 
 {% endblock %}
 
 {% block contents %}
 
-<div class="nav-bar">
-    <button id="collapse-button" onclick="toggleMenu()">☰</button>
-</div>
 
+
+
+
+<div class="app-container">
+<button id="settings-button">Settings</button>
 <div class="app">
-
-    <div class="left-menu">
-        <img id="logo" src="https://dendrotweaks.readthedocs.io/en/latest/_static/logo.png" alt="logo">
-        {{ embed(roots.left_menu) }}
-        <button id="settings-button">Settings</button>
-    </div>
-
-    <div class="workspace">
-
-        <div class="row" id="top-row">
-            <div id="cell">
-                {{ embed(roots.panel_cell) }}
-            </div>
-
-            <div id="graph">
-                {{ embed(roots.panel_graph) }}
-            </div>
-        </div>
-
-        <div class="row" id="bottom-row">
-            <div id="simulation">
-                {{ embed(roots.panel_simulation) }}
-
-            </div>
-
-        </div>
-    </div>
-
-    <div class="right-menu">
-        {{ embed(roots.right_menu_section) }}
-    </div>
-    
+    {{ embed(roots.app) }}
+</div>
 </div>
 
 <div class="settings hidden">

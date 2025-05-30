@@ -34,9 +34,8 @@ class WorkspaceMixin():
         self.figures['cell'] = figure(
             title='Cell',
             width=400,
-            height=500,
+            height=480,
             match_aspect=True,
-            sizing_mode='stretch_both',
             tools='pan, box_zoom,reset, tap, wheel_zoom, save'
         )
         self.figures['cell'].toolbar.active_scroll = self.figures['cell'].select_one(WheelZoomTool)
@@ -68,7 +67,6 @@ class WorkspaceMixin():
             step=2, 
             title="Rotate", 
             width=370, 
-            sizing_mode='stretch_width'
         )
         self.widgets.sliders['rotate_cell'].on_change('value', self.p.rotate_cell_renderer_callback)
 
@@ -110,10 +108,8 @@ class WorkspaceMixin():
                         self.widgets.buttons['child']
                     ],
                     styles={'padding-top': '20px'},
-                    sizing_mode='scale_width'
                 )
             ],
-            sizing_mode='scale_width',
             max_width=300,
             flow_mode='inline',
         )
@@ -132,13 +128,11 @@ class WorkspaceMixin():
                 self.figures['cell'], 
                 row(
                     self.widgets.sliders['rotate_cell'],
-                    sizing_mode='stretch_width', 
                     styles={'margin-right': '25px'}
                 ),
                 navigation
             ],
             name='panel_cell',
-            sizing_mode='stretch_both',
             styles={'padding-bottom': '20px'}
         )
 
@@ -153,11 +147,9 @@ class WorkspaceMixin():
     def _create_graph_figure(self):
         self.figures['graph'] = figure(title='Graph', 
                             width=700, 
-                            height=500, 
+                            height=480, 
                             tools='pan, box_zoom,reset, lasso_select, tap, wheel_zoom, save',  
-                            match_aspect=True,
-                            width_policy='fit',
-                            sizing_mode='stretch_both',)
+                            match_aspect=True)
 
         self.figures['graph'].toolbar.active_scroll = self.figures['graph'].select_one(WheelZoomTool)
 
@@ -255,8 +247,6 @@ class WorkspaceMixin():
                 ),
             ],
             name='panel_graph',
-            width_policy='fit',
-            sizing_mode='stretch_both'
         )
 
         return graph_layout
@@ -269,10 +259,8 @@ class WorkspaceMixin():
     def _create_voltage_figure(self):
         
         self.figures['sim'] = figure(
-            width=600, 
-            height=300, 
-            width_policy='fit',
-            sizing_mode='scale_width',
+            width=1100, 
+            height=280, 
             x_axis_label='Time (ms)',
             y_axis_label='Voltage (mV)',
             y_range=(-100, 50),
@@ -346,9 +334,7 @@ class WorkspaceMixin():
 
     def _create_current_figure(self):
 
-        self.figures['curr'] = figure(width=600, height=300,
-                                    width_policy='fit',
-                                    sizing_mode='scale_width',
+        self.figures['curr'] = figure(width=600, height=280,
                                     x_axis_label='Time (ms)',
                                     y_axis_label='Current (nA)',
                                     tools='pan, box_zoom, reset, save, tap')
@@ -397,9 +383,7 @@ class WorkspaceMixin():
 
         from bokeh.models import FactorRange
 
-        self.figures['spikes'] = figure(height=300, 
-                        width_policy='fit',
-                        sizing_mode='scale_width',
+        self.figures['spikes'] = figure(height=280, 
                         x_axis_label='Time (ms)',
                         x_range=(0, 300),
                         y_axis_label='Synapses',
@@ -432,10 +416,8 @@ class WorkspaceMixin():
                 self.figures['sim'], 
                 row([self.widgets.switches['frozen_v'], Div(text='Freeze traces')])
             ],
-            width=600,
-            height=300,
-            width_policy='fit',
-            sizing_mode='stretch_both'
+            width=1100,
+            height=280,
         )
 
         self.widgets.tab_panels['voltage'] = TabPanel(
@@ -454,10 +436,8 @@ class WorkspaceMixin():
                 self.figures['curr'],
                 row([self.widgets.switches['frozen_I'],Div(text='Freeze traces')])
             ],
-            width=600,
-            height=300,
-            width_policy='fit',
-            sizing_mode='stretch_both'
+            width=1100,
+            height=280,
         )
 
         self.widgets.tab_panels['current'] = TabPanel(
@@ -473,9 +453,7 @@ class WorkspaceMixin():
         spike_times_layout = column(
             self.figures['spikes'], 
             width=600, 
-            height=300, 
-            width_policy='fit', 
-            sizing_mode='stretch_both'
+            height=280, 
         )
 
         self.widgets.tab_panels['spike_times'] = TabPanel(
@@ -496,9 +474,8 @@ class WorkspaceMixin():
                 self.widgets.tab_panels['current'],
                 self.widgets.tab_panels['spike_times']
             ], 
-            width=600, 
-            height=300,
-            sizing_mode='stretch_both',
+            width=1100, 
+            height=280,
         )
 
     def create_simulation_panel(self):
@@ -509,6 +486,32 @@ class WorkspaceMixin():
             [
                 self.widgets.tabs['simulation'], 
             ],
-            name='panel_simulation', 
-            sizing_mode='stretch_both'
+            name='panel_simulation'
         )
+
+
+    def create_workspace(self):
+
+        """
+        Create the workspace layout.
+        """
+        cell_panel = self.create_cell_panel()
+        section_panel = self.create_section_panel()
+        graph_panel = self.create_graph_panel()
+        simulation_panel = self.create_simulation_panel()
+
+        workspace = column(
+            [
+                row(
+                    cell_panel, 
+                    graph_panel
+                ),
+                simulation_panel
+            ],
+            name='workspace',
+            styles={'background-color':'black', 'padding': '10px'},
+            width=1120,
+            height=960,
+        )
+
+        return workspace

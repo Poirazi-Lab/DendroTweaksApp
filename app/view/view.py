@@ -264,3 +264,24 @@ class CellView(LeftMenuMixin, WorkspaceMixin, RightMenuMixin, SettingsMixin, Aux
         )
 
         self.widgets.selectors['theme'].js_on_change("value", callback)
+
+    def create_app(self):
+
+        workspace = self.create_workspace()
+        self.menus['right_menu'] = self.create_right_menu()
+        self.menus['left_menu'] = self.create_left_menu()        
+
+        app = row(
+            self.menus['left_menu'],
+            workspace,
+            self.menus['right_menu'],
+            name='app',
+            width=1920,
+            height=960,
+            styles={
+                'background-color': 'purple',
+                },
+            sizing_mode='fixed',
+        )
+
+        return app

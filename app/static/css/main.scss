@@ -17,78 +17,16 @@ $graph-width: 60%;
 $cell-width: 100% - $graph-width;
 
 
+#logo {
+    position: relative;
+    top: 0;
+    left: 0;
+    max-width: 20px;
+    margin: 1em 0;
+    z-index: 9999;
+}
 
-
-html {
-
-    margin: 0;
-    padding: 0;
-    height: 100%;
-    min-height: 100vh;
-    overflow-x: hidden;
-    background-color: $primary-background-color;
-
-    body {
-        margin: 0;
-        padding: 0;
-        background-color: $primary-background-color;
-        color: #ffffff;
-        display: flex;
-        flex-direction: column;
-        width: 100%;
-        height: 100%;
-        min-height: 100vh;
-        overflow-x: hidden;
-
-        .nav-bar {
-            min-height: 3%;
-            width: 100%;
-            display: none;
-            z-index: 9999;
-
-            #collapse-button {
-                position: fixed;
-                top: 0;
-                left: 0;
-                height: 3%;
-
-            }
-        }
-
-        .app {
-            flex-grow: 1;
-            color: #ffffff;
-            display: flex;
-            flex-direction: row;
-            justify-content: space-between;
-            height: 100%;
-            width: 100%;
-            flex-wrap: nowrap;
-            overflow-x: hidden;
-
-            .left-menu {
-                
-                color: #5db4ff;
-                width: $left-menu-width;
-                height: 100%;
-                padding: 0 10px;
-                display: flex;
-                flex-direction: column;
-                justify-content: space-between;
-                align-items: center;
-                position: relative;
-                z-index: 9997;
-
-                &.collapsed {
-                    display: none;
-                }
-
-                #logo {
-                    width: 60%;
-                    margin: 1em 0;
-                }
-
-                #settings-button {
+#settings-button {
                     width: 80%;
                     margin: 1em 0;
                     padding: 10px;
@@ -106,68 +44,38 @@ html {
                         background-color: #8b8b8b;
                     }
                 }
-            }
 
-            .workspace {
-                width: $workspace-width;
-                color: #ffffff;
-                display: flex;
-                flex-direction: column;
-                justify-content: flex-start;
-                align-items: center;
-                padding: 0 10px;
+html {
 
-                .row {
-                    display: flex;
-                    flex-direction: row;
-                    justify-content: space-around;
-                    align-items: top;
-                    flex-wrap: nowrap;
-                    width: 100%;
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    min-height: 100vh;
 
-                    &#top-row {
-                        height: $top-row-height;
-                    }
+    background-color: $primary-background-color;
 
-                    &#bottom-row {
-                        height: $bottom-row-height;
-                    }
+    body {
+        margin: 0;
+        padding: 0;
+        background-color: $primary-background-color;
+        color: #ffffff;
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        height: 100%;
+        min-height: 100vh;
+        justify-content: center;
+        align-items: center;
 
-                    div {
-                        min-width: 100px;
-                    }
-
-                    #cell {
-                        width: $cell-width;
-                        height: 100%;
-                    }
-
-                    #graph {
-                        width: $graph-width;
-                        height: 100%;
-                    }
-
-                    #simulation {
-                        width: 100%;
-                        height: 100%;
-                    }
-
-                    #section {
-                        width: 300px;
-                        height: 500px;
-                    }
-                }
-            }
-
-            .right-menu {
-                color: #57b1ff;
-                width: $right-menu-width;
-                height: 100%;
-                padding: 0 20px;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-            }
+        .app {
+            flex-grow: 1;
+            color: #ffffff;
+            display: flex;
+            flex-direction: row;
+            justify-content: space-between;
+            height: 100%;
+            width: 100%;
+            flex-wrap: nowrap;
         }
 
         .settings {
@@ -228,77 +136,6 @@ body::-webkit-scrollbar {
 .app::-webkit-scrollbar {
     display: none;
 }
-
-/* Test 1: Body-level media query */
-@media screen and (max-width: 1500px) {
-    html {
-        body {
-            .nav-bar {
-                display: flex;
-                flex-direction: row;
-                justify-content: flex-start;
-                z-index: 9999;
-            }
-
-            .app {
-                .workspace {
-                    width: 100%;
-                }
-
-                .left-menu {
-                    background-color: $tertiary-background-color;
-                    position: fixed;
-                    top: 0;
-                    left: 0;
-                    height: 100%;
-                    z-index: 9997;
-                }
-            }
-        }
-    }
-}
-
-@media screen and (max-width: 1000px) {
-    html {
-        height: 100%;
-        width: 100%;
-        overflow-x: hidden;
-
-        body {
-            height: 100%;
-            min-height: 100%;
-            width: 100%;
-            overflow-x: hidden;
-
-            .app {
-                flex-direction: column;
-                justify-content: flex-start;
-                align-items: center;
-                height: auto; // Changed from fit-content
-                min-height: 100vh; // Added to ensure full height
-                width: 100%;
-                overflow-x: hidden;
-
-                .workspace {
-                    width: 100%;
-                    min-height: 80%;
-                }
-
-                .right-menu {
-                    width: 100%;
-                    min-width: 100%;
-                    height: 100%;
-                    min-height: 100%;
-                    align-self: stretch;
-                    
-                }
-            }
-        }
-    }
-}
-
-
-
 
 
 

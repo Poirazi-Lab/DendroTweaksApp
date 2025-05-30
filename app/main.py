@@ -65,40 +65,12 @@ view._create_status_bar()
 
 
 
-# =================================================================
-# WORKSPACE
-# =================================================================
-
-# CELL PANEL
-panel_cell = view.create_cell_panel()
-curdoc().add_root(panel_cell)
-
-# SECTION PANEL
-panel_section = view.create_section_panel()
-
-# GRAPH PANEL
-panel_graph = view.create_graph_panel()
-curdoc().add_root(panel_graph)
-
-# SIMULATION PANEL
-panel_simulation = view.create_simulation_panel()
-curdoc().add_root(panel_simulation)
-
-
-# =================================================================
-# RIGHT MENU
-# =================================================================
-
-view.menus['right_menu'] = view.create_right_menu()
-curdoc().add_root(view.menus['right_menu'])
-
-
 # ====================================================================================
-# LEFT MENU
+# APP
 # ====================================================================================
 
-view.menus['left_menu'] = view.create_left_menu()
-curdoc().add_root(view.menus['left_menu'])
+app = view.create_app()
+curdoc().add_root(app)
 
 
 # ====================================================================================

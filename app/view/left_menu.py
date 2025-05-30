@@ -139,7 +139,6 @@ class LeftMenuMixin():
                 self.widgets.selectors['biophys'],
                 self.widgets.selectors['stimuli'],
             ],
-            sizing_mode='scale_both',
             align='center',
         )
 
@@ -156,7 +155,6 @@ class LeftMenuMixin():
                     self.widgets.buttons['export_model'],
                     self.widgets.buttons['download_model'],
                 ],
-                sizing_mode='scale_both',
                 align='center',
             )
         else:
@@ -165,7 +163,6 @@ class LeftMenuMixin():
                     Div(text='File Export', align='center', styles={'padding-top': '20px'}),
                     Div(text='File upload/download is disabled in this version.', align='center'),
                 ],
-                sizing_mode='scale_both',
                 align='center',
             )
 
@@ -174,7 +171,6 @@ class LeftMenuMixin():
                 import_layout,
                 export_layout,
             ],
-            sizing_mode='scale_both',
             align='center',
         )
 
@@ -329,7 +325,6 @@ class LeftMenuMixin():
                 self.widgets.buttons['run'],
                 self.DOM_elements['runtime'],
             ],
-            sizing_mode='scale_both',
         )
 
         self.widgets.tab_panels['simulation'] = TabPanel(
@@ -353,7 +348,6 @@ class LeftMenuMixin():
                 self.widgets.tab_panels['simulation'],
             ],
             visible=True,
-            sizing_mode='scale_both'
         )
 
     
@@ -379,9 +373,18 @@ class LeftMenuMixin():
 
         return column(
             [
-                self.DOM_elements['status'],
-                self.widgets.tabs['left_menu']
+            Div(
+                text='<img id="logo" src="https://dendrotweaks.readthedocs.io/en/latest/_static/logo.png" alt="logo" width="200">',
+                align='center'
+            ),
+            self.DOM_elements['status'],
+            self.widgets.tabs['left_menu']
             ],
+            width=300,
+            height=960,
             name='left_menu',
-            sizing_mode='scale_both'
+            styles={
+            'padding': '10px',
+            'background-color': 'orange',
+            },
         )

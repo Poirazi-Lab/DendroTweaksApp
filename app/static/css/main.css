@@ -1,9 +1,34 @@
+#logo {
+  position: relative;
+  top: 0;
+  left: 0;
+  max-width: 20px;
+  margin: 1em 0;
+  z-index: 9999;
+}
+
+#settings-button {
+  width: 80%;
+  margin: 1em 0;
+  padding: 10px;
+  background-color: #696969;
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+#settings-button:hover {
+  background-color: #727272;
+}
+#settings-button:active {
+  background-color: #8b8b8b;
+}
+
 html {
   margin: 0;
   padding: 0;
   height: 100%;
   min-height: 100vh;
-  overflow-x: hidden;
   background-color: #15191c;
 }
 html body {
@@ -16,19 +41,8 @@ html body {
   width: 100%;
   height: 100%;
   min-height: 100vh;
-  overflow-x: hidden;
-}
-html body .nav-bar {
-  min-height: 3%;
-  width: 100%;
-  display: none;
-  z-index: 9999;
-}
-html body .nav-bar #collapse-button {
-  position: fixed;
-  top: 0;
-  left: 0;
-  height: 3%;
+  justify-content: center;
+  align-items: center;
 }
 html body .app {
   flex-grow: 1;
@@ -39,93 +53,6 @@ html body .app {
   height: 100%;
   width: 100%;
   flex-wrap: nowrap;
-  overflow-x: hidden;
-}
-html body .app .left-menu {
-  color: #5db4ff;
-  width: 300px;
-  height: 100%;
-  padding: 0 10px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  align-items: center;
-  position: relative;
-  z-index: 9997;
-}
-html body .app .left-menu.collapsed {
-  display: none;
-}
-html body .app .left-menu #logo {
-  width: 60%;
-  margin: 1em 0;
-}
-html body .app .left-menu #settings-button {
-  width: 80%;
-  margin: 1em 0;
-  padding: 10px;
-  background-color: #696969;
-  color: #fff;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-}
-html body .app .left-menu #settings-button:hover {
-  background-color: #727272;
-}
-html body .app .left-menu #settings-button:active {
-  background-color: #8b8b8b;
-}
-html body .app .workspace {
-  width: calc(100vw - 300px - 500px);
-  color: #ffffff;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-start;
-  align-items: center;
-  padding: 0 10px;
-}
-html body .app .workspace .row {
-  display: flex;
-  flex-direction: row;
-  justify-content: space-around;
-  align-items: top;
-  flex-wrap: nowrap;
-  width: 100%;
-}
-html body .app .workspace .row#top-row {
-  height: 65%;
-}
-html body .app .workspace .row#bottom-row {
-  height: 35%;
-}
-html body .app .workspace .row div {
-  min-width: 100px;
-}
-html body .app .workspace .row #cell {
-  width: 40%;
-  height: 100%;
-}
-html body .app .workspace .row #graph {
-  width: 60%;
-  height: 100%;
-}
-html body .app .workspace .row #simulation {
-  width: 100%;
-  height: 100%;
-}
-html body .app .workspace .row #section {
-  width: 300px;
-  height: 500px;
-}
-html body .app .right-menu {
-  color: #57b1ff;
-  width: 500px;
-  height: 100%;
-  padding: 0 20px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
 }
 html body .settings {
   position: fixed;
@@ -177,58 +104,4 @@ body::-webkit-scrollbar {
 
 .app::-webkit-scrollbar {
   display: none;
-}
-
-/* Test 1: Body-level media query */
-@media screen and (max-width: 1500px) {
-  html body .nav-bar {
-    display: flex;
-    flex-direction: row;
-    justify-content: flex-start;
-    z-index: 9999;
-  }
-  html body .app .workspace {
-    width: 100%;
-  }
-  html body .app .left-menu {
-    background-color: rgb(56, 62, 70);
-    position: fixed;
-    top: 0;
-    left: 0;
-    height: 100%;
-    z-index: 9997;
-  }
-}
-@media screen and (max-width: 1000px) {
-  html {
-    height: 100%;
-    width: 100%;
-    overflow-x: hidden;
-  }
-  html body {
-    height: 100%;
-    min-height: 100%;
-    width: 100%;
-    overflow-x: hidden;
-  }
-  html body .app {
-    flex-direction: column;
-    justify-content: flex-start;
-    align-items: center;
-    height: auto;
-    min-height: 100vh;
-    width: 100%;
-    overflow-x: hidden;
-  }
-  html body .app .workspace {
-    width: 100%;
-    min-height: 80%;
-  }
-  html body .app .right-menu {
-    width: 100%;
-    min-width: 100%;
-    height: 100%;
-    min-height: 100%;
-    align-self: stretch;
-  }
 }/*# sourceMappingURL=main.css.map */
