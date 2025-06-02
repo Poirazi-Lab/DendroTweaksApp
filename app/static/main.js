@@ -9,32 +9,14 @@ window.onload = function() {
     });
     
     document.querySelector('.settings').addEventListener('click', function(event) {
-    if (event.target === this) {
-        console.log('clicked');
-        this.classList.toggle('hidden');
-    }
+        if (event.target === this) {
+            this.classList.toggle('hidden');
+        }
+    });
+
+    document.getElementById('settings-close-button').addEventListener('click', function() {
+        document.querySelector('.settings').classList.add('hidden');
     });
 }
-
-
-
-window.addEventListener('resize', function() {
-    console.log('Window width:', window.innerWidth);
-    console.log('Client width:', document.documentElement.clientWidth);
-});
-
-function toggleMenu() {
-    const leftMenu = document.querySelector('.left-menu');
-    leftMenu.classList.toggle('collapsed');
-}
-
-window.addEventListener('resize', function() {
-    const leftMenu = document.querySelector('.left-menu');
-    if (window.innerWidth > 1500) {
-        console.log('Window is greater than 1000px');
-        leftMenu.classList.remove('collapsed');
-    }
-});
-
 
 

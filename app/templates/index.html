@@ -4,7 +4,7 @@
 {% block preamble %}
 <link rel="stylesheet" href="app/static/css/main.css">
 <link rel="shortcut icon" type="image/x-icon" href="/app/static/images/favicon.png">
-
+<script src="app/static/main.js"></script>
 
 
 {% endblock %}
@@ -13,19 +13,17 @@
 
 
 
-
-
 <div class="app-container">
-<button id="settings-button">Settings</button>
-<div class="app">
-    {{ embed(roots.app) }}
-</div>
+    <div class="app">
+        <button id="settings-button">Settings</button>
+        {{ embed(roots.app) }}
+    </div>
 </div>
 
 <div class="settings hidden">
     <div class="settings-content">
         <div class="settings-header">
-            <!-- <button id="settings-close-button">Close</button> -->
+            <button id="settings-close-button">✕</button>
         </div>
         <div class="settings-body">
             <div id="settings">

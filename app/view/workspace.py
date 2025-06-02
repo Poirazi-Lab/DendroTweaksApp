@@ -34,11 +34,11 @@ class WorkspaceMixin():
         self.figures['cell'] = figure(
             title='Cell',
             width=400,
-            height=480,
+            height=460,
             match_aspect=True,
             tools='pan, box_zoom,reset, tap, wheel_zoom, save'
         )
-        self.figures['cell'].toolbar.active_scroll = self.figures['cell'].select_one(WheelZoomTool)
+        # self.figures['cell'].toolbar.active_scroll = self.figures['cell'].select_one(WheelZoomTool)
         self.sources['cell'] = ColumnDataSource(data={'xs': [], 'ys': [], 'line_color': [], 'line_width': [], 'label': [], 'line_alpha': []})
         self.sources['soma'] = ColumnDataSource(data={'x': [], 'y': [], 'rad': [], 'color': []})
         color_mapper = CategoricalColorMapper(palette=['#E69F00', '#F0E442', '#019E73', '#0072B2'], factors=['soma', 'axon', 'dend', 'apic'])
@@ -147,11 +147,11 @@ class WorkspaceMixin():
     def _create_graph_figure(self):
         self.figures['graph'] = figure(title='Graph', 
                             width=700, 
-                            height=480, 
+                            height=460, 
                             tools='pan, box_zoom,reset, lasso_select, tap, wheel_zoom, save',  
                             match_aspect=True)
 
-        self.figures['graph'].toolbar.active_scroll = self.figures['graph'].select_one(WheelZoomTool)
+        # self.figures['graph'].toolbar.active_scroll = self.figures['graph'].select_one(WheelZoomTool)
 
         # Add hover tool to show all the node labels
         graph_hover_callback = CustomJS(args=dict(plot=self.figures['graph']), code="""
@@ -260,7 +260,7 @@ class WorkspaceMixin():
         
         self.figures['sim'] = figure(
             width=1100, 
-            height=280, 
+            height=250, 
             x_axis_label='Time (ms)',
             y_axis_label='Voltage (mV)',
             y_range=(-100, 50),
@@ -334,7 +334,7 @@ class WorkspaceMixin():
 
     def _create_current_figure(self):
 
-        self.figures['curr'] = figure(width=600, height=280,
+        self.figures['curr'] = figure(width=600, height=250,
                                     x_axis_label='Time (ms)',
                                     y_axis_label='Current (nA)',
                                     tools='pan, box_zoom, reset, save, tap')
@@ -383,7 +383,7 @@ class WorkspaceMixin():
 
         from bokeh.models import FactorRange
 
-        self.figures['spikes'] = figure(height=280, 
+        self.figures['spikes'] = figure(height=250, 
                         x_axis_label='Time (ms)',
                         x_range=(0, 300),
                         y_axis_label='Synapses',
@@ -417,7 +417,7 @@ class WorkspaceMixin():
                 row([self.widgets.switches['frozen_v'], Div(text='Freeze traces')])
             ],
             width=1100,
-            height=280,
+            height=250,
         )
 
         self.widgets.tab_panels['voltage'] = TabPanel(
@@ -437,7 +437,7 @@ class WorkspaceMixin():
                 row([self.widgets.switches['frozen_I'],Div(text='Freeze traces')])
             ],
             width=1100,
-            height=280,
+            height=250,
         )
 
         self.widgets.tab_panels['current'] = TabPanel(
@@ -453,7 +453,7 @@ class WorkspaceMixin():
         spike_times_layout = column(
             self.figures['spikes'], 
             width=600, 
-            height=280, 
+            height=250, 
         )
 
         self.widgets.tab_panels['spike_times'] = TabPanel(
@@ -475,7 +475,7 @@ class WorkspaceMixin():
                 self.widgets.tab_panels['spike_times']
             ], 
             width=1100, 
-            height=280,
+            height=250,
         )
 
     def create_simulation_panel(self):
@@ -509,9 +509,10 @@ class WorkspaceMixin():
                 simulation_panel
             ],
             name='workspace',
-            styles={'background-color':'black', 'padding': '10px'},
+            visible=False,
+            styles={'background-color':'#15191cff', 'padding': '10px'},
             width=1120,
-            height=960,
+            height=940,
         )
 
         return workspace

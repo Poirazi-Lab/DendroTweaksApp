@@ -54,7 +54,7 @@ class RightMenuMixin():
         section_figures = self.create_section_panel()
         self.DOM_elements['psection'] = Div(
             text="""Select a section to show.""",
-            styles={'width': '500px', 'height':'200px', 
+            styles={'width': '450px', 'height':'200px', 
                     'margin-top': '60px',
                     'overflow': 'auto', 'font-size': '12px'})
         
@@ -901,12 +901,12 @@ class RightMenuMixin():
                 self.widgets.tabs['stimuli'],
             ],
             name='right_menu_section',
-            visible=True,
+            visible=False,
             styles={
                 'padding': '10px',
-                'background_color': 'goldenrod',
+                'background-color': '#20262B',
             },
-            height=960,
+            height=940,
             width=500,
 
         )

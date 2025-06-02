@@ -267,20 +267,23 @@ class CellView(LeftMenuMixin, WorkspaceMixin, RightMenuMixin, SettingsMixin, Aux
 
     def create_app(self):
 
-        workspace = self.create_workspace()
+        self.menus['workspace'] = self.create_workspace()
         self.menus['right_menu'] = self.create_right_menu()
         self.menus['left_menu'] = self.create_left_menu()        
 
         app = row(
             self.menus['left_menu'],
-            workspace,
+            self.menus['workspace'],
             self.menus['right_menu'],
             name='app',
-            width=1920,
-            height=960,
-            styles={
-                'background-color': 'purple',
-                },
+            width=1914,
+            height=922,
+            # styles={
+            #     'display': 'flex',
+            #     'flex-direction': 'row',
+            #     'align-items': 'center',
+            #     'justify-content': 'center',
+            #     },
             sizing_mode='fixed',
         )
 

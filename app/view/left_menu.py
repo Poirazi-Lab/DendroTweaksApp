@@ -381,10 +381,10 @@ class LeftMenuMixin():
             self.widgets.tabs['left_menu']
             ],
             width=300,
-            height=960,
+            height=940,
             name='left_menu',
             styles={
             'padding': '10px',
-            'background-color': 'orange',
+            'background-color': '#20262B',
             },
         )
