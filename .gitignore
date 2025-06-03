@@ -26,4 +26,15 @@ E_6_15_in_um_extended.swc
 **CA1_new_mean_std_rad.swc
 **E_3_6_modified.swc
 app/data/
-app/static/data/
+app/static/data/Default/
+app/static/data/Templates/
+app/static/data/*/biophys/mod/*/
+!app/static/data/*/biophys/mod/*.mod
+app/static/data/*/biophys/mod/std*.mod
+app/static/data/*/biophys/python/*
+app/static/data/*/*.py
+app/static/data/*/*.ipynb
+app/static/data/*/morphology/*sorted.swc
+app/static/data/*/morphology/*.asc
+app/static/data/*/morphology/Hay_2011.swc
+app/static/data/*/morphology/Poirazi_2003.swc
