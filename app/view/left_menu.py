@@ -325,6 +325,8 @@ class LeftMenuMixin():
                 self.widgets.buttons['run'],
                 self.DOM_elements['runtime'],
             ],
+            align='center',
+            width=280,
         )
 
         self.widgets.tab_panels['simulation'] = TabPanel(
