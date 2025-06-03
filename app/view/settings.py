@@ -19,7 +19,7 @@ class SettingsMixin():
         console = TextInput(value='Only for development', title='Console', width=500, height=50, name='console', disabled=False)
         console.on_change('value', self.p.console_callback)
 
-        status_bar = Div(text="""Launched GUI""", name='status_bar', styles={'width': '500px', 'height':'200px', 
+        status_bar = Div(text="""Launched GUI""", name='status_bar', styles={'width': '500px', 'height':'100px', 
                                                                             'overflow': 'auto', 'font-size': '12px'})
         self.DOM_elements['status_bar'] = status_bar
         self.DOM_elements['console'] = console
@@ -97,7 +97,7 @@ class SettingsMixin():
         self.widgets.buttons['save_preferences'].on_event(ButtonClick, self.p.save_preferences_callback)
 
         if not self.p.config['dev_tools']['save_preferences']:
-            self.widgets.buttons['save_preferences'].disabled = True
+            self.widgets.buttons['save_preferences'].visible = False
 
 
     def create_settings_panel(self):
@@ -114,18 +114,29 @@ class SettingsMixin():
         self._create_save_preferences_button()
 
 
-        return column(
+        settings = column(
             [
-                self.widgets.selectors['theme'],
-                # self.widgets.switches['show_kinetics'],
-                self.widgets.sliders['voltage_plot_x_range'],
-                self.widgets.sliders['voltage_plot_y_range'],
-                # row(self.widgets.switches['enable_record_from_all'], Div(text='Enable record from all')),
-                self.widgets.selectors['graph_layout'],
-                self.widgets.selectors['simulator'],
-                row(self.widgets.switches['cvode'], Div(text='Use adaptive time step (CVode)')),
-                self.widgets.buttons['save_preferences'],
-                self.DOM_elements['controller'],
+            Div(text='Settings', styles={'font-size': '20px', 'font-weight': 'bold'}),
+            Div(text='For more information, visit <a href="https://dendrotweaks.dendrites.gr" target="_blank" style="color: dodgerblue;">DendroTweaks online platform</a>'),
+            
+            Div(text='Appearance', styles={'font-size': '16px', 'font-weight': 'bold'}),
+            self.widgets.selectors['theme'],
+            # self.widgets.switches['show_kinetics'],
+            self.widgets.sliders['voltage_plot_x_range'],
+            self.widgets.sliders['voltage_plot_y_range'],
+            # row(self.widgets.switches['enable_record_from_all'], Div(text='Enable record from all')),
+            self.widgets.selectors['graph_layout'],
+            Div(text='Simulation', styles={'font-size': '16px', 'font-weight': 'bold'}),
+            self.widgets.selectors['simulator'],
+            row(self.widgets.switches['cvode'], Div(text='Use adaptive time step (CVode)')),
+            Div(text='Development tools', styles={'font-size': '16px', 'font-weight': 'bold'}),
+            self.widgets.buttons['save_preferences'],
+            self.DOM_elements['controller'],
             ],
-            name='settings_panel'
+            name='settings_panel',
+
         )
+
+        self.layout_elements['settings'] = settings
+
+        return settings

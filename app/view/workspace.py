@@ -510,7 +510,7 @@ class WorkspaceMixin():
             ],
             name='workspace',
             visible=False,
-            styles={'background-color':'#15191cff', 'padding': '10px'},
+            styles={'padding': '10px'},
             width=1120,
             height=940,
         )

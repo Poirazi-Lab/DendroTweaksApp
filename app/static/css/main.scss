@@ -70,7 +70,7 @@ body {
     width: 100%;
     height: 100vh; // Use viewport height instead of 100%
     overflow: auto; // Enable scrolling
-    background-color: $primary-background-color;
+    
     
     // Remove flex properties and use padding for centering instead
     padding: calc(50vh - 461px) calc(50vw - 957px); // Centers a 1914x922 element
@@ -83,7 +83,7 @@ body {
         width: 1914px;
         height: 922px;
         box-shadow: 0 0px 18px rgba(0, 0, 0, 0.5);
-        background-color: $primary-background-color;
+        
     }
 }
 
@@ -104,12 +104,12 @@ body {
         left: 10vw;
         width: 80vw;
         height: 80vh;
-        background-color: $tertiary-background-color;
         color: #ffffff;
         display: flex;
         justify-content: center;
         align-items: center;
         padding: 1em;
+        border: 1px solid rgba(255, 255, 255, 0.2);
     }
 
     .settings-header {
@@ -117,6 +117,16 @@ body {
         top: 0;
         right: 0;
         padding: 1em;
+    }
+
+    .settings-body {
+        height: 100%;
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+
     }
 
     #settings-close-button {
@@ -151,7 +161,7 @@ body {
     background-color: #20262b;
     color: #ffffff;
 
-    .workspace {
+    .app-container {
         background-color: #15191c;
         color: #ffffff;
     }
@@ -161,7 +171,7 @@ body {
     background-color: #d8d2d0;
     color: #000000;
 
-    .workspace {
+    .app-container {
         background-color: #ebe6e4;
         color: #000000;
     }
@@ -178,6 +188,3 @@ body::-webkit-scrollbar {
 .app::-webkit-scrollbar {
     display: none;
 }
-
-
-

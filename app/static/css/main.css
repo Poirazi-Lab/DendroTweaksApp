@@ -48,7 +48,6 @@ body .app-container {
   width: 100%;
   height: 100vh;
   overflow: auto;
-  background-color: #15191c;
   padding: calc(50vh - 461px) calc(50vw - 957px);
   box-sizing: border-box;
 }
@@ -59,7 +58,6 @@ body .app-container .app {
   width: 1914px;
   height: 922px;
   box-shadow: 0 0px 18px rgba(0, 0, 0, 0.5);
-  background-color: #15191c;
 }
 
 .settings {
@@ -77,18 +75,26 @@ body .app-container .app {
   left: 10vw;
   width: 80vw;
   height: 80vh;
-  background-color: rgb(56, 62, 70);
   color: #ffffff;
   display: flex;
   justify-content: center;
   align-items: center;
   padding: 1em;
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 .settings .settings-header {
   position: absolute;
   top: 0;
   right: 0;
   padding: 1em;
+}
+.settings .settings-body {
+  height: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 .settings #settings-close-button {
   background: rgba(255, 255, 255, 0.1);
@@ -119,7 +125,7 @@ body .app-container .app {
   background-color: #20262b;
   color: #ffffff;
 }
-.dark_minimal .workspace {
+.dark_minimal .app-container {
   background-color: #15191c;
   color: #ffffff;
 }
@@ -128,7 +134,7 @@ body .app-container .app {
   background-color: #d8d2d0;
   color: #000000;
 }
-.light_minimal .workspace {
+.light_minimal .app-container {
   background-color: #ebe6e4;
   color: #000000;
 }

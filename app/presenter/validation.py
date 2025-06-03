@@ -141,14 +141,17 @@ class ValidationMixin():
         if len(self.model.recordings['v']) != 1:
             self.view.DOM_elements['stats_ephys'].text = "Please place a single recording at the soma."
             self.view.DOM_elements['stats_ephys'].styles['color'] = self.view.theme.status_colors['error']
+            self.update_status_message('Unsupported protocol.', 'error')
             return False
         if len(self.model.iclamps) != 1:
             self.view.DOM_elements['stats_ephys'].text = "Please place a single current clamp at the soma."
             self.view.DOM_elements['stats_ephys'].styles['color'] = self.view.theme.status_colors['error']
+            self.update_status_message('Unsupported protocol.', 'error')
             return False
         if list(self.model.iclamps.values())[0].amp >= 0:
             self.view.DOM_elements['stats_ephys'].text = "Please use hyperpolarizing current injection."
             self.view.DOM_elements['stats_ephys'].styles['color'] = self.view.theme.status_colors['error']
+            self.update_status_message('Unsupported protocol.', 'error')
             return False
         return True
 
@@ -156,14 +159,17 @@ class ValidationMixin():
         if len(self.model.recordings['v']) != 1:
             self.view.DOM_elements['stats_ephys'].text = "Please place a single recording at the soma."
             self.view.DOM_elements['stats_ephys'].styles['color'] = self.view.theme.status_colors['error']
+            self.update_status_message('Unsupported protocol.', 'error')
             return False
         if len(self.model.iclamps) != 1:
             self.view.DOM_elements['stats_ephys'].text = "Please place a single current clamp at the soma."
             self.view.DOM_elements['stats_ephys'].styles['color'] = self.view.theme.status_colors['error']
+            self.update_status_message('Unsupported protocol.', 'error')
             return False
         if list(self.model.iclamps.values())[0].amp <= 0:
             self.view.DOM_elements['stats_ephys'].text = "Please use depolarizing current injection to elicit spikes."
             self.view.DOM_elements['stats_ephys'].styles['color'] = self.view.theme.status_colors['error']
+            self.update_status_message('Unsupported protocol.', 'error')
             return False
         return True
 
@@ -171,14 +177,17 @@ class ValidationMixin():
         if len(self.model.recordings['v']) < 2:
             self.view.DOM_elements['stats_ephys'].text = "Please place at least two recordings."
             self.view.DOM_elements['stats_ephys'].styles['color'] = self.view.theme.status_colors['error']
+            self.update_status_message('Unsupported protocol.', 'error')
             return False
         if len(self.model.iclamps) != 1:
             self.view.DOM_elements['stats_ephys'].text = "Please place a single current clamp at one of the recording sites."
             self.view.DOM_elements['stats_ephys'].styles['color'] = self.view.theme.status_colors['error']
+            self.update_status_message('Unsupported protocol.', 'error')
             return False
         if list(self.model.iclamps.values())[0].amp >= 0:
             self.view.DOM_elements['stats_ephys'].text = "Please use hyperpolarizing current injection."
             self.view.DOM_elements['stats_ephys'].styles['color'] = self.view.theme.status_colors['error']
+            self.update_status_message('Unsupported protocol.', 'error')
             return False
         return True
 
@@ -186,16 +195,19 @@ class ValidationMixin():
         if len(self.model.iclamps) != 0:
             self.view.DOM_elements['stats_ephys'].text = "Please remove current clamp."
             self.view.DOM_elements['stats_ephys'].styles['color'] = self.view.theme.status_colors['error']
+            self.update_status_message('Unsupported protocol.', 'error')
             return False
         if not any(
             key in self.model.populations and len(self.model.populations[key]) == 1 for key in ['AMPA', 'NMDA', 'AMPA_NMDA']
         ):
             self.view.DOM_elements['stats_ephys'].text = "Please add a valid synapse population with exactly one synapse."
             self.view.DOM_elements['stats_ephys'].styles['color'] = self.view.theme.status_colors['error']
+            self.update_status_message('Unsupported protocol.', 'error')
             return False
         if len(self.model.recordings['v']) != 1:
             self.view.DOM_elements['stats_ephys'].text = "Please place a single recording at the dendrite."
             self.view.DOM_elements['stats_ephys'].styles['color'] = self.view.theme.status_colors['error']
+            self.update_status_message('Unsupported protocol.', 'error')
             return False
         return True
 
@@ -226,6 +238,7 @@ class ValidationMixin():
 
         self.view.DOM_elements['stats_ephys'].text = stats
         self.view.DOM_elements['stats_ephys'].styles['color'] = self.view.theme.status_colors['success']
+        self.update_status_message('Passive properties calculated successfully.', 'success')
 
 
     def _plot_somatic_spikes(self, spike_data):
@@ -261,7 +274,7 @@ class ValidationMixin():
 
         self.view.DOM_elements['stats_ephys'].text = stats
         self.view.DOM_elements['stats_ephys'].styles['color'] = self.view.theme.status_colors['success']
-
+        self.update_status_message('Somatic spikes detected successfully.', 'success')
 
 
     def _plot_voltage_attenuation(self, data):
@@ -284,7 +297,7 @@ class ValidationMixin():
 
         self.view.DOM_elements['stats_ephys'].text = stats
         self.view.DOM_elements['stats_ephys'].styles['color'] = self.view.theme.status_colors['success']
-
+        self.update_status_message('Voltage attenuation calculated successfully.', 'success')
 
     def _plot_fI_curve(self, data):
 
@@ -305,7 +318,7 @@ class ValidationMixin():
         stats += "</table>"
         self.view.DOM_elements['stats_ephys'].text = stats
         self.view.DOM_elements['stats_ephys'].styles['color'] = self.view.theme.status_colors['success']
-
+        self.update_status_message('f-I curve calculated successfully.', 'success')
 
     def _plot_dendritic_nonlinearity(self, data):
 
@@ -330,7 +343,7 @@ class ValidationMixin():
         stats += "</table>"
         self.view.DOM_elements['stats_ephys'].text = stats
         self.view.DOM_elements['stats_ephys'].styles['color'] = self.view.theme.status_colors['success']
-
+        self.update_status_message('Dendritic nonlinearity calculated successfully.', 'success')
 
 
 

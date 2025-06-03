@@ -166,8 +166,8 @@ class IOMixin():
             self.update_status_message('Error loading morphology.', status='error')
             return
 
-        self.view.menus['workspace'].visible = True
-        self.view.menus['right_menu'].visible = True
+        self.view.layout_elements['workspace'].visible = True
+        self.view.layout_elements['right_menu'].visible = True
         self.update_status_message('Morphology loaded.', status='success')
         
 

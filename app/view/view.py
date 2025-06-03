@@ -90,16 +90,16 @@ LIGHT_PALETTES = {
 }
 
 DARK_STATUS_COLORS = {
-    'info': 'gold',
+    'info': 'magenta',
     'success': 'lawngreen',
-    'warning': 'salmon',
+    'warning': 'orange',
     'error': 'red',
 }
 
 LIGHT_STATUS_COLORS = {
-    'info': '#85643a',
-    'success': 'green',
-    'warning': 'brown',
+    'info': 'magenta',
+    'success': 'seagreen',
+    'warning': 'darkorange',
     'error': 'red',
 }
 
@@ -122,6 +122,8 @@ class Theme:
         self.palettes = palettes
         self.status_colors = status_colors
         self.frozen = frozen
+        self.primary_background_color = '#15191c' if 'dark' in name else '#ebe6e4'
+        self.secondary_background_color = '#20262b' if 'dark' in name else '#d8d2d0'
 
 THEMES = {
     'dark_minimal': Theme('dark_minimal', '#f064ae', DARK_GRAPH_COLORS, '#20262B', DARK_STATUS_COLORS, 'white', DARK_PALETTES),
@@ -187,7 +189,6 @@ class CellView(LeftMenuMixin, WorkspaceMixin, RightMenuMixin, SettingsMixin, Aux
         self.figures = {}
         self.sources = {}
         self.renderers = {}
-        self.menus = {}
         self.widgets = WidgetManager()
         self.DOM_elements = {}
         self.layout_elements = {}
@@ -230,6 +231,11 @@ class CellView(LeftMenuMixin, WorkspaceMixin, RightMenuMixin, SettingsMixin, Aux
             renderer.node_renderer.nonselection_glyph.line_color = self.theme.graph_colors['edge']
             renderer.edge_renderer.glyph.line_color = self.theme.graph_colors['edge']
 
+        self.layout_elements['app'].styles.update({'background-color': self.theme.primary_background_color})
+        self.layout_elements['right_menu'].styles.update({'background-color': self.theme.secondary_background_color})
+        self.layout_elements['left_menu'].styles.update({'background-color': self.theme.secondary_background_color})
+        
+
         self.DOM_elements['status'].styles.update({'color': self.theme.status_colors['info']})
         
 
@@ -247,17 +253,12 @@ class CellView(LeftMenuMixin, WorkspaceMixin, RightMenuMixin, SettingsMixin, Aux
 
         callback = CustomJS(code="""
             var theme = cb_obj.value;
-            var appElement = document.querySelector('.app');
-            var leftMenuElement = document.querySelector('.left-menu');
-            var mainElement = document.querySelector('.workspace');
-            var rightMenuElement = document.querySelector('.right-menu');
-            var settingsPanelElement = document.querySelector('.settings-content');
 
-            appElement.className = 'app ' + theme;
-            leftMenuElement.className = 'left-menu ' + theme;
-            mainElement.className = 'workspace ' + theme;
-            rightMenuElement.className = 'right-menu ' + theme;
-            settingsPanelElement.className = 'settings-content ' + theme;
+            var appContainerElement = document.querySelector('.app-container');
+            var settingsContentElement = document.querySelector('.settings-content');
+            
+            appContainerElement.className = 'app-container ' + theme;
+            settingsContentElement.className = 'settings-content ' + theme;
 
             console.log('Theme changed to: ' + theme);
             """
@@ -267,24 +268,27 @@ class CellView(LeftMenuMixin, WorkspaceMixin, RightMenuMixin, SettingsMixin, Aux
 
     def create_app(self):
 
-        self.menus['workspace'] = self.create_workspace()
-        self.menus['right_menu'] = self.create_right_menu()
-        self.menus['left_menu'] = self.create_left_menu()        
+        self.layout_elements['workspace'] = self.create_workspace()
+        self.layout_elements['right_menu'] = self.create_right_menu()
+        self.layout_elements['left_menu'] = self.create_left_menu()        
 
         app = row(
-            self.menus['left_menu'],
-            self.menus['workspace'],
-            self.menus['right_menu'],
+            self.layout_elements['left_menu'],
+            self.layout_elements['workspace'],
+            self.layout_elements['right_menu'],
             name='app',
             width=1914,
             height=922,
-            # styles={
-            #     'display': 'flex',
-            #     'flex-direction': 'row',
-            #     'align-items': 'center',
-            #     'justify-content': 'center',
-            #     },
+            styles={
+                'background-color': self.theme.primary_background_color,
+                # 'display': 'flex',
+                # 'flex-direction': 'row',
+                # 'align-items': 'center',
+                # 'justify-content': 'center',
+                },
             sizing_mode='fixed',
         )
+
+        self.layout_elements['app'] = app
 
         return app

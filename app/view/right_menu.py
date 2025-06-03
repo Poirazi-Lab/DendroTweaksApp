@@ -825,7 +825,7 @@ class RightMenuMixin():
             styles={
                 'color': self.theme.status_colors['info'],
                 'margin': '10px',
-                'background-color': 'rgba(255, 255, 255, 0.2)',
+                'background-color': 'rgba(125, 125, 125, 0.2)',
                 'padding': '10px',
                 'border-radius': '5px',
             }
