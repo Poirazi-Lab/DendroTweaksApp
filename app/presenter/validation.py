@@ -69,6 +69,9 @@ class ValidationMixin():
         self.view.widgets.switches['frozen_v'].active = False
         self.view.figures['stats_ephys'].visible = False
         self.view.DOM_elements['stats_ephys'].text = "Data cleared. Select a protocol to validate."
+        if not self.view.DOM_elements['status'].text.startswith('Select'):
+            self.update_status_message('Idle.', 'info')
+
 
     def select_protocol_callback(self, attr, old, new):
         
@@ -226,7 +229,7 @@ class ValidationMixin():
             return A * np.exp(-t / tau)
 
         shifted_exp_decay = _exp_decay(t_decay, A, tau) + v_offset
-        data = {'xs': [t_decay + start_t], 'ys': [shifted_exp_decay], 'color': ['red']}
+        data = {'xs': [t_decay + start_t], 'ys': [shifted_exp_decay], 'color': ['magenta']}
         self.view.sources['frozen_v'].data = data
 
         stats = f"Input resistance = (V_min - V_init) / I<br>"
@@ -257,9 +260,10 @@ class ValidationMixin():
             data['xs'].append([t, t])
             data['ys'].append([v, v - a])
             data['line_color'].append('lawngreen')
-            data['xs'].append([lb, rb])
-            data['ys'].append([v - a/2, v - a/2])
-            data['line_color'].append('lawngreen')
+            if not self.model.simulator._cvode:
+                data['xs'].append([lb, rb])
+                data['ys'].append([v - a/2, v - a/2])
+                data['line_color'].append('lawngreen')
         self.view.sources['frozen_v'].data = data
 
         stats = f"Number of spikes: {len(spike_times)}<br>"

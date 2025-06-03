@@ -878,7 +878,8 @@ class RightMenuMixin():
         self.widgets.buttons['switch_right_menu'] = RadioButtonGroup(
             labels=['Morphology', 'Biophysics', 'Recordings and Stimuli'], 
             active=0, 
-            align='center', 
+            # align='center', 
+            width=460,
             disabled=False,
             styles={"padding": "10px 0 20px 0"}
         )

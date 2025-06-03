@@ -329,12 +329,12 @@ class WorkspaceMixin():
         self.widgets.switches['frozen_v'].on_change('active', frozen_v_callback)
 
         self.sources['detected_spikes'] = ColumnDataSource(data={'x': [], 'y': []})
-        self.figures['sim'].circle(x='x', y='y', color='red', source=self.sources['detected_spikes'])
+        self.figures['sim'].circle(x='x', y='y', color='magenta', source=self.sources['detected_spikes'])
 
 
     def _create_current_figure(self):
 
-        self.figures['curr'] = figure(width=600, height=250,
+        self.figures['curr'] = figure(width=1100, height=250,
                                     x_axis_label='Time (ms)',
                                     y_axis_label='Current (nA)',
                                     tools='pan, box_zoom, reset, save, tap')
@@ -384,6 +384,7 @@ class WorkspaceMixin():
         from bokeh.models import FactorRange
 
         self.figures['spikes'] = figure(height=250, 
+                        width=1100,
                         x_axis_label='Time (ms)',
                         x_range=(0, 300),
                         y_axis_label='Synapses',
@@ -452,7 +453,7 @@ class WorkspaceMixin():
 
         spike_times_layout = column(
             self.figures['spikes'], 
-            width=600, 
+            width=1100, 
             height=250, 
         )
 
