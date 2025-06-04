@@ -132,6 +132,8 @@ class Presenter(IOMixin, NavigationMixin,
         with remove_callbacks(self.view.widgets.multichoice['domains']):
             self.view.widgets.multichoice['domains'].options = self.available_domains
             self.view.widgets.multichoice['domains'].value = mech_domains
+        with remove_callbacks(self.view.widgets.multichoice['group_domains']):
+            self.view.widgets.multichoice['group_domains'].options = self.available_domains
 
     def _update_multichoice_mechanisms_widget(self):
         added_mechs = list(self.model.mechanisms)
@@ -1013,6 +1015,7 @@ class Presenter(IOMixin, NavigationMixin,
         self._init_cell_widgets()
 
         self.view.widgets.multichoice['domains'].options = list(self.model.domains.keys())
+        self.view.widgets.multichoice['group_domains'].options = list(self.model.domains.keys())
         
         self._create_graph_renderer()
         self._update_group_selector_widget()
@@ -1029,7 +1032,6 @@ class Presenter(IOMixin, NavigationMixin,
     # MISC
     # =================================================================
 
-    # self.view.widgets.multichoice['group_domains'].options = list(self.model.domains.keys())
     
     def select_graph_param_based_on_tab(self):
 

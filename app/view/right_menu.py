@@ -204,6 +204,7 @@ class RightMenuMixin():
                                                             options=[],
                                                             value=[],
                                                             visible=True,
+                                                            styles={"color": "dodgerblue"},
                                                             width=300)
         self.widgets.multichoice['mechanisms'].on_change('value', self.p.add_mechanism_callback)
 
@@ -235,6 +236,7 @@ class RightMenuMixin():
                                                                   options=[],
                                                                   value=[],
                                                                   visible=True,
+                                                                  styles={"color": "dodgerblue"},
                                                                   width=300)
         self.widgets.multichoice['domains'].on_change('value', self.p.insert_mechanism_callback)
 
@@ -292,7 +294,8 @@ class RightMenuMixin():
         self.widgets.multichoice['group_domains'] = MultiChoice(
             title='Domain',
             options=[],
-            width=300
+            width=300,
+            styles={"color": "dodgerblue"}
         )
         self.widgets.multichoice['group_domains'].on_change('value', self.p.select_group_segments_callback)
 

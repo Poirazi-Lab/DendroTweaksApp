@@ -200,6 +200,7 @@ class IOMixin():
         # self._attach_download_js()
 
         self.view.widgets.multichoice['domains'].options = list(self.model.domains.keys())
+        self.view.widgets.multichoice['group_domains'].options = list(self.model.domains.keys())
         self.view.widgets.selectors['morphology'].options = self.model.list_morphologies()
         
 
