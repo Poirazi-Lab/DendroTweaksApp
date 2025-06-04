@@ -618,7 +618,8 @@ class Presenter(IOMixin, NavigationMixin,
                     mech = self.model.mechanisms[mech_name]
                     mech.params[param_name.replace(f'_{mech.name}', '')] = round(new, 10) # TODO: actually should take the seg value, but which seg
                     logger.debug(f'Updating {mech_name} {param_name} to {new}')
-                    self._toggle_kinetic_plots(mech.name)
+                    if self.view.widgets.switches['show_kinetics'].active:
+                        self._toggle_kinetic_plots(mech.name)
                 self._update_graph_param(param_name)
                 self._update_distribution_plot()
             return slider_callback
