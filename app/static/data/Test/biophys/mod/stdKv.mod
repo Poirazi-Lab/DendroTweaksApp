@@ -21,12 +21,12 @@ UNITS {
 }
 
 PARAMETER {
+    gbar    = 0.0 (S/cm2)
     vhalf_n = 14.164 (mV)
     sigma_n = 9.0 (mV)
     k_n     = 0.123 (1/ms)
     delta_n = 0.732 (1)
     tau0_n  = 0.877 (ms)
-    gbar    = 0.0 (S/cm2)
     q10     = 2.3 (1)
     temp    = 23 (degC)
 }

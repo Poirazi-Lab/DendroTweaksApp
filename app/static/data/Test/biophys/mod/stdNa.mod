@@ -10,7 +10,7 @@ NEURON {
     
     USEION na READ ena WRITE ina
     
-    RANGE gbar, i, vhalf_m, sigma_m, k_m, delta_m, tau0_m, vhalf_h, sigma_h, k_h, delta_h, tau0_h, gbar, q10, temp
+    RANGE gbar, i, gbar, vhalf_m, sigma_m, k_m, delta_m, tau0_m, vhalf_h, sigma_h, k_h, delta_h, tau0_h
 }
 
 UNITS {
@@ -21,6 +21,7 @@ UNITS {
 }
 
 PARAMETER {
+    gbar    = 0.0 (S/cm2)
     vhalf_m = -32.571 (mV)
     sigma_m = 9.8 (mV)
     k_m     = 1.882 (1/ms)
@@ -31,7 +32,6 @@ PARAMETER {
     k_h     = 0.018 (1/ms)
     delta_h = 0.395 (1)
     tau0_h  = 0.797 (ms)
-    gbar    = 0.0 (S/cm2)
     q10     = 2.3 (1)
     temp    = 23 (degC)
 }
