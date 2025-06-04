@@ -31,6 +31,7 @@ app/static/data/Templates/
 app/static/data/*/biophys/mod/*/
 !app/static/data/*/biophys/mod/*.mod
 app/static/data/*/biophys/mod/std*.mod
+!app/static/data/Test/biophys/mod/std*.mod
 app/static/data/*/biophys/python/*
 app/static/data/*/*.py
 app/static/data/*/*.ipynb
