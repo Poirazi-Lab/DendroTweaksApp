@@ -191,6 +191,19 @@ class GraphMixin():
     # UPDATE GRAPH
     # ========================================================================================================
 
+    def update_graph_layout_callback(self, attr, old, new):
+        """
+        Callback for the graph_layout selector.
+        Updates the graph layout and re-renders the graph.
+        """
+        if not self.model or not self.model.seg_tree:
+            logger.warning('Model or seg_tree is not available. Cannot update graph layout.')
+            return
+        logger.info(f'Updating graph layout to {new}')
+        self._create_graph_renderer()
+        self._update_graph_param(self.view.widgets.selectors['graph_param'].value, update_colors=False)
+        self.view.widgets.selectors['section'].value = '0'
+
     # --------------------------------------------------------------------------------------------
     # UPDATE PARAMS
     # --------------------------------------------------------------------------------------------

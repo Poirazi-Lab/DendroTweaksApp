@@ -73,6 +73,7 @@ class SettingsMixin():
             options=['kamada-kawai', 'dot', 'neato', 'twopi'], 
             value=self.p.config['appearance']['plots']['graph_plot']['layout'],
         )
+        self.widgets.selectors['graph_layout'].on_change('value', self.p.update_graph_layout_callback)
 
     # Simulation
     def _create_simulator_selector(self):
