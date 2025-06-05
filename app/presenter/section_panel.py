@@ -113,12 +113,15 @@ class SectionMixin():
         self.update_seg_x_selector()
 
         if len(self.selected_secs) == 1:
+            self.view.DOM_elements['sections_layout'].visible = True
             if list(self.selected_secs)[0].parent is None:
-                self.view.widgets.spinners['nseg'].visible = False
+                self.view.widgets.spinners['nseg'].disabled = True
             else:
-                self.view.widgets.spinners['nseg'].visible = True
+                self.view.widgets.spinners['nseg'].disabled = False
             with remove_callbacks(self.view.widgets.spinners['nseg']):
                 self.view.widgets.spinners['nseg'].value = self.selected_sec.nseg
+        else:
+            self.view.DOM_elements['sections_layout'].visible = False
 
         self.update_navigation_buttons_on_reaching_terminal_branch()
 
@@ -197,8 +200,15 @@ class SectionMixin():
             logger.debug('No change in nseg')
             return
 
+        # Temporarily save and clear stimuli
+        self.model._temp_clear_stimuli()
+
         for sec in selected_secs:
             sec.nseg = int(new)
+
+        # Reload stimuli and clean up temporary files
+        self.model._temp_reload_stimuli()
+        self._recorded_segments = self.get_recorded_segments()
             
         self._create_graph_renderer()
         self.update_section_panel()

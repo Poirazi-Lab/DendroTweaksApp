@@ -28,7 +28,7 @@ class SimulationMixin():
         var_names = [var] if var else self.model.simulator.recordings.keys()
         segments = [seg for var in var_names 
             for seg in self.model.recordings.get(var, [])]
-        return segments
+        return sorted(set(segments), key=lambda seg: seg.idx)
 
     # MODEL TO VIEW
 

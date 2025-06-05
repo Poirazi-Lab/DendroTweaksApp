@@ -58,18 +58,19 @@ class RightMenuMixin():
                     'margin-top': '60px',
                     'overflow': 'auto', 'font-size': '12px'})
         
-        sections_layout = column(
+        self.DOM_elements['sections_layout'] = column(
             [
                 self.widgets.spinners['nseg'],
                 section_figures,
                 self.DOM_elements['psection']
             ],
+            visible=False,
             name='sections_layout',
         )
 
         self.widgets.tab_panels['sections'] = TabPanel(
             title='Sections',
-            child=sections_layout,
+            child=self.DOM_elements['sections_layout'],
         )
 
     # -----------------------------------------------------------------
