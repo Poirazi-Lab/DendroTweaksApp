@@ -440,6 +440,10 @@ class Presenter(IOMixin, NavigationMixin,
             ch_type = 'fit'
             factor = 2
             self.view.widgets.buttons['standardize'].visible = False
+        elif mech_name.startswith('std'): # Already standardized
+            ch_type = 'orig'
+            factor = 1
+            self.view.widgets.buttons['standardize'].visible = False
         else:
             ch_type = 'orig'
             factor = 1
