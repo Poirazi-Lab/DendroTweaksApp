@@ -194,6 +194,7 @@ class IOMixin():
         self._create_graph_renderer()
         self._update_group_selector_widget()
         self._update_graph_param_widget()
+        self._update_mechanism_selector_widget('Independent')
         
         
         # MISC ---------------------------------------------------

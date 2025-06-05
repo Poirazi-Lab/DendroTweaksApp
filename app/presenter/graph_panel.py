@@ -128,6 +128,7 @@ class GraphMixin():
         # UPDATE PARAM OPTIONS
         self.view.params.update({'Recordings': [f'rec_{var}' for var in self.avaliable_vars_to_record]})
         self.view.widgets.selectors['graph_param'].options = {**self.view.params, **self.model.mechs_to_params}
+        self.view.widgets.selectors['graph_param'].value = 'domain'
 
         self.add_lasso_callback()
 

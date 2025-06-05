@@ -223,9 +223,9 @@ class RightMenuMixin():
     def _create_mechanisms_to_insert_selector(self):
 
         self.widgets.selectors['mechanism_to_insert'] = Select(
-            title='Mechanism',
-            options=['Leak'],
-            value = 'Leak',
+            title='Mechanism to insert',
+            options=[],
+            value = None,
         )
         self.widgets.selectors['mechanism_to_insert'].on_change('value', self.p.select_mechanism_to_insert_callback)
 
@@ -456,6 +456,7 @@ class RightMenuMixin():
                                                         )
 
         self.widgets.buttons['remove_distribution'].on_event(ButtonClick, self.p.remove_distribution_callback)
+        self.widgets.buttons['remove_distribution'].on_event(ButtonClick, self.p.voltage_callback_on_event)
 
 
     def _create_distribution_type_selector(self):
