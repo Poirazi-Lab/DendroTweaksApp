@@ -143,7 +143,7 @@ class GraphMixin():
                                                     line_width='line_width')
         graph_renderer.node_renderer.glyph.line_alpha = 0.3  # 0.3
         graph_renderer.node_renderer.glyph.line_width = 0.5
-        graph_renderer.node_renderer.glyph.fill_alpha = 1
+        graph_renderer.node_renderer.glyph.fill_alpha = 0.8
         color_mapper = CategoricalColorMapper(palette=[self.view.get_domain_color(domain) for domain in self.model.domains],
                                               factors=[domain for domain in self.model.domains])
         graph_renderer.node_renderer.glyph.fill_color = {'field': 'domain', 'transform': color_mapper}

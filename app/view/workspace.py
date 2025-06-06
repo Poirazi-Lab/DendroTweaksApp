@@ -47,7 +47,7 @@ class WorkspaceMixin():
             ys='ys', 
             line_color='line_color', 
             line_width='line_width', 
-            line_alpha=1
+            line_alpha=.7
         )
         self.figures['cell'].add_glyph(self.sources['cell'], glyph)
 

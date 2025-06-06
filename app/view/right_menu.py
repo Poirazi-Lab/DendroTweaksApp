@@ -54,23 +54,29 @@ class RightMenuMixin():
         section_figures = self.create_section_panel()
         self.DOM_elements['psection'] = Div(
             text="""Select a section to show.""",
-            styles={'width': '450px', 'height':'200px', 
-                    'margin-top': '60px',
+            styles={'width': '450px', 'height':'200px',
                     'overflow': 'auto', 'font-size': '12px'})
         
         self.DOM_elements['sections_layout'] = column(
             [
                 self.widgets.spinners['nseg'],
-                section_figures,
-                self.DOM_elements['psection']
+                section_figures
             ],
             visible=False,
             name='sections_layout',
+            styles={
+                'margin-bottom': '60px'
+            }
+        )
+
+        sections_layout = column(
+            self.DOM_elements['sections_layout'],
+            self.DOM_elements['psection']
         )
 
         self.widgets.tab_panels['sections'] = TabPanel(
             title='Sections',
-            child=self.DOM_elements['sections_layout'],
+            child= sections_layout,
         )
 
     # -----------------------------------------------------------------
@@ -106,9 +112,11 @@ class RightMenuMixin():
         self._create_set_domain_button()
 
         domains_panel = column([
-            self.widgets.selectors['domain'],
-            row(self.widgets.selectors['set_domain'], self.widgets.buttons['set_domain']),
-        ])
+                    Div(text='NOTE: Changing the domains will reset the biophysical parameters. Please ensure this is done early in the process to avoid losing your configurations.', 
+                        styles={'color': self.theme.status_colors['warning'], 'font-size': '12px'}),
+                    self.widgets.selectors['domain'],
+                    row(self.widgets.selectors['set_domain'], self.widgets.buttons['set_domain']),
+                ])
 
         self.widgets.tab_panels['domains'] = TabPanel(
             title='Domains',
@@ -138,6 +146,8 @@ class RightMenuMixin():
 
         tree_modification_panel = column(
             [
+                Div(text='Select a section to reduce or delete its subtree.', 
+                    styles={'font-size': '12px'}),
                 self.widgets.buttons['reduce_subtree'],
                 self.widgets.buttons['delete_subtree'],
             ]
@@ -161,6 +171,8 @@ class RightMenuMixin():
 
         stats_panel = column(
             [
+                Div(text='Select sections to analyze their morphometric statistics. ',
+                    styles={'font-size': '12px'}),
                 self.widgets.buttons['stats'], 
                 self.DOM_elements['stats'],
             ],
@@ -251,9 +263,13 @@ class RightMenuMixin():
         self._create_domains_multichoice()
 
         mechanisms_panel = column([
+            Div(text='Add mechanisms such as ion channels from the available MOD files.',
+                 styles={'font-size': '12px'}),
             row(self.widgets.switches['recompile'], Div(text='Recompile mod files')),
             self.widgets.multichoice['mechanisms'],
             self.widgets.buttons['add_default_mechanisms'],
+            Div(text='Select a mechanism to insert into the selected segments. Specify the domains where it should be inserted.',
+                styles={'font-size': '12px'}),
             self.widgets.selectors['mechanism_to_insert'],
             self.widgets.multichoice['domains'],
         ])
@@ -293,7 +309,7 @@ class RightMenuMixin():
 
     def _create_group_domains_multichoice(self):
         self.widgets.multichoice['group_domains'] = MultiChoice(
-            title='Domain',
+            title='Select whithin domains',
             options=[],
             width=300,
             styles={"color": "dodgerblue"}
@@ -348,12 +364,16 @@ class RightMenuMixin():
         
         groups_panel = column(
             [
+                Div(text='Create segment groups to apply biophysical parameters to multiple segments at once. The "all" group and one group per domain are created by default.',
+                    styles={'font-size': '12px'}),
                 row(
                     [
-                        self.widgets.text['group_name'],
-                        self.widgets.buttons['add_group']
+                        self.widgets.selectors['group'],
+                        self.widgets.buttons['remove_group'],
                     ]
                 ),
+                Div(text='You can add more targeted groups such as "distal_dendrites" or "thin_basal". Do not use the graph plot to select segments! Instead, use the widgets below to filter segments based on their properties.',
+                    styles={'font-size': '12px'}),
                 self.widgets.multichoice['group_domains'],
                 row(
                     [
@@ -364,10 +384,10 @@ class RightMenuMixin():
                 ),
                 row(
                     [
-                        self.widgets.selectors['group'],
-                        self.widgets.buttons['remove_group'],
+                        self.widgets.text['group_name'],
+                        self.widgets.buttons['add_group']
                     ]
-                )
+                ),
             ], 
         )
 
@@ -490,7 +510,17 @@ class RightMenuMixin():
 
         # Distr → Group → Param → Mech
 
-        self.DOM_elements['distribution_widgets_panel'] = column(width=300)
+        self.DOM_elements['distribution_widgets_panel'] = column(
+                    width=480,
+                    height=None,
+                    # styles={
+                    #     "overflow-y": "auto",
+                    #     "scrollbar-width": "thin",
+                    #     "scrollbar-color": "dodgerblue #20262B",
+                    #     "margin": "10px 0 10px 0",
+                    #     "border_radius": "5px",
+                    # }
+                    )
         
         self.DOM_elements['group_panel'] = column(
             [
@@ -512,7 +542,15 @@ class RightMenuMixin():
                 ),
                 self.DOM_elements['group_panel'],
             ], 
-            visible=True
+            visible=True,
+            height=600,
+            styles={
+                "overflow-y": "auto",
+                "scrollbar-width": "thin",
+                "scrollbar-color": "dodgerblue #20262B",
+                "margin-top": "10px",
+                "border_radius": "5px",
+            }
         )
 
         mech_panel = column(
@@ -523,9 +561,11 @@ class RightMenuMixin():
                         self.widgets.buttons['standardize'],
                     ]
                 ),
-                row(Div(text='Show distribution'), self.widgets.switches['show_kinetics'], Div(text='Show kinetics'),
-                        # styles={"padding-top":"20px"},
-                        ),
+                row(
+                    Div(text='Show distribution'), 
+                    self.widgets.switches['show_kinetics'], 
+                    Div(text='Show kinetics'),
+                ),
                 kinetics_panel,
                 self.widgets.selectors['param'],
             ]
@@ -611,6 +651,8 @@ class RightMenuMixin():
 
         recordings_panel = column(
             [
+                Div(text='Select a segment in the graph to record its voltage or current.',
+                    styles={'font-size': '12px'}),
                 self.widgets.selectors['recording_variable'],
                 row([self.widgets.switches['record'], Div(text='Record from segment')]),
                 # row([self.widgets.switches['record_from_all'], Div(text='Record from all')]),
@@ -672,6 +714,8 @@ class RightMenuMixin():
         
         iclamp_panel = column(
             [
+                Div(text='Select a segment in the graph to add a current injection (IClamp).',
+                    styles={'font-size': '12px'}),
                 row([self.widgets.switches['iclamp'], Div(text='Add IClamp to segment')]),
                 self.widgets.sliders['iclamp_amp'].get_widget(),
                 self.widgets.sliders['iclamp_duration'],
@@ -691,7 +735,7 @@ class RightMenuMixin():
 
     def _create_syn_type_selector(self):
         self.widgets.selectors['syn_type'] = Select(
-            title='Synaptic type', 
+            title='Synapse type', 
             value='AMPA_NMDA', 
             options=['AMPA', 'NMDA', 'AMPA_NMDA', 'GABAa'], 
             width=150
@@ -700,7 +744,7 @@ class RightMenuMixin():
 
 
     def _create_n_syn_spinner(self):
-        self.widgets.spinners['N_syn'] = NumericInput(value=1, title='N syn', width=100)
+        self.widgets.spinners['N_syn'] = NumericInput(value=1, title='Number of synapses', width=100)
 
 
     def _create_add_population_button(self):
@@ -739,6 +783,8 @@ class RightMenuMixin():
 
         synapses_panel = column([
             # self.widgets.buttons['remove_all_populations'],
+            Div(text='Add populations of "virtual" neurons that synapse onto the selected segments. You can use the lasso tool to select multiple segments in the graph.',
+                styles={'font-size': '12px'}),
             row([self.widgets.selectors['syn_type'], self.widgets.spinners['N_syn']]),
             self.widgets.buttons['add_population'],
             Div(text='<hr style="width:30em">'),
@@ -844,6 +890,8 @@ class RightMenuMixin():
 
         validation_layout = column(
             [
+                Div(text='Select a validation protocol and follow the instructions to set up the stimuli and recordings. Then press "Run protocol" to calculate the required properties.',
+                    styles={'font-size': '12px'}),
                 self.widgets.selectors['protocol'],
                 self.DOM_elements['stats_ephys'],
                 self.figures['stats_ephys'],

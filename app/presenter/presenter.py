@@ -412,9 +412,11 @@ class Presenter(IOMixin, NavigationMixin,
             self.view.figures['tau_log'].visible = False
             self.view.figures['distribution'].visible = True
             self.view.widgets.buttons['standardize'].visible = False
+            self.view.DOM_elements['param_panel'].height = 600
             return
 
         self.view.figures['distribution'].visible = False
+        self.view.DOM_elements['param_panel'].height = 220
         mech_name = self.selected_mech_name
         self._toggle_kinetic_plots(mech_name)
     
