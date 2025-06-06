@@ -723,18 +723,19 @@ class Presenter(IOMixin, NavigationMixin,
         var = self.view.widgets.selectors['recording_variable'].value
         logger.debug(f'Selected variable: {var}')
         if new:
-            logger.debug(f'Recording {var} in {seg}')
             self.model.add_recording(sec, loc, var)
             if seg not in self._recorded_segments:
                 self._recorded_segments.append(seg)
             self._update_graph_param(f'rec_{var}')
+            self.update_status_message(f'Added a recording for "{var}" in {seg.idx}', status='success')
         else:
-            logger.debug(f'Stop recording {var} in {seg}')
             self.model.remove_recording(sec, loc, var)
             if seg not in self.get_recorded_segments():
                 self._recorded_segments.remove(seg)
             self._update_graph_param(f'rec_{var}')
+            self.update_status_message(f'Removed a recording for "{var}" in {seg.idx}', status='warning')
         self._update_traces_renderers()
+        
     
     def _update_traces_renderers(self):
         """
@@ -991,6 +992,7 @@ class Presenter(IOMixin, NavigationMixin,
     def delete_subtree_callback(self, event):
 
         if len(self.selected_secs) != 1:
+            self.update_status_message(message='Select a section to delete its subtree.', status='error')
             return
 
         sec = self.selected_secs.pop()

@@ -170,12 +170,15 @@ class SimulationMixin():
             # self.view.widgets.selectors['iclamp_amp_unit'].visible = True
             self.model.add_iclamp(sec=sec, loc=loc)
             self._update_graph_param('iclamps')
+            self.update_status_message(f'Added IClamp to seg {seg.idx}.', status='success')
         else:
             self.model.remove_iclamp(sec=sec, loc=loc)
             self.view.widgets.sliders['iclamp_duration'].visible = False
             self.view.widgets.sliders['iclamp_amp'].visible = False
             # self.view.widgets.selectors['iclamp_amp_unit'].visible = False
             self._update_graph_param('iclamps')
+            self.update_status_message(f'Removed IClamp from seg {seg.idx}.', status='warning')
+    
 
     def update_equilibtium_potentials(self):
         for ch in self.model.channels.values():

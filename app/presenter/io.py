@@ -282,6 +282,7 @@ class IOMixin():
 
         d_lambda = self.view.widgets.sliders['d_lambda'].value
         self.build_seg_tree(d_lambda)
+        self.update_status_message(f'Segmentation resulted in {len(self.model.seg_tree)} segments.', status='success')
         
     @log
     def build_seg_tree(self, d_lambda):

@@ -146,7 +146,7 @@ class RightMenuMixin():
 
         tree_modification_panel = column(
             [
-                Div(text='Select a section to reduce or delete its subtree.', 
+                Div(text='Select a section to reduce or delete its subtree. Note that the subtree includes the selected section!', 
                     styles={'font-size': '12px'}),
                 self.widgets.buttons['reduce_subtree'],
                 self.widgets.buttons['delete_subtree'],
