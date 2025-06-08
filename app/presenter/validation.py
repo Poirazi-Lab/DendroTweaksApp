@@ -128,7 +128,7 @@ class ValidationMixin():
                 data = calculate_fI_curve(self.model, duration=duration, min_amp=min_amp, max_amp=max_amp, n=n)
                 self._plot_fI_curve(data)
                 with remove_callbacks(self.view.widgets.sliders['iclamp_amp']):
-                    self.view.widgets.sliders['iclamp_amp'].value = max_amp* 1e3
+                    self.view.widgets.sliders['iclamp_amp'].value = max_amp
                 self.update_voltage()
             
         
@@ -311,12 +311,12 @@ class ValidationMixin():
         t = data['time']
 
         self.view.figures['stats_ephys'].visible = True
-        self.view.figures['stats_ephys'].xaxis.axis_label = 'Current injection, pA'
+        self.view.figures['stats_ephys'].xaxis.axis_label = 'Current injection, nA'
         self.view.figures['stats_ephys'].yaxis.axis_label = 'Firing rate, Hz'
         self.view.figures['stats_ephys'].y_range.start = -1
         self.view.figures['stats_ephys'].y_range.end = max(rates) * 1.1
         self.view.sources['stats_ephys'].data = {'x': amps, 'y': rates}
-        stats = f"<table><tr><th>Current, pA</th><th>Firing rate, Hz</th></tr>"
+        stats = f"<table><tr><th>Current, nA</th><th>Firing rate, Hz</th></tr>"
         for amp, rate in zip(amps, rates):
             stats += f"<tr><td>{np.round(amp,2)}</td><td>{np.round(rate, 2)}</td></tr>"
         stats += "</table>"

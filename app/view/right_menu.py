@@ -689,9 +689,9 @@ class RightMenuMixin():
 
     def _create_iclamp_delay_slider(self):
         self.widgets.sliders['iclamp_amp'] = AdjustableSpinner(
-            title="Amp (pA)", 
+            title="Amp (nA)", 
             value=0, 
-            step=1, 
+            step=0.001, 
             visible=False)
         self.widgets.sliders['iclamp_amp'].on_change('value_throttled', self.p.iclamp_amp_callback)
         self.widgets.sliders['iclamp_amp'].on_change('value_throttled', self.p.voltage_callback_on_change)

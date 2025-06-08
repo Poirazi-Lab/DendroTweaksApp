@@ -285,8 +285,8 @@ class WorkspaceMixin():
         self.figures['sim'].renderers[0].nonselection_glyph = MultiLine(line_width=2, line_alpha=0.3)
 
         from bokeh.models import Span
-        self.renderers['span_v'] = Span(location=100, dimension='height', line_color='red', line_width=1, name='v_span')
-        self.figures['sim'].add_layout(self.renderers['span_v'])
+        # self.renderers['span_v'] = Span(location=100, dimension='height', line_color='red', line_width=1, name='v_span')
+        # self.figures['sim'].add_layout(self.renderers['span_v'])
         # self.sources['span_v'] = ColumnDataSource(data={'x': [100, 100], 'y': [-90, 90]})
         # self.figures['sim'].line(x='x', y='y', color='red', source=self.sources['span_v'])
 
@@ -376,7 +376,7 @@ class WorkspaceMixin():
 
         self.widgets.switches['frozen_I'].on_change('active', frozen_I_callback)
 
-        self.figures['curr'].add_layout(self.renderers['span_v'])
+        # self.figures['curr'].add_layout(self.renderers['span_v'])
 
 
     def _create_spike_times_figure(self):
@@ -402,7 +402,7 @@ class WorkspaceMixin():
 
 
         # self.renderers['span_t'] = Span(location=100, dimension='height', line_color='red', line_width=1)
-        self.figures['spikes'].add_layout(self.renderers['span_v'])
+        # self.figures['spikes'].add_layout(self.renderers['span_v'])
 
         self.figures['sim'].x_range = self.figures['spikes'].x_range = self.figures['curr'].x_range
 

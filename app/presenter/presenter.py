@@ -783,11 +783,8 @@ class Presenter(IOMixin, NavigationMixin,
     @log
     def iclamp_amp_callback(self, attr, old, new):
         seg = self.selected_segs[0]
-        # unit = self.view.widgets.selectors['iclamp_amp_unit'].value
-        unit = 'pA'
         amp = self.view.widgets.sliders['iclamp_amp'].value
-        factor = {f'pA': 1e-12, f'nA': 1e-9, f'uA': 1e-6}[unit]
-        self.model.iclamps[seg].amp = amp * factor * 1e9
+        self.model.iclamps[seg].amp = amp
         logger.debug(f'Amplitude of iclamp in {seg} set to {self.model.iclamps[seg].amp}')
 
 
