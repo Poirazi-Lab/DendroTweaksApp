@@ -6,7 +6,7 @@ from bokeh.models import ColumnDataSource
 from bokeh.models import MultiLine
 from bokeh.models import Patches
 from bokeh.models import ColorPicker
-
+from dendrotweaks import __version__ as VERSION
 
 class SettingsMixin():
 
@@ -118,8 +118,7 @@ class SettingsMixin():
         settings = column(
             [
             Div(text='Settings', styles={'font-size': '20px', 'font-weight': 'bold'}),
-            Div(text='For more information, visit <a href="https://dendrotweaks.dendrites.gr" target="_blank" style="color: dodgerblue;">DendroTweaks online platform</a>'),
-            
+            Div(text=f'Package version: {VERSION}. For more information, visit <a href="https://dendrotweaks.dendrites.gr" target="_blank" style="color: dodgerblue;">DendroTweaks online platform</a>'),
             Div(text='Appearance', styles={'font-size': '16px', 'font-weight': 'bold'}),
             self.widgets.selectors['theme'],
             # self.widgets.switches['show_kinetics'],
