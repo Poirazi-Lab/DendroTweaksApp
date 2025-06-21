@@ -141,52 +141,58 @@ class GraphMixin():
                                                     line_color='line_color',
                                                     line_alpha='line_alpha',
                                                     line_width='line_width')
-        graph_renderer.node_renderer.glyph.line_alpha = 0.3  # 0.3
-        graph_renderer.node_renderer.glyph.line_width = 0.5
+        # fill
         graph_renderer.node_renderer.glyph.fill_alpha = 0.8
         color_mapper = CategoricalColorMapper(palette=[self.view.get_domain_color(domain) for domain in self.model.domains],
                                               factors=[domain for domain in self.model.domains])
         graph_renderer.node_renderer.glyph.fill_color = {'field': 'domain', 'transform': color_mapper}
+        # line
+        graph_renderer.node_renderer.glyph.line_color = self.view.theme.graph_colors['edge']
+        graph_renderer.node_renderer.glyph.line_alpha = 0.2  # 0.3
+        graph_renderer.node_renderer.glyph.line_width = 0.5
 
+        # Edge
         graph_renderer.edge_renderer.glyph = MultiLine(line_color=self.view.theme.graph_colors['edge'],
                                                        line_alpha=0.5, 
                                                        line_width=1)
 
-        # graph_renderer.selection_policy
 
     def _update_selection_glyph(self, graph_renderer):
+
         graph_renderer.node_renderer.selection_glyph = Circle(radius='radius',
                                                               radius_units='data',
                                                               fill_color='fill_color',
                                                               line_color='line_color',
                                                               line_alpha='line_alpha',
                                                               line_width='line_width')
-        # graph_renderer.node_renderer.selection_glyph = graph_renderer.node_renderer.glyph
-        # graph_renderer.node_renderer.selection_glyph.line_alpha = 0.8
-        graph_renderer.node_renderer.selection_glyph.fill_alpha = 1  # 1
-        graph_renderer.node_renderer.selection_glyph.line_width = 1
+        # fill
+        graph_renderer.node_renderer.selection_glyph.fill_alpha = 1
         color_mapper = CategoricalColorMapper(palette=[self.view.get_domain_color(domain) for domain in self.model.domains],
                                               factors=[domain for domain in self.model.domains])
         graph_renderer.node_renderer.selection_glyph.fill_color = {'field': 'domain', 'transform': color_mapper}
-        # graph_renderer.node_renderer.selection_glyph.line_width = int(G.nodes[1]['size']) * 0.1
-        # graph_renderer.node_renderer.selection_glyph.line_color = view.theme.graph_line
+        # line 
+        graph_renderer.node_renderer.selection_glyph.line_color = self.view.theme.graph_colors['edge']
+        graph_renderer.node_renderer.selection_glyph.line_alpha = 0.3
+        graph_renderer.node_renderer.selection_glyph.line_width = 1
+
 
     def _update_nonselection_glyph(self, graph_renderer):
+
         graph_renderer.node_renderer.nonselection_glyph = Circle(radius='radius', 
                                                             radius_units='data',
                                                             fill_color='fill_color', 
                                                             line_color=self.view.theme.graph_colors['edge'], 
                                                             line_alpha='line_alpha', 
                                                             line_width='line_width')
-        # graph_renderer.node_renderer.nonselection_glyph = graph_renderer.node_renderer.glyph
-        # graph_renderer.node_renderer.nonselection_glyph = graph_renderer.node_renderer.glyph
+        # fill
         graph_renderer.node_renderer.nonselection_glyph.fill_alpha = 0.3
         color_mapper = CategoricalColorMapper(palette=[self.view.get_domain_color(domain) for domain in self.model.domains],
                                               factors=[domain for domain in self.model.domains])
         graph_renderer.node_renderer.nonselection_glyph.fill_color = {'field': 'domain', 'transform': color_mapper}
+        # line
+        graph_renderer.node_renderer.nonselection_glyph.line_alpha = 0.2 #0.7
         graph_renderer.node_renderer.nonselection_glyph.line_width = 0.3
-        # graph_renderer.node_renderer.nonselection_glyph.fill_alpha = 0.5 #0.7
-        graph_renderer.node_renderer.nonselection_glyph.line_alpha = 0.3 #0.7
+    
     
     # ========================================================================================================
     # UPDATE GRAPH
@@ -357,11 +363,11 @@ class GraphMixin():
                 low, high = min(values), max(values)
                 if low >= 0: low = 0
                 if high <= 0: high = 0
-                val = max(abs(low), abs(high))
+                # val = max(abs(low), abs(high))
                 color_mapper = LinearColorMapper(
                     palette=self.view.theme.palettes['params'] + null_color,
-                    low=-val, 
-                    high=val, 
+                    low=low, 
+                    high=high, 
                     nan_color=self.view.theme.graph_colors['node_fill']
                     )  #rainbow4
 
@@ -393,7 +399,10 @@ class GraphMixin():
             return
         graph_renderer = self.view.figures['graph'].renderers[0]
         palette = graph_renderer.node_renderer.glyph.fill_color.transform.palette
-        new_color_mapper = LinearColorMapper(palette=palette, low=-new, high=new)
+        if new > 0:
+            new_color_mapper = LinearColorMapper(palette=palette, low=0, high=new)
+        else:
+            new_color_mapper = LinearColorMapper(palette=palette, low=new, high=0)
         param_name = graph_renderer.node_renderer.glyph.fill_color.field
         graph_renderer.node_renderer.glyph.fill_color = {'field': param_name, 'transform': new_color_mapper}
         graph_renderer.node_renderer.selection_glyph.fill_color = {'field': param_name, 'transform': new_color_mapper}

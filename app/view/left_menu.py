@@ -100,6 +100,7 @@ class LeftMenuMixin():
             label='Export model',
             width=242, align='center',
             button_type='default',
+            styles={'color': 'dodgerblue'},
             menu=[
                 ('Export morphology', 'morphology'), 
                 ('Export biophys config', 'biophys'),

@@ -28,65 +28,17 @@ from view.auxiliary import AuxiliaryMixin
 
 from bokeh.models import Div
 
-CANOPY_COLORS = {
-    'negative':[
-        '#89b1fdff',
-        '#16b1ffff',
-        '#00a1a1ff',
-        '#00865aff',
-        '#006725ff',
-        # '#333333ff',
-    ],
-    'positive':[
-        # '#333333ff',
-        '#615100ff',
-        '#b15900ff',
-        '#ff5e3fff',
-        '#ff7a8fff',
-        '#ff97c9ff',
-    ]
-}
-
-def create_palette(palette_dict, n_colors=256):
-
-    negative_colors = palette_dict['negative']
-    positive_colors = palette_dict['positive']
-    negative_palette = LinearSegmentedColormap.from_list("negative", negative_colors, N=128)
-    positive_palette = LinearSegmentedColormap.from_list("positive", positive_colors, N=128)
-
-    n_half = n_colors // 2
-
-    colors_combined = np.vstack([
-        negative_palette(np.linspace(0, 1, n_half)),
-        positive_palette(np.linspace(0, 1, n_half))
-    ])
-
-    concatenated_palette = LinearSegmentedColormap.from_list("concatenated", colors_combined)
-
-    return concatenated_palette
-
-def palette_to_hex(palette, n_samples=256):
-    color_samples = palette(np.linspace(0, 1, n_samples))
-    return [f'#{int(r*255):02x}{int(g*255):02x}{int(b*255):02x}' for r, g, b, _ in color_samples]
-
-def _insert_gray(palette, gray_color):
-    L = len(palette)
-    return palette[:L//2] + [gray_color] + palette[L//2:]
-
-canopy = palette_to_hex(create_palette(CANOPY_COLORS))
-canopy = _insert_gray(canopy, 'gray')
-
 
 DARK_PALETTES = {
     'trace': ["#fd7f6f", "#7eb0d5", "#b2e061", "#bd7ebe", "#ffb55a", "#ffee65", "#beb9db", "#fdcce5", "#8bd3c7"],
     'continuous': cc.glasbey_dark,
-    'params': canopy,
+    'params': cc.rainbow4,
 }
 
 LIGHT_PALETTES = {
     'trace': ["#fd7f6f", "#7eb0d5", "#b2e061", "#bd7ebe", "#ffb55a", "#ffee65", "#beb9db", "#fdcce5", "#8bd3c7"],
     'continuous': cc.glasbey_light,
-    'params': canopy,
+    'params': cc.rainbow4,
 }
 
 DARK_STATUS_COLORS = {
