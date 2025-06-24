@@ -218,18 +218,22 @@ class ValidationMixin():
 
         Rin = passive_data['input_resistance']
         tau = passive_data['time_constant']
+        tau1 = passive_data['tau1']
+        tau2 = passive_data['tau2']
         v_onset = passive_data['onset_voltage']
         v_offset = passive_data['offset_voltage']
         t_decay = passive_data['decay_time']
         v_decay = passive_data['decay_voltage']
-        A = passive_data['A']
+        A1 = passive_data['A1']
+        A2 = passive_data['A2']
         start_t = passive_data['start_time']
 
-        def _exp_decay(t, A, tau):
-            return A * np.exp(-t / tau)
+        def _double_exp_decay(t, A1, tau1, A2, tau2):
+            return A1 * np.exp(-t / tau1) + A2 * np.exp(-t / tau2)
 
-        shifted_exp_decay = _exp_decay(t_decay, A, tau) + v_offset
-        data = {'xs': [t_decay + start_t], 'ys': [shifted_exp_decay], 'color': ['magenta']}
+        shifted_exp_decay = _double_exp_decay(t_decay, A1, tau1, A2, tau2) + v_offset
+        print(f"Shifted exp decay: {shifted_exp_decay}, v_offset: {v_offset}")
+        data = {'xs': [t_decay + start_t], 'ys': [shifted_exp_decay], 'color': ['gold']}
         self.view.sources['frozen_v'].data = data
 
         stats = f"Input resistance = (V_min - V_init) / I<br>"
@@ -283,7 +287,8 @@ class ValidationMixin():
 
     def _plot_voltage_attenuation(self, data):
         path_distances = data['path_distances']
-        voltages = data['min_voltages']
+        min_voltages = data['min_voltages']
+        end_voltages = data['end_voltages']
         attenuation = data['attenuation']
 
         self.view.figures['stats_ephys'].visible = True
@@ -294,9 +299,9 @@ class ValidationMixin():
         
         self.view.sources['stats_ephys'].data = {'x': path_distances, 'y': attenuation}
 
-        stats = f"<table><tr><th>Dist, µm</th><th>Voltage, mV</th><th>Attenuation</th></tr>"
-        for d, v, a in zip(path_distances, voltages, attenuation):
-            stats += f"<tr><td>{np.round(d,2)}</td><td>{np.round(v, 2)}</td><td>{np.round(a, 2)}</td></tr>"
+        stats = f"<table><tr><th>Dist, µm</th><th>End voltage, mV</th><th>Attenuation</th></tr>"
+        for d, min_v, end_v, a in zip(path_distances, min_voltages, end_voltages, attenuation):
+            stats += f"<tr><td>{np.round(d,2)}</td><td>{np.round(end_v, 2)}</td><td>{np.round(a, 2)}</td></tr>"
         stats += "</table>"
 
         self.view.DOM_elements['stats_ephys'].text = stats
