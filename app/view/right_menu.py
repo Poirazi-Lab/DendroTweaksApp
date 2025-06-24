@@ -485,7 +485,7 @@ class RightMenuMixin():
         self.widgets.selectors['distribution_type'] = Select(
             title='Distribution type',
             value='constant',
-            options=['constant', 'linear', 'exponential', 'sigmoid', 'sinusoidal', 'gaussian', 'step', 'inherit'],
+            options=['constant', 'linear', 'exponential', 'sigmoid', 'sinusoidal', 'gaussian', 'step', 'inherit', 'polynomial'],
             width=150,
             visible=True
         )
@@ -680,7 +680,7 @@ class RightMenuMixin():
             start=0,
             end=300,
             value=(100,200),
-            step=10,
+            step=5,
             title="Duration, ms",
             visible=False
         )

@@ -613,6 +613,11 @@ class Presenter(IOMixin, NavigationMixin,
             self.view.DOM_elements['distribution_widgets_panel'].visible = False
             self.view.DOM_elements['distribution_widgets_panel'].children = []
             return
+
+        if self.model.params[param_name][group_name].function_name == 'polynomial':
+            self.view.DOM_elements['distribution_widgets_panel'].visible = False
+            self.view.DOM_elements['distribution_widgets_panel'].children = []
+            return
             
         def make_slider_callback(slider_title):
             def slider_callback(attr, old, new):
