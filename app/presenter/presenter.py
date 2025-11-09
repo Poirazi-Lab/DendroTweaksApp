@@ -1128,7 +1128,7 @@ class Presenter(IOMixin, NavigationMixin,
             }
         }
 
-        with open('app/user_config.json', 'w') as f:
+        with open('app/static/data/user_config.json', 'w') as f:
             json.dump(preferences, f, indent=4)
 
         self.update_status_message('Preferences saved.', status='success')

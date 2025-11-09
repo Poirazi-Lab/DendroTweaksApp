@@ -30,7 +30,7 @@ AVAILABLE_DOMAINS = [
 with open('app/default_config.json', 'r') as f:
     default_config = json.load(f)
 
-with open('app/user_config.json', 'r') as f:
+with open('app/static/data/user_config.json', 'r') as f:
     user_config = json.load(f)
 
 for key, value in user_config.items():
