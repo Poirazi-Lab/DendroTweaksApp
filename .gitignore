@@ -39,3 +39,4 @@ app/static/data/*/morphology/*sorted.swc
 app/static/data/*/morphology/*.asc
 app/static/data/*/morphology/Hay_2011.swc
 app/static/data/*/morphology/Poirazi_2003.swc
+test_data/

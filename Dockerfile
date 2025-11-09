@@ -2,7 +2,7 @@
 FROM python:3.11-slim
 
 # Set working directory
-WORKDIR /app
+WORKDIR /dendrotweaks
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
@@ -21,6 +21,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the entire app directory
 COPY app/ ./app/
+
+# Create non-root user for security
+RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /dendrotweaks
+USER appuser
 
 # Expose Bokeh default port
 EXPOSE 5006
