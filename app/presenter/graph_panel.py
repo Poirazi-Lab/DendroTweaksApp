@@ -47,11 +47,11 @@ class GraphMixin():
         self.G = nx.Graph()
         total_nseg = len(self.model.seg_tree)
         for seg in self.model.seg_tree:
-            radius = int(200/np.sqrt(total_nseg)) if seg._section.domain == 'soma' else int(150/np.sqrt(total_nseg))
+            radius = int(200/np.sqrt(total_nseg)) if seg.domain_name == 'soma' else int(150/np.sqrt(total_nseg))
             self.G.add_node(seg.idx, 
                             sec = seg._section.idx,
                             x = round(seg.x, 3),
-                            domain=seg._section.domain,
+                            domain=seg.domain_name,
                             cm = seg._ref.cm,
                             Ra = seg._section._ref.Ra,
                             diam = seg.diam,
@@ -64,7 +64,7 @@ class GraphMixin():
                             rec_v='None',
                             iclamps=0,
                             radius=radius*0.0015,
-                            fill_color=self.view.get_domain_color(seg._section.domain),
+                            fill_color=seg.domain_color
                             )
             if seg.parent is not None:
                 self.G.add_edge(seg.parent.idx, seg.idx)
@@ -143,7 +143,7 @@ class GraphMixin():
                                                     line_width='line_width')
         # fill
         graph_renderer.node_renderer.glyph.fill_alpha = 0.8
-        color_mapper = CategoricalColorMapper(palette=[self.view.get_domain_color(domain) for domain in self.model.domains],
+        color_mapper = CategoricalColorMapper(palette=[domain.color for domain in self.model.domains.values()],
                                               factors=[domain for domain in self.model.domains])
         graph_renderer.node_renderer.glyph.fill_color = {'field': 'domain', 'transform': color_mapper}
         # line
@@ -167,7 +167,7 @@ class GraphMixin():
                                                               line_width='line_width')
         # fill
         graph_renderer.node_renderer.selection_glyph.fill_alpha = 1
-        color_mapper = CategoricalColorMapper(palette=[self.view.get_domain_color(domain) for domain in self.model.domains],
+        color_mapper = CategoricalColorMapper(palette=[domain.color for domain in self.model.domains.values()],
                                               factors=[domain for domain in self.model.domains])
         graph_renderer.node_renderer.selection_glyph.fill_color = {'field': 'domain', 'transform': color_mapper}
         # line 
@@ -186,7 +186,7 @@ class GraphMixin():
                                                             line_width='line_width')
         # fill
         graph_renderer.node_renderer.nonselection_glyph.fill_alpha = 0.3
-        color_mapper = CategoricalColorMapper(palette=[self.view.get_domain_color(domain) for domain in self.model.domains],
+        color_mapper = CategoricalColorMapper(palette=[domain.color for domain in self.model.domains.values()],
                                               factors=[domain for domain in self.model.domains])
         graph_renderer.node_renderer.nonselection_glyph.fill_color = {'field': 'domain', 'transform': color_mapper}
         # line
@@ -247,6 +247,14 @@ class GraphMixin():
         self.update_section_param_data(param_name)
 
 
+    def _remove_graph_param(self, param_name):
+        """
+        Removes the parameter from the graph data source.
+        """
+        if param_name in self.view.figures['graph'].renderers[0].node_renderer.data_source.data:
+            self.view.figures['graph'].renderers[0].node_renderer.data_source.data.pop(param_name)
+
+
     def _get_param_value(self, seg, param_name):
         """
         Retrieves the value of the specified parameter for the given segment.
@@ -264,15 +272,12 @@ class GraphMixin():
         elif param_name == 'iclamps':
             return 1 if self.model.iclamps.get(seg) is not None else np.nan
 
-        elif param_name in ['AMPA', 'NMDA', 'GABAa', 'AMPA_NMDA']:
-            relevant_populations = self.model.populations[param_name]
-            if not relevant_populations:
-                return np.nan
-            if not any(seg in pop.segments for pop in relevant_populations.values()):
-                return np.nan
-            return sum(pop.n_per_seg[seg] 
-                       for pop in relevant_populations.values()
-                       if seg in pop.segments)
+        # POPULATIONS
+        elif param_name in self.model.populations:
+            pop = self.model.populations[param_name]
+            if seg in pop.segments:
+                return pop.n_per_seg[seg] 
+            return 0
 
         elif param_name == 'weights':
             if self.model.synapses.get(seg) is not None:
@@ -289,6 +294,8 @@ class GraphMixin():
             return seg.path_distance()
         elif param_name == 'section_diam':
             return seg._section._ref.diam
+        elif param_name == 'domain':
+            return seg.domain_name
         else:
             return seg.get_param_value(param_name)
 
@@ -323,8 +330,8 @@ class GraphMixin():
 
         if param == 'domain': 
             color_mapper = CategoricalColorMapper(
-                palette=[self.view.get_domain_color(domain) for domain in self.model.domains], 
-                factors=[domain for domain in self.model.domains]
+                palette=[domain.color for domain in self.model.domains.values()], 
+                factors=[domain.name for domain in self.model.domains.values()]
             )
             self.view.widgets.sliders['graph_param_high'].visible = False
         elif param.startswith('rec_'):
@@ -341,14 +348,17 @@ class GraphMixin():
         else:
             if param == 'iclamps':
                 color_mapper = LinearColorMapper(palette=['red'], high=1, nan_color=self.view.theme.graph_colors['node_fill'])
-            elif param == 'AMPA':
-                color_mapper = LinearColorMapper(palette=['gray'] + cc.kr[100:-10], low=0, nan_color=self.view.theme.graph_colors['node_fill'])
-            elif param == 'GABAa':
-                color_mapper = LinearColorMapper(palette=['gray'] + cc.kb[100:-10], low=0, nan_color=self.view.theme.graph_colors['node_fill'])
-            elif param == 'NMDA':
-                color_mapper = LinearColorMapper(palette=['gray'] + cc.kg[100:-10], low=0, nan_color=self.view.theme.graph_colors['node_fill'])
-            elif param == 'AMPA_NMDA':
-                color_mapper = LinearColorMapper(palette=['gray'] + cc.fire[100:-10], low=0, nan_color=self.view.theme.graph_colors['node_fill'])
+            elif param in self.model.populations:
+                pop = self.model.populations[param]
+                syn_type = pop.syn_type
+                if syn_type == 'AMPA':
+                    color_mapper = LinearColorMapper(palette=['gray'] + cc.kr[100:-10], low=0, nan_color=self.view.theme.graph_colors['node_fill'])
+                elif syn_type == 'GABAa':
+                    color_mapper = LinearColorMapper(palette=['gray'] + cc.kb[100:-10], low=0, nan_color=self.view.theme.graph_colors['node_fill'])
+                elif syn_type == 'NMDA':
+                    color_mapper = LinearColorMapper(palette=['gray'] + cc.kg[100:-10], low=0, nan_color=self.view.theme.graph_colors['node_fill'])
+                elif syn_type == 'AMPA_NMDA':
+                    color_mapper = LinearColorMapper(palette=['gray'] + cc.fire[100:-10], low=0, nan_color=self.view.theme.graph_colors['node_fill'])
             elif param == 'weights':
                 low = min(graph_renderer.node_renderer.data_source.data[param])
                 high = max(graph_renderer.node_renderer.data_source.data[param])

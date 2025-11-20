@@ -29,7 +29,7 @@ class CellMixin():
             
     @property
     def colors(self):
-        return [self.view.get_domain_color(sec.domain) for sec in self.model.sec_tree]
+        return [sec.domain_color for sec in self.model.sec_tree]
         
     @property
     def line_widths(self):

@@ -126,9 +126,20 @@ class IOMixin():
         self._update_traces_renderers()        
         self.update_voltage()
 
-        for param_name in ['AMPA', 'NMDA', 'GABAa', 'AMPA_NMDA', 'iclamps', 'rec_v']:
+        # UPDATE GRAPH PARAM ----------------------------------------------
+        self.view.params.update({'Synapses': list(self.model.populations.keys())})
+        self.view.widgets.selectors['graph_param'].options = {**self.view.params}
+
+        for param_name in ['iclamps', 'rec_v'] + list(self.model.populations.keys()):
             self._update_graph_param(param_name, update_colors=False)
 
+        # UPDATE POPULATION OPTIONS ----------------------------------------
+        with remove_callbacks(self.view.widgets.selectors['population']):
+            options = list(self.model.populations.keys())
+            self.view.widgets.selectors['population'].options = options
+            self.view.widgets.selectors['population'].value = options[-1] if options else None
+
+        # UPDATE STIMULI OPTIONS ------------------------------------------------
         self.view.widgets.selectors['stimuli'].options = self.model.list_stimuli()
         self.update_status_message('Stimuli loaded.', status='success')
         

@@ -740,17 +740,33 @@ class RightMenuMixin():
             options=['AMPA', 'NMDA', 'AMPA_NMDA', 'GABAa'], 
             width=150
         )
-        self.widgets.selectors['syn_type'].on_change('value', self.p.select_synapse_type_callback)
 
 
     def _create_n_syn_spinner(self):
         self.widgets.spinners['N_syn'] = NumericInput(value=1, title='Number of synapses', width=100)
 
 
+    def _create_population_name_text_input(self):
+        self.widgets.text['population_name'] = TextInput(value='', 
+                                                        title='Population name', 
+                                                        placeholder='New population name',
+                                                        width=150)
+        def check_population_name_exists_callback(attr, old, new):
+            if not new:
+                self.widgets.buttons['add_population'].disabled = True
+            else:
+                if new in self.widgets.selectors['population'].options:
+                    self.widgets.buttons['add_population'].disabled = True
+                else:
+                    self.widgets.buttons['add_population'].disabled = False
+        self.widgets.text['population_name'].on_change('value_input', check_population_name_exists_callback)
+
+
     def _create_add_population_button(self):
         self.widgets.buttons['add_population'] = Button(label='Add population', 
-                                                        button_type='primary', 
-                                                        disabled=False)
+                                                        button_type='primary',
+                                                        styles={"padding-top":"20px"}, 
+                                                        disabled=True)
         self.add_message(self.widgets.buttons['add_population'], 'Adding population. Please wait...', callback_type='on_click')
         self.widgets.buttons['add_population'].on_event(ButtonClick, 
                                                         self.p.add_population_callback)
@@ -775,6 +791,7 @@ class RightMenuMixin():
         
         self._create_syn_type_selector()
         self._create_n_syn_spinner()
+        self._create_population_name_text_input()
         self._create_add_population_button()
         self._create_population_selector()
         self._create_remove_population_button()
@@ -786,7 +803,7 @@ class RightMenuMixin():
             Div(text='Add populations of "virtual" neurons that synapse onto the selected segments. You can use the lasso tool to select multiple segments in the graph.',
                 styles={'font-size': '12px'}),
             row([self.widgets.selectors['syn_type'], self.widgets.spinners['N_syn']]),
-            self.widgets.buttons['add_population'],
+            row([self.widgets.text['population_name'], self.widgets.buttons['add_population']]),
             Div(text='<hr style="width:30em">'),
             row([self.widgets.selectors['population'], self.widgets.buttons['remove_population']]),
             self.DOM_elements['population_panel'],

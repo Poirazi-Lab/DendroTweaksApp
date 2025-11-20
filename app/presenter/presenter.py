@@ -29,7 +29,7 @@ from bokeh.models import CategoricalColorMapper
 
 from bokeh_utils import log
 
-
+from bokeh.models import Div
 
 from presenter.io import IOMixin
 from presenter.navigation import NavigationMixin
@@ -167,7 +167,7 @@ class Presenter(IOMixin, NavigationMixin,
         Selects the segments in the graph that belong to the domain.
         """
         # GET MODEL
-        sections = self.model.get_sections(lambda sec : sec.domain in domain_names)
+        sections = self.model.get_sections(lambda sec : sec.domain_name in domain_names)
         seg_ids = [seg.idx for sec in sections for seg in sec.segments]
         # SET VIEW
         self.view.figures['graph'].renderers[0].node_renderer.data_source.selected.indices = seg_ids
@@ -191,19 +191,19 @@ class Presenter(IOMixin, NavigationMixin,
 
         # GET MODEL
         if select_by == 'distance':
-            condition = lambda seg: seg.domain in domains and \
+            condition = lambda seg: seg.domain_name in domains and \
                         (min_val is None or seg.path_distance() >= min_val) and \
                         (max_val is None or seg.path_distance() <= max_val)
         elif select_by == 'domain_distance':
-            condition = lambda seg: seg.domain in domains and \
+            condition = lambda seg: seg.domain_name in domains and \
                         (min_val is None or seg.path_distance(within_domain=True) >= min_val) and \
                         (max_val is None or seg.path_distance(within_domain=True) <= max_val)
         elif select_by == 'diam':
-            condition = lambda seg: seg.domain in domains and \
+            condition = lambda seg: seg.domain_name in domains and \
                         (min_val is None or seg.diam >= min_val) and \
                         (max_val is None or seg.diam <= max_val)
         elif select_by == 'section_diam':
-            condition = lambda seg: seg.domain in domains and \
+            condition = lambda seg: seg.domain_name in domains and \
                         (min_val is None or seg._section.diam >= min_val) and \
                         (max_val is None or seg._section.diam <= max_val)
         
@@ -693,7 +693,7 @@ class Presenter(IOMixin, NavigationMixin,
 
         data = {'x': [seg.path_distance() for seg in selected_segs],
                 'y': [seg.get_param_value(param_name) for seg in selected_segs],
-                'color': [self.view.get_domain_color(seg.domain) for seg in selected_segs],
+                'color': [seg.domain_color for seg in selected_segs],
                 'label': [str(seg.idx) for seg in selected_segs]}
 
         self.view.sources['distribution'].data = data
@@ -707,7 +707,7 @@ class Presenter(IOMixin, NavigationMixin,
 
         data = {'x': [seg.path_distance() for seg in selected_segs],
                 'y': [seg.diam for seg in selected_segs],
-                'color': [self.view.get_domain_color(seg.domain) for seg in selected_segs],
+                'color': [seg.domain_color for seg in selected_segs],
                 'label': [str(seg.idx) for seg in selected_segs]}
 
         self.view.sources['diam_distribution'].data = data
@@ -730,13 +730,13 @@ class Presenter(IOMixin, NavigationMixin,
         if new:
             self.model.add_recording(sec, loc, var)
             if seg not in self._recorded_segments:
-                self._recorded_segments.append(seg)
+                self._recorded_segments = self.get_recorded_segments()
             self._update_graph_param(f'rec_{var}')
             self.update_status_message(f'Added a recording for "{var}" in {seg.idx}', status='success')
         else:
             self.model.remove_recording(sec, loc, var)
             if seg not in self.get_recorded_segments():
-                self._recorded_segments.remove(seg)
+                self._recorded_segments = self.get_recorded_segments()
             self._update_graph_param(f'rec_{var}')
             self.update_status_message(f'Removed a recording for "{var}" in {seg.idx}', status='warning')
         self._update_traces_renderers()
@@ -799,22 +799,21 @@ class Presenter(IOMixin, NavigationMixin,
 
     @property
     def selected_population(self):
-        syn_type = self.view.widgets.selectors['syn_type'].value
         pop_name = self.view.widgets.selectors['population'].value
-        population = self.model.populations[syn_type].get(pop_name, None)
+        population = self.model.populations.get(pop_name, None)
         return population
 
     
     # SELECT SYNAPSE TYPE ------------------------------------------------------
 
-    def select_synapse_type_callback(self, attr, old, new):
+    # def select_synapse_type_callback(self, attr, old, new):
         
-        syn_type = self.view.widgets.selectors['syn_type'].value
+    #     syn_type = self.view.widgets.selectors['syn_type'].value
 
-        options = list(self.model.populations[syn_type].keys())
-        self.view.widgets.selectors['population'].options = options
-        self.view.widgets.selectors['graph_param'].value = syn_type
-        self.view.widgets.selectors['population'].value = options[-1] if options else None
+    #     options = list(self.model.populations.keys())
+    #     self.view.widgets.selectors['population'].options = options
+    #     self.view.widgets.selectors['graph_param'].value = syn_type
+    #     self.view.widgets.selectors['population'].value = options[-1] if options else None
     
 
     # ADD / REMOVE POPULATION -----------------------------------------
@@ -823,42 +822,55 @@ class Presenter(IOMixin, NavigationMixin,
     def add_population_callback(self, event):
         
         segments = self.selected_segs[:]
+        population_name = self.view.widgets.text['population_name'].value
         syn_type = self.view.widgets.selectors['syn_type'].value
         N_syn = self.view.widgets.spinners['N_syn'].value
         
         self.model.add_population(
+            name=population_name,
             segments=segments,
             N=N_syn,
             syn_type=syn_type
             )
 
-        self._update_graph_param(syn_type)
+        self._update_graph_param(population_name)
 
-        options = list(self.model.populations[syn_type])
+        options = list(self.model.populations.keys())
         self.view.widgets.selectors['population'].options = options
         self.view.widgets.selectors['population'].value = options[-1]
 
+        # Update graph param selector options
+        self.view.params.update({'Synapses': list(self.model.populations.keys())})
+        self.view.widgets.selectors['graph_param'].options = {**self.view.params}
+        self.view.widgets.selectors['graph_param'].value = population_name
+
+        # Reset population name text box
+        self.view.widgets.text['population_name'].value = ''
         self.update_status_message(f'{syn_type} population added.', status='success')
 
 
     def remove_population_callback(self, event):
         
-        pop_name = self.view.widgets.selectors['population'].value
-        syn_type = self.view.widgets.selectors['syn_type'].value
+        population_name = self.view.widgets.selectors['population'].value
 
-        self.model.remove_population(pop_name)
+        pop = self.model.populations[population_name]
+        self.model.remove_population(population_name)
         
-        self._update_graph_param(syn_type)
+        self._remove_graph_param(population_name)
 
-        options = list(self.model.populations[syn_type])
+        options = list(self.model.populations.keys())
         self.view.widgets.selectors['population'].options = options
         self.view.widgets.selectors['population'].value = options[-1] if options else None
 
+        self.view.params.update({'Synapses': list(self.model.populations.keys())})
+        self.view.widgets.selectors['graph_param'].options = {**self.view.params}
+        self.view.widgets.selectors['graph_param'].value = options[-1] if options else None
 
     # SELECT POPULATION ------------------------------------------------------
 
     def select_population_callback(self, attr, old, new):
         self.toggle_population_panel()
+        self.view.widgets.selectors['graph_param'].value = new
         self.select_population_segs_in_graph()
 
 
@@ -879,14 +891,23 @@ class Presenter(IOMixin, NavigationMixin,
                 population.update_input_params(**{slider_title: new})
             return slider_callback
 
-        
-        rate_slider = Slider(title='Rate', value=population.input_params['rate'], start=0.1, end=100, step=0.1, width=300)
-        rate_slider.on_change('value_throttled', make_input_param_slider_callback('rate'))
-        rate_slider.on_change('value_throttled', self.voltage_callback_on_change)
+        seed_spinner = Spinner(title='Seed', value=population.input_params['seed'], step=1, width=100)
+        seed_spinner.on_change('value_throttled', make_input_param_slider_callback('seed'))
+        seed_spinner.on_change('value_throttled', self.voltage_callback_on_change)
 
-        noise_slider = Slider(title='Noise', value=population.input_params['noise'], start=0, end=1, step=0.01, width=300)
-        noise_slider.on_change('value_throttled', make_input_param_slider_callback('noise'))
-        noise_slider.on_change('value_throttled', self.voltage_callback_on_change)
+        syn_type = population.syn_type
+        syn_type_div = Div(text=f'<b>Synapse type:</b><br> {syn_type}', width=150)
+
+        N = population.N
+        N_div = Div(text=f'<b>Number of synapses:</b><br> {N}', width=150)
+        
+        rate_spinner = Spinner(title='Rate', value=population.input_params['rate'], step=0.1, low=0, high=100, width=100)
+        rate_spinner.on_change('value_throttled', make_input_param_slider_callback('rate'))
+        rate_spinner.on_change('value_throttled', self.voltage_callback_on_change)
+
+        noise_spinner = Spinner(title='Noise', value=population.input_params['noise'], step=0.01, low=0, high=1, width=100)
+        noise_spinner.on_change('value_throttled', make_input_param_slider_callback('noise'))
+        noise_spinner.on_change('value_throttled', self.voltage_callback_on_change)
 
         weight_slider = Slider(title='Weight', value=population.input_params['weight'], start=0, end=100, step=1, width=300)
         weight_slider.on_change('value_throttled', make_input_param_slider_callback('weight'))
@@ -968,13 +989,13 @@ class Presenter(IOMixin, NavigationMixin,
         range_slider.on_change('value_throttled', self.voltage_callback_on_change)
 
         
-        self.view.DOM_elements['population_panel'].children = [rate_slider, 
-                                                              noise_slider, 
-                                                              range_slider, 
-                                                              weight_slider, 
-                                                              *gmax_sliders,
-                                                              tau_sliders,
-                                                                row(spinners)]
+        self.view.DOM_elements['population_panel'].children = [row(syn_type_div, N_div),
+                                                               row(rate_spinner, noise_spinner, seed_spinner),
+                                                               range_slider, 
+                                                               weight_slider, 
+                                                               *gmax_sliders,
+                                                               tau_sliders,
+                                                               row(spinners)]
                                                               
                                                               
     def select_population_segs_in_graph(self):

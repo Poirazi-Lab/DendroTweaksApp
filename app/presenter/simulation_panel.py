@@ -107,16 +107,15 @@ class SimulationMixin():
     @timeit
     def update_spike_times_data(self):
         data = {'x': [], 'y': [], 'color': []}
-        for syn_type, pops in self.model.populations.items():
-            for pop_name, pop in pops.items():
-                if not pop: continue
-                for seg_idx, synapses in pop.synapses.items():
-                    for i, syn in enumerate(synapses):
-                        label = f'Pop_{pop_name}_seg_{seg_idx}_syn_{i}'
-                        color = 'blue' if syn_type in ['GABAa', 'GABAb'] else 'orange'
-                        data['x'].extend(syn.spike_times)
-                        data['y'].extend([label] * len(syn.spike_times))
-                        data['color'].extend([color] * len(syn.spike_times))
+        for pop_name, pop in self.model.populations.items():
+            if not pop: continue
+            for seg_idx, synapses in pop.synapses.items():
+                for i, syn in enumerate(synapses):
+                    label = f'Pop_{pop_name}_seg_{seg_idx}_syn_{i}'
+                    color = 'blue' if pop.syn_type in ['GABAa', 'GABAb'] else 'orange'
+                    data['x'].extend(syn.spike_times)
+                    data['y'].extend([label] * len(syn.spike_times))
+                    data['color'].extend([color] * len(syn.spike_times))
         
         if data['y']:
             synapse_names = sorted(set(data['y']))

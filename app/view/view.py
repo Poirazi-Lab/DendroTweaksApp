@@ -18,8 +18,6 @@ import numpy as np
 from matplotlib.colors import LinearSegmentedColormap
 import colorcet as cc
 
-from dendrotweaks.utils import get_domain_color
-
 from view.left_menu import LeftMenuMixin
 from view.right_menu import RightMenuMixin
 from view.workspace import WorkspaceMixin
@@ -98,10 +96,6 @@ PARAMS_TO_UNITS = {
               'gbar': 'Conductance (S/cm²)',
               },
     'sim': {'iclamps': 'Injected current (nA)',
-            'AMPA': 'Number of synapses',
-            'NMDA': 'Number of synapses',
-            'AMPA_NMDA': 'Number of synapses',
-            'GABAa': 'Number of synapses',
             'rec_v': 'Voltage (mV)'
             }
 }
@@ -111,7 +105,7 @@ PARAMS = {
     'Geometry': ['diam', 'section_diam', 'area', 'distance', 'domain_distance'],
     'Stimuli': ['iclamps'],
     'Recordings': ['rec_v'],
-    'Synapses': ['AMPA', 'NMDA', 'AMPA_NMDA', 'GABAa']
+    'Synapses': []
 }
 
 
@@ -148,7 +142,6 @@ class CellView(LeftMenuMixin, WorkspaceMixin, RightMenuMixin, SettingsMixin, Aux
         self._add_theme_callbacks()
         self._file_content = None
         self._filename = None
-        self.get_domain_color = get_domain_color
         self.recordings_color_mapper = None
 
     @property
