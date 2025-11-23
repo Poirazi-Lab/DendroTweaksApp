@@ -842,18 +842,6 @@ class Presenter(IOMixin, NavigationMixin,
         population = self.model.populations.get(pop_name, None)
         return population
 
-    
-    # SELECT SYNAPSE TYPE ------------------------------------------------------
-
-    # def select_synapse_type_callback(self, attr, old, new):
-        
-    #     syn_type = self.view.widgets.selectors['syn_type'].value
-
-    #     options = list(self.model.populations.keys())
-    #     self.view.widgets.selectors['population'].options = options
-    #     self.view.widgets.selectors['graph_param'].value = syn_type
-    #     self.view.widgets.selectors['population'].value = options[-1] if options else None
-    
 
     # ADD / REMOVE POPULATION -----------------------------------------
 
@@ -872,16 +860,15 @@ class Presenter(IOMixin, NavigationMixin,
             syn_type=syn_type
             )
 
-        self._update_graph_param(population_name)
-
-        options = list(self.model.populations.keys())
-        self.view.widgets.selectors['population'].options = options
-        self.view.widgets.selectors['population'].value = options[-1]
-
         # Update graph param selector options
         self.view.params.update({'Synapses': list(self.model.populations.keys())})
         self.view.widgets.selectors['graph_param'].options = {**self.view.params}
-        self.view.widgets.selectors['graph_param'].value = population_name
+        self._update_graph_param(population_name)
+
+        # Update population selector options
+        options = list(self.model.populations.keys())
+        self.view.widgets.selectors['population'].options = options
+        self.view.widgets.selectors['population'].value = options[-1]
 
         # Reset population name text box
         self.view.widgets.text['population_name'].value = ''
@@ -895,15 +882,35 @@ class Presenter(IOMixin, NavigationMixin,
         pop = self.model.populations[population_name]
         self.model.remove_population(population_name)
         
+        # Update graph param selector options
+        self.view.params.update({'Synapses': list(self.model.populations.keys())})
+        self.view.widgets.selectors['graph_param'].options = {**self.view.params}
         self._remove_graph_param(population_name)
 
+        # Update population selector options
         options = list(self.model.populations.keys())
         self.view.widgets.selectors['population'].options = options
         self.view.widgets.selectors['population'].value = options[-1] if options else None
 
-        self.view.params.update({'Synapses': list(self.model.populations.keys())})
+
+    def remove_all_populations_callback(self, event):
+
+        population_names = list(self.model.populations.keys())
+
+        self.model.remove_all_populations()
+        
+        # Update graph param selector options
+        self.view.params.update({'Synapses': []})
         self.view.widgets.selectors['graph_param'].options = {**self.view.params}
-        self.view.widgets.selectors['graph_param'].value = options[-1] if options else None
+        self.view.widgets.selectors['graph_param'].value = 'domain'
+        for population_name in population_names:
+            self._remove_graph_param(population_name)
+
+        # Update population selector options
+        with remove_callbacks(self.view.widgets.selectors['population']):
+            self.view.widgets.selectors['population'].options = []
+            self.view.widgets.selectors['population'].value = None
+
 
     # SELECT POPULATION ------------------------------------------------------
 
@@ -1109,7 +1116,7 @@ class Presenter(IOMixin, NavigationMixin,
         TABS_TO_PARAMS = {
             0: ('morphology', ['domain']*4),
             1: ('biophys', ['domain', 'domain', self.view.widgets.selectors['param'].value]),
-            2: ('stimuli', ['rec_v', 'iclamps', 'AMPA_NMDA', 'rec_v']),
+            2: ('stimuli', ['rec_v', 'iclamps', 'synapses', 'rec_v']),
         }
 
         active_tab_id = self.view.widgets.buttons['switch_right_menu'].active
@@ -1118,11 +1125,17 @@ class Presenter(IOMixin, NavigationMixin,
 
         logger.debug(f'Switching to "{tab_name}" tab with index {tab_idx}')
 
-        param_name = params[tab_idx]
         options = {**self.view.params, **self.model.mechs_to_params} if tab_name == 'biophys' else {**self.view.params}
-
         self.view.widgets.selectors['graph_param'].options = options
+
+        param_name = params[tab_idx]
+        if param_name == 'synapses':
+            options = self.view.widgets.selectors['population'].options
+            param_name = options[-1] if options else None
+            with remove_callbacks(self.view.widgets.selectors['population']):
+                self.view.widgets.selectors['population'].value = param_name
         self.view.widgets.selectors['graph_param'].value = param_name
+
 
     def switch_tab_callback(self, attr, old, new):
 

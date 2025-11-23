@@ -832,6 +832,12 @@ class RightMenuMixin():
                                                         self.p.voltage_callback_on_event)
 
 
+    def _create_remove_all_populations_button(self):
+        self.widgets.buttons['remove_all_populations'] = Button(label='Remove all populations', button_type='danger')
+        self.widgets.buttons['remove_all_populations'].on_event(ButtonClick, self.p.remove_all_populations_callback)
+        self.widgets.buttons['remove_all_populations'].on_event(ButtonClick, self.p.voltage_callback_on_event)
+
+
     def _create_population_selector(self):
 
         self.widgets.selectors['population'] = Select(options=[], title='Population', width=150)
@@ -851,6 +857,7 @@ class RightMenuMixin():
         self._create_n_syn_spinner()
         self._create_population_name_text_input()
         self._create_add_population_button()
+        self._create_remove_all_populations_button()
         self._create_population_selector()
         self._create_remove_population_button()
 
@@ -865,6 +872,7 @@ class RightMenuMixin():
             Div(text='<hr style="width:30em">'),
             row([self.widgets.selectors['population'], self.widgets.buttons['remove_population']]),
             self.DOM_elements['population_panel'],
+            self.widgets.buttons['remove_all_populations'],
         ])
 
         self.widgets.tab_panels['synapses'] = TabPanel(
