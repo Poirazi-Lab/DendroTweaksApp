@@ -98,24 +98,58 @@ class Presenter(IOMixin, NavigationMixin,
 
     def define_domain_callback(self, event):
         """
-        Callback for the buttons['create_domain'] widget.
+        Callback for the buttons['set_domain'] widget.
+        Handles both creating new domains and extending existing ones.
         """
         # GET VIEW
-        domain_name = self.view.widgets.selectors['set_domain'].value
+        domain_name = self.view.widgets.text['domain_name'].value
+        domain_type_idx = self.view.widgets.numeric['domain_type_idx'].value
+        domain_color = self.view.widgets.color_pickers['domain_color'].color
+        
         # SET MODEL
-        self.model.define_domain(domain_name, sections=self.selected_secs)
-        # SET VIEW
-        self._update_graph_param('domain')
+        is_new_domain = domain_name not in self.model.domains
+        try: 
+            if is_new_domain:
+                self.model.add_domain(
+                    name=domain_name, 
+                    type_idx=domain_type_idx,
+                    color=domain_color,
+                    sections=self.selected_secs
+                )
+                mode = 'created'
+            else:
+                self.model.extend_domain(
+                    name=domain_name,
+                    sections=self.selected_secs
+                )
+                self.model.update_domain_type_idx(domain_name, domain_type_idx)
+                self.model.update_domain_color(domain_name, domain_color)
+                mode = 'updated'
+            self.update_status_message(f'Domain {domain_name} {mode}.', status='success')
+
+        except ValueError as e:
+            self.update_status_message(str(e), status='error')
+            return
+
+        # UPDATE VIEW
+        self._refresh_domain_views(domain_name)
+
+    
+    def _refresh_domain_views(self, domain_name):
+        """Helper to update all domain-related widgets"""
+        # self._update_graph_param('domain')
+        self._create_graph_renderer()
         self._create_cell_renderer()
+
+        # Update domain selector
         self.view.widgets.selectors['domain'].options = list(self.model.domains.keys())
         self.view.widgets.selectors['domain'].value = domain_name
         
+        # Update other widgets
         self._update_multichoice_domain_widget()
-            
         with remove_callbacks(self.view.widgets.selectors['group']):
             self.view.widgets.selectors['group'].options = list(self.model.groups.keys())
             self.view.widgets.selectors['group'].value = domain_name
-
         # TODO: make this a property of the model
         domains_to_sec_ids = {domain.name: sorted([str(sec.idx) for sec in domain.sections], key=lambda x: int(x)) 
                              for domain in self.model.domains.values()}
@@ -123,7 +157,7 @@ class Presenter(IOMixin, NavigationMixin,
 
         # TODO: Need a warning here if some mechanisms are already inserted
         # as they will be removed
-        self.update_status_message(f'Domain {domain_name} created.', status='success')
+
 
     def _update_multichoice_domain_widget(self):
         mech_name = self.view.widgets.selectors['mechanism_to_insert'].value
@@ -153,13 +187,18 @@ class Presenter(IOMixin, NavigationMixin,
     # INSERT MECHANISMS TO DOMAINS
     # -----------------------------------------------------------------
 
-    def select_domain_segments_callback(self, attr, old, new):
+    def select_domain_callback(self, attr, old, new):
         """
         Callback for the selectors['subtree'] widget.
         """
         # GET VIEW
         domain_name = new
+        domain = self.model.domains[domain_name]
+        self.view.widgets.text['domain_name'].value = domain.name
+        self.view.widgets.numeric['domain_type_idx'].value = domain.type_idx
+        self.view.widgets.color_pickers['domain_color'].color = domain.color
         self._select_domain_segs_in_graph(domain_names=[domain_name])
+        self.view.widgets.buttons['set_domain'].disabled = False
 
     @log
     def _select_domain_segs_in_graph(self, domain_names):

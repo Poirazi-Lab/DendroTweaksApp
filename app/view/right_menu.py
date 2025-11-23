@@ -13,13 +13,28 @@ from bokeh.models import CustomJS
 
 from bokeh.models import Div
 from bokeh_utils import AdjustableSpinner
-AVAILABLE_DOMAINS = [
-    'soma', 'perisomatic', 
-    'axon', 
-    'dend', 'basal', 
-    'apic', 'trunk', 'tuft', 'oblique', 
-    'custom_0', 'custom_1', 'custom_2', 'custom_3'
-]
+
+DOMAINS_TO_SWC_IDS = {
+    'soma': 1,
+    'axon': 2,
+    'dend': 3,
+    'basal': 31,
+    'apic': 4,
+    'trunk': 41,
+    'tuft': 42,
+    'oblique': 43
+}
+
+DOMAINS_TO_COLORS = {
+    'soma': 'orange',
+    'axon': 'gold',
+    'dend': 'forestgreen',
+    'basal': 'seagreen',
+    'apic': 'steelblue',
+    'trunk': 'skyblue',
+    'tuft': 'plum',
+    'oblique': 'rosybrown'
+}
 
 class RightMenuMixin():
 
@@ -89,16 +104,47 @@ class RightMenuMixin():
                                             value=None,
                                             title='Select domain',
                                             width=100)
-        self.widgets.selectors['domain'].on_change('value', self.p.select_domain_segments_callback)
+        self.widgets.selectors['domain'].on_change('value', self.p.select_domain_callback)
 
 
-    def _create_set_domain_selector(self):
+    def _create_domain_name_text_input(self):
 
-        self.widgets.selectors['set_domain'] = Select(title='Set domain',
-                                        options=AVAILABLE_DOMAINS,
-                                        value='soma',
-                                        width=150)
-        
+        self.widgets.text['domain_name'] = TextInput(value='', 
+                                            title='Domain name', 
+                                            placeholder='New domain name',
+                                            width=150)
+        def check_domain_name_exists_callback(attr, old, new):
+            if new in self.widgets.selectors['domain'].options:
+                self.widgets.buttons['set_domain'].disabled = True
+            else:
+                self.widgets.buttons['set_domain'].disabled = False
+            self._suggest_domain_param_names(new)
+        self.widgets.text['domain_name'].on_change('value_input', check_domain_name_exists_callback)
+
+    def _suggest_domain_param_names(self, domain_name):
+        """
+        Suggest parameter names based on the domain name.
+        E.g., for domain 'soma', suggest 'gbar_soma', 'e_rev_soma', etc.
+        """
+        base_name, _, idx = domain_name.partition('_')
+        suggested_type_idx = DOMAINS_TO_SWC_IDS.get(base_name)
+        suggested_color = DOMAINS_TO_COLORS.get(base_name)
+        if suggested_type_idx is not None:
+            self.widgets.numeric['domain_type_idx'].value = suggested_type_idx
+        if suggested_color is not None:
+            self.widgets.color_pickers['domain_color'].color = suggested_color
+
+    def _create_type_idx_numeric_input(self):
+
+        self.widgets.numeric['domain_type_idx'] = NumericInput(value=None, title='Type idx', width=75, mode='int')
+
+    def _create_domain_color_picker(self):
+
+        from bokeh.models import ColorPicker
+
+        self.widgets.color_pickers['domain_color'] = ColorPicker(title='Domain color', 
+                                                            color='#ff0000', 
+                                                            width=50)
 
     def _create_set_domain_button(self):
         self.widgets.buttons['set_domain'] = Button(label='Set domain', button_type='primary', styles={"padding-top":"20px"})
@@ -108,14 +154,26 @@ class RightMenuMixin():
     def _create_domains_tab_panel(self):
 
         self._create_domain_selector()
-        self._create_set_domain_selector()
+        self._create_domain_name_text_input()
+        self._create_type_idx_numeric_input()
+        self._create_domain_color_picker()
         self._create_set_domain_button()
 
         domains_panel = column([
                     Div(text='NOTE: Changing the domains will reset the biophysical parameters. Please ensure this is done early in the process to avoid losing your configurations.', 
                         styles={'color': self.theme.status_colors['warning'], 'font-size': '12px'}),
+                    Div(text='Suggested domain names, type indices, and colors are:<br>' +
+                        '<table>' +
+                        ''.join([f'<tr><td><b>{name}</b></td><td>{type_idx}</td><td>{color}</td><td><div style="width:20px;height:10px;background-color:{color};border:1px solid #000;"></div></td></tr>' 
+                                 for name, type_idx, color in zip(DOMAINS_TO_SWC_IDS.keys(), DOMAINS_TO_SWC_IDS.values(), DOMAINS_TO_COLORS.values())]) +
+                        '</table>',
+                        styles={'font-size': '12px'}),
                     self.widgets.selectors['domain'],
-                    row(self.widgets.selectors['set_domain'], self.widgets.buttons['set_domain']),
+                    row(
+                        self.widgets.text['domain_name'],
+                        self.widgets.numeric['domain_type_idx'],
+                        self.widgets.color_pickers['domain_color'],
+                        self.widgets.buttons['set_domain']),
                 ])
 
         self.widgets.tab_panels['domains'] = TabPanel(
