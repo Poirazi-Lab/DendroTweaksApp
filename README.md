@@ -110,3 +110,14 @@ bokeh serve --show app
 This will start the Bokeh server and automatically open your default web browser to display the app.
 
 
+## License
+
+This project uses multiple licenses depending on the content:
+
+- **App code**: Mozilla Public License 2.0 (MPL-2.0).  
+  All modifications to these files must remain under MPL-2.0 when redistributed.
+
+- **Examples (`app/static/data/*`)**: no formal license; provided for demonstration purposes.  
+  Use freely in your own projects.
+
+> **Note:** Previous versions of this project were released under GPL-3.0.

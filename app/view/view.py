@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2025 Poirazi Lab <dendrotweaks@dendrites.gr>
+# SPDX-License-Identifier: MPL-2.0
+
 from collections import defaultdict
 
 from bokeh.models import ColumnDataSource, Select, Slider, Button

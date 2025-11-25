@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2025 Poirazi Lab <dendrotweaks@dendrites.gr>
+# SPDX-License-Identifier: MPL-2.0
+
 from bokeh.models import Select, Button, RangeSlider, TextInput, Div, Switch
 from bokeh.layouts import column, row
 from bokeh.events import ButtonClick

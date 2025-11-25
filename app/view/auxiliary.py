@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2025 Poirazi Lab <dendrotweaks@dendrites.gr>
+# SPDX-License-Identifier: MPL-2.0
 
 from bokeh.models import ColumnDataSource, Button, CustomJS, HoverTool, Patches
 from bokeh.layouts import column, row

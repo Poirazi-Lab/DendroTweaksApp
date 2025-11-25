@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2025 Poirazi Lab <dendrotweaks@dendrites.gr>
+# SPDX-License-Identifier: MPL-2.0
+
 import numpy as np
 
 from utils import get_seg_name, get_sec_type, get_sec_name, get_sec_id

@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2025 Poirazi Lab <dendrotweaks@dendrites.gr>
+# SPDX-License-Identifier: MPL-2.0
 
 from bokeh.models import Button, Select, Slider, RadioButtonGroup
 from bokeh.models import RangeSlider, Switch, Spinner
