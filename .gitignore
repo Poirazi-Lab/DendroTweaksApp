@@ -41,3 +41,4 @@ app/static/data/*/morphology/Hay_2011.swc
 app/static/data/*/morphology/Poirazi_2003.swc
 app/static/data/_*/
 test_data/
+app/static/data/*/*.npy

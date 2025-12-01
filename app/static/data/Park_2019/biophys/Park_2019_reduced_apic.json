@@ -8,17 +8,6 @@
     },
     "d_lambda": 0.1,
     "domains": {
-        "apic": [
-            "CaDyn",
-            "CaHVA",
-            "CaLVA",
-            "KCa",
-            "Ka",
-            "Km",
-            "Kv",
-            "Leak",
-            "Na"
-        ],
         "axon": [
             "Leak"
         ],
@@ -43,22 +32,27 @@
             "Kv",
             "Leak",
             "Na"
+        ],
+        "reduced_0": [
+            "CaDyn",
+            "CaHVA",
+            "CaLVA",
+            "KCa",
+            "Ka",
+            "Km",
+            "Kv",
+            "Leak",
+            "Na"
         ]
     },
     "groups": [
         {
             "name": "all",
             "domains": [
-                "apic",
                 "axon",
                 "dend",
-                "soma"
-            ]
-        },
-        {
-            "name": "apical",
-            "domains": [
-                "apic"
+                "soma",
+                "reduced_0"
             ]
         },
         {
@@ -82,8 +76,7 @@
         {
             "name": "dendritic_thin",
             "domains": [
-                "dend",
-                "apic"
+                "dend"
             ],
             "select_by": "section_diam",
             "max_value": 0.8
@@ -91,27 +84,10 @@
         {
             "name": "dendritic_thick",
             "domains": [
-                "dend",
-                "apic"
+                "dend"
             ],
             "select_by": "section_diam",
             "min_value": 0.8
-        },
-        {
-            "name": "proximal_apical",
-            "domains": [
-                "apic"
-            ],
-            "select_by": "distance",
-            "max_value": 260
-        },
-        {
-            "name": "distal_apical",
-            "domains": [
-                "apic"
-            ],
-            "select_by": "distance",
-            "min_value": 260
         },
         {
             "name": "basal",
@@ -122,8 +98,13 @@
         {
             "name": "dendritic",
             "domains": [
-                "dend",
-                "apic"
+                "dend"
+            ]
+        },
+        {
+            "name": "reduced_0",
+            "domains": [
+                "reduced_0"
             ]
         }
     ],
@@ -140,6 +121,12 @@
                 "parameters": {
                     "value": 1
                 }
+            },
+            "reduced_0": {
+                "function": "constant",
+                "parameters": {
+                    "value": 2.0
+                }
             }
         },
         "Ra": {
@@ -147,6 +134,12 @@
                 "function": "constant",
                 "parameters": {
                     "value": 100
+                }
+            },
+            "reduced_0": {
+                "function": "constant",
+                "parameters": {
+                    "value": 100.0
                 }
             }
         },
@@ -156,6 +149,12 @@
                 "parameters": {
                     "value": 9.09090909090909e-05
                 }
+            },
+            "reduced_0": {
+                "function": "constant",
+                "parameters": {
+                    "value": 9.090909090909094e-05
+                }
             }
         },
         "e_Leak": {
@@ -163,6 +162,12 @@
                 "function": "constant",
                 "parameters": {
                     "value": -79
+                }
+            },
+            "reduced_0": {
+                "function": "constant",
+                "parameters": {
+                    "value": -79.0
                 }
             }
         },
@@ -172,6 +177,12 @@
                 "parameters": {
                     "value": 0.1
                 }
+            },
+            "reduced_0": {
+                "function": "constant",
+                "parameters": {
+                    "value": 0.10000000000000003
+                }
             }
         },
         "taur_CaDyn": {
@@ -179,6 +190,12 @@
                 "function": "constant",
                 "parameters": {
                     "value": 50
+                }
+            },
+            "reduced_0": {
+                "function": "constant",
+                "parameters": {
+                    "value": 50.0
                 }
             }
         },
@@ -188,6 +205,12 @@
                 "parameters": {
                     "value": 0.0001
                 }
+            },
+            "reduced_0": {
+                "function": "constant",
+                "parameters": {
+                    "value": 0.00010000000000000006
+                }
             }
         },
         "gamma_CaDyn": {
@@ -195,6 +218,12 @@
                 "function": "constant",
                 "parameters": {
                     "value": 1
+                }
+            },
+            "reduced_0": {
+                "function": "constant",
+                "parameters": {
+                    "value": 1.0
                 }
             }
         },
@@ -204,6 +233,12 @@
                 "parameters": {
                     "value": 0
                 }
+            },
+            "reduced_0": {
+                "function": "constant",
+                "parameters": {
+                    "value": -0.0
+                }
             }
         },
         "kd_CaDyn": {
@@ -211,6 +246,12 @@
                 "function": "constant",
                 "parameters": {
                     "value": 0
+                }
+            },
+            "reduced_0": {
+                "function": "constant",
+                "parameters": {
+                    "value": -0.0
                 }
             }
         },
@@ -234,18 +275,14 @@
                     "intercept": 5e-06
                 }
             },
-            "proximal_apical": {
-                "function": "sinusoidal",
+            "reduced_0": {
+                "function": "polynomial",
                 "parameters": {
-                    "amplitude": 4.923e-06,
-                    "frequency": 0.008758,
-                    "phase": 0.8656
-                }
-            },
-            "distal_apical": {
-                "function": "constant",
-                "parameters": {
-                    "value": 2e-06
+                    "coeffs": [
+                        1.7032189556395082e-11,
+                        -1.695473421088239e-08,
+                        5.594679565797894e-06
+                    ]
                 }
             }
         },
@@ -254,6 +291,12 @@
                 "function": "constant",
                 "parameters": {
                     "value": 140
+                }
+            },
+            "reduced_0": {
+                "function": "constant",
+                "parameters": {
+                    "value": 127.5895106176
                 }
             }
         },
@@ -277,18 +320,18 @@
                     "intercept": 3e-05
                 }
             },
-            "proximal_apical": {
-                "function": "sinusoidal",
+            "reduced_0": {
+                "function": "polynomial",
                 "parameters": {
-                    "amplitude": 2.9538e-05,
-                    "frequency": 0.008758,
-                    "phase": 0.8656
-                }
-            },
-            "distal_apical": {
-                "function": "constant",
-                "parameters": {
-                    "value": 1.2e-05
+                    "coeffs": [
+                        -4.9577591017548084e-20,
+                        1.1831704547486388e-16,
+                        -1.0949157415043703e-13,
+                        4.91583935780707e-11,
+                        -1.0765865406507897e-08,
+                        9.427534917154298e-07,
+                        4.3803559822139125e-06
+                    ]
                 }
             }
         },
@@ -310,6 +353,12 @@
                 "parameters": {
                     "value": 0.00021
                 }
+            },
+            "reduced_0": {
+                "function": "constant",
+                "parameters": {
+                    "value": 0.0002100000000000001
+                }
             }
         },
         "ek": {
@@ -317,6 +366,12 @@
                 "function": "constant",
                 "parameters": {
                     "value": -80
+                }
+            },
+            "reduced_0": {
+                "function": "constant",
+                "parameters": {
+                    "value": -80.0
                 }
             }
         },
@@ -344,6 +399,20 @@
                 "parameters": {
                     "value": 0.0108
                 }
+            },
+            "reduced_0": {
+                "function": "polynomial",
+                "parameters": {
+                    "coeffs": [
+                        -1.5064242419631078e-17,
+                        2.942014886287498e-14,
+                        -1.9401604372156943e-11,
+                        4.388441541535075e-09,
+                        -2.291086622871766e-08,
+                        3.919078433162552e-05,
+                        0.07384108596642618
+                    ]
+                }
             }
         },
         "gbar_Km": {
@@ -364,6 +433,12 @@
                 "parameters": {
                     "value": 0.000127
                 }
+            },
+            "reduced_0": {
+                "function": "constant",
+                "parameters": {
+                    "value": 0.00012700000000000005
+                }
             }
         },
         "v12_Km": {
@@ -372,6 +447,12 @@
                 "parameters": {
                     "value": -30
                 }
+            },
+            "reduced_0": {
+                "function": "constant",
+                "parameters": {
+                    "value": -30.0
+                }
             }
         },
         "q_Km": {
@@ -379,6 +460,12 @@
                 "function": "constant",
                 "parameters": {
                     "value": 9
+                }
+            },
+            "reduced_0": {
+                "function": "constant",
+                "parameters": {
+                    "value": 9.0
                 }
             }
         },
@@ -400,6 +487,12 @@
                 "parameters": {
                     "value": 0.00015
                 }
+            },
+            "reduced_0": {
+                "function": "constant",
+                "parameters": {
+                    "value": 0.00015000000000000007
+                }
             }
         },
         "v12_Kv": {
@@ -408,6 +501,12 @@
                 "parameters": {
                     "value": 25
                 }
+            },
+            "reduced_0": {
+                "function": "constant",
+                "parameters": {
+                    "value": 25.0
+                }
             }
         },
         "q_Kv": {
@@ -415,6 +514,12 @@
                 "function": "constant",
                 "parameters": {
                     "value": 9
+                }
+            },
+            "reduced_0": {
+                "function": "constant",
+                "parameters": {
+                    "value": 9.0
                 }
             }
         },
@@ -436,6 +541,12 @@
                 "parameters": {
                     "value": 0.0303
                 }
+            },
+            "reduced_0": {
+                "function": "constant",
+                "parameters": {
+                    "value": 0.030300000000000018
+                }
             }
         },
         "Rma_Na": {
@@ -443,6 +554,12 @@
                 "function": "constant",
                 "parameters": {
                     "value": 0.182
+                }
+            },
+            "reduced_0": {
+                "function": "constant",
+                "parameters": {
+                    "value": 0.18200000000000005
                 }
             }
         },
@@ -452,6 +569,12 @@
                 "parameters": {
                     "value": 0.14
                 }
+            },
+            "reduced_0": {
+                "function": "constant",
+                "parameters": {
+                    "value": 0.1400000000000001
+                }
             }
         },
         "v12m_Na": {
@@ -460,10 +583,22 @@
                 "parameters": {
                     "value": -30
                 }
+            },
+            "reduced_0": {
+                "function": "constant",
+                "parameters": {
+                    "value": -30.0
+                }
             }
         },
         "qm_Na": {
             "all": {
+                "function": "constant",
+                "parameters": {
+                    "value": 9.8
+                }
+            },
+            "reduced_0": {
                 "function": "constant",
                 "parameters": {
                     "value": 9.8
@@ -476,6 +611,12 @@
                 "parameters": {
                     "value": 0.0091
                 }
+            },
+            "reduced_0": {
+                "function": "constant",
+                "parameters": {
+                    "value": 0.009100000000000004
+                }
             }
         },
         "Rha_Na": {
@@ -483,6 +624,12 @@
                 "function": "constant",
                 "parameters": {
                     "value": 0.024
+                }
+            },
+            "reduced_0": {
+                "function": "constant",
+                "parameters": {
+                    "value": 0.024000000000000007
                 }
             }
         },
@@ -492,6 +639,12 @@
                 "parameters": {
                     "value": -45
                 }
+            },
+            "reduced_0": {
+                "function": "constant",
+                "parameters": {
+                    "value": -45.0
+                }
             }
         },
         "v12hb_Na": {
@@ -499,6 +652,12 @@
                 "function": "constant",
                 "parameters": {
                     "value": -70
+                }
+            },
+            "reduced_0": {
+                "function": "constant",
+                "parameters": {
+                    "value": -70.0
                 }
             }
         },
@@ -508,6 +667,12 @@
                 "parameters": {
                     "value": 5
                 }
+            },
+            "reduced_0": {
+                "function": "constant",
+                "parameters": {
+                    "value": 5.0
+                }
             }
         },
         "v12hinf_Na": {
@@ -516,10 +681,22 @@
                 "parameters": {
                     "value": -60
                 }
+            },
+            "reduced_0": {
+                "function": "constant",
+                "parameters": {
+                    "value": -60.0
+                }
             }
         },
         "qhinf_Na": {
             "all": {
+                "function": "constant",
+                "parameters": {
+                    "value": 6.2
+                }
+            },
+            "reduced_0": {
                 "function": "constant",
                 "parameters": {
                     "value": 6.2
@@ -531,6 +708,12 @@
                 "function": "constant",
                 "parameters": {
                     "value": 60
+                }
+            },
+            "reduced_0": {
+                "function": "constant",
+                "parameters": {
+                    "value": 60.0
                 }
             }
         }
