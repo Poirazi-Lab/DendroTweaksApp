@@ -771,16 +771,13 @@ class Presenter(IOMixin, NavigationMixin,
         logger.debug(f'Selected variable: {var}')
         if new:
             self.model.add_recording(sec, loc, var)
-            if seg not in self._recorded_segments:
-                self._recorded_segments = self.get_recorded_segments()
-            self._update_graph_param(f'rec_{var}')
             self.update_status_message(f'Added a recording for "{var}" in {seg.idx}', status='success')
         else:
             self.model.remove_recording(sec, loc, var)
-            if seg not in self.get_recorded_segments():
-                self._recorded_segments = self.get_recorded_segments()
-            self._update_graph_param(f'rec_{var}')
             self.update_status_message(f'Removed a recording for "{var}" in {seg.idx}', status='warning')
+        
+        self._recorded_segments = self.get_recorded_segments()
+        self._update_graph_param(f'rec_{var}')
         self._update_traces_renderers()
         
     
@@ -920,7 +917,7 @@ class Presenter(IOMixin, NavigationMixin,
     def select_population_callback(self, attr, old, new):
         self.toggle_population_panel()
         self.view.widgets.selectors['graph_param'].value = new
-        self.select_population_segs_in_graph()
+        # self.select_population_segs_in_graph()
 
 
     def toggle_population_panel(self):
@@ -1047,13 +1044,13 @@ class Presenter(IOMixin, NavigationMixin,
                                                                row(spinners)]
                                                               
                                                               
-    def select_population_segs_in_graph(self):
-        if self.view.widgets.selectors['population'].options:
-            population = self.selected_population
-            seg_ids = [seg.idx for seg in population.segments]
-            self.view.figures['graph'].renderers[0].node_renderer.data_source.selected.indices = seg_ids
-        else:
-            self.view.figures['graph'].renderers[0].node_renderer.data_source.selected.indices = []
+    # def select_population_segs_in_graph(self):
+    #     if self.view.widgets.selectors['population'].options:
+    #         population = self.selected_population
+    #         seg_ids = [seg.idx for seg in population.segments]
+    #         self.view.figures['graph'].renderers[0].node_renderer.data_source.selected.indices = seg_ids
+    #     else:
+    #         self.view.figures['graph'].renderers[0].node_renderer.data_source.selected.indices = []
        
 
     # =================================================================

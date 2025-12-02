@@ -67,7 +67,8 @@ class SimulationMixin():
 
         segments = self.get_recorded_segments('v')
         labels = [str(seg.idx) for seg in segments]
-        voltages = list(self.model.simulator.recordings['v'].values())
+        voltages = [list(self.model.simulator.recordings['v'].get(seg, []))
+                for seg in segments]
 
         ts = [self.model.simulator.t for _ in range(len(voltages))]
 
