@@ -786,6 +786,7 @@ class Presenter(IOMixin, NavigationMixin,
         Updates the traces renderers
         """
         labels = [str(seg.idx) for seg in self._recorded_segments]
+        if not labels: return
         color_mapper = CategoricalColorMapper(
             palette=cc.glasbey_light, 
             factors=labels, 

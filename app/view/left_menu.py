@@ -190,7 +190,7 @@ class LeftMenuMixin():
     # Segmentation
     def _create_d_lambda_slider(self):
         self.widgets.sliders['d_lambda'] = Slider(
-            start=0, 
+            start=0.01, 
             end=0.2, 
             value=0.1, 
             step=0.01, 
@@ -208,6 +208,7 @@ class LeftMenuMixin():
             align='center'
         )
         self.widgets.buttons['set_segmentation'].on_event(ButtonClick, self.p.build_seg_tree_callback)
+        self.widgets.buttons['set_segmentation'].on_event(ButtonClick, self.p.voltage_callback_on_event)
 
 
     # Simulation
