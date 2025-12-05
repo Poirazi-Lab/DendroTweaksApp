@@ -35,10 +35,7 @@ app/static/data/*/biophys/mod/std*.mod
 app/static/data/*/biophys/python/*
 app/static/data/*/*.py
 app/static/data/*/*.ipynb
-app/static/data/*/morphology/*sorted.swc
 app/static/data/*/morphology/*.asc
-app/static/data/*/morphology/Hay_2011.swc
-app/static/data/*/morphology/Poirazi_2003.swc
 app/static/data/_*/
 test_data/
 app/static/data/*/*.npy
