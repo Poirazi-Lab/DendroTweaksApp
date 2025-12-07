@@ -8,7 +8,7 @@
         "d_lambda": 0.1,
         "temperature": 34,
         "v_init": -70,
-        "dt": 0.025,
+        "dt": 0.1,
         "duration": 900
     },
     "stimuli": {
