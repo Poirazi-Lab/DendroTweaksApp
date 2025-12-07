@@ -1133,8 +1133,7 @@ class Presenter(IOMixin, NavigationMixin,
         if param_name == 'synapses':
             options = self.view.widgets.selectors['population'].options
             param_name = options[-1] if options else None
-            with remove_callbacks(self.view.widgets.selectors['population']):
-                self.view.widgets.selectors['population'].value = param_name
+            self.view.widgets.selectors['population'].value = param_name
         self.view.widgets.selectors['graph_param'].value = param_name
 
 

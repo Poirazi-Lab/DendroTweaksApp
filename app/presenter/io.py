@@ -140,7 +140,6 @@ class IOMixin():
         with remove_callbacks(self.view.widgets.selectors['population']):
             options = list(self.model.populations.keys())
             self.view.widgets.selectors['population'].options = options
-            self.view.widgets.selectors['population'].value = options[-1] if options else None
 
         # UPDATE STIMULI OPTIONS ------------------------------------------------
         self.view.widgets.selectors['stimuli'].options = self.model.list_stimuli()
