@@ -26,8 +26,8 @@
         "cvode": false
     },
     "dev_tools": {
-        "console": true,
-        "allow_file_io": true,
+        "console": false,
+        "allow_file_io": false,
         "save_preferences": false,
         "choose_simulator": false
     }
